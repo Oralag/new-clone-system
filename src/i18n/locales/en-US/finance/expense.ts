@@ -14,13 +14,13 @@ export default {
 
   // Toolbar
   fundFlow: 'Cash Flow',
-  payReceipt: 'Payment Receipt',
+  payReceipt: 'Payment',
 
   // Table columns
   amount: 'Amount',
   applicant: 'Applicant',
   applyDate: 'Apply Date',
-  remark: 'Remark',
+  remark: 'Notes',
   operation: 'Action',
 
   // Row actions
@@ -39,8 +39,8 @@ export default {
   formAmount: 'Amount',
   formApplyDate: 'Apply Date',
   formApplyDatePlaceholder: 'Select apply date',
-  formRemark: 'Remark',
-  formRemarkPlaceholder: 'Enter remark',
+  formRemark: 'Notes',
+  formRemarkPlaceholder: 'Enter notes',
 
   // Pay dialog
   payDialogTitle: 'Expense Payment',
@@ -49,8 +49,8 @@ export default {
   payFormAccount: 'Fund Account',
   payFormAccountPlaceholder: 'Select account',
   payFormAmount: 'Payment Amount',
-  payFormRemark: 'Remark',
-  payFormRemarkPlaceholder: 'Enter remark',
+  payFormRemark: 'Notes',
+  payFormRemarkPlaceholder: 'Enter notes',
   confirmPay: 'Confirm Payment',
   cancel: 'Cancel',
 

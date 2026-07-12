@@ -16,7 +16,7 @@ export default {
   colBeforeDept: 'Department Before',
   colAfterDept: 'Department After',
   colChangeDate: 'Change Date',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // Action buttons
@@ -32,7 +32,7 @@ export default {
   fieldBeforeDept: 'Department Before',
   fieldAfterDept: 'Department After',
   fieldChangeDate: 'Change Date',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgOpSuccess: 'Operation succeeded',

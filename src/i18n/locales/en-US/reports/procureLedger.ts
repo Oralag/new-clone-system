@@ -21,7 +21,7 @@ export default {
   colDebtStatus: 'Debt Status',
   colProcureStatus: 'Order Status',
   colWarehouse: 'Warehouse',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   statusUnpaid: 'Outstanding',
   statusPaid: 'Settled',
   statusInProgress: 'Active',

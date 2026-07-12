@@ -9,7 +9,7 @@ export default {
   // Table columns
   colName: 'Warehouse Name',
   colAddress: 'Address',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
   tagDefault: 'Default',
 
@@ -25,10 +25,10 @@ export default {
   formTitleEdit: 'Edit Warehouse',
   fieldName: 'Warehouse Name',
   fieldAddress: 'Address',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderName: 'Enter warehouse name',
   placeholderAddress: 'Enter address',
-  placeholderRemark: 'Enter remark',
+  placeholderRemark: 'Enter notes',
   ruleNameRequired: 'Warehouse name is required',
 
   // Messages

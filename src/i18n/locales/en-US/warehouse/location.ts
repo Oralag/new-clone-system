@@ -10,7 +10,7 @@ export default {
   // Table columns
   colLocationName: 'Location Name',
   colWarehouseName: 'Warehouse',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // Row actions
@@ -21,10 +21,10 @@ export default {
   formTitle: 'Add Location',
   fieldLocationName: 'Location Name',
   fieldWarehouseName: 'Warehouse',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderLocationName: 'Enter location name',
   placeholderWarehouseName: 'Enter warehouse name',
-  placeholderRemark: 'Enter remark',
+  placeholderRemark: 'Enter notes',
   ruleLocationNameRequired: 'Location name is required',
 
   // Messages

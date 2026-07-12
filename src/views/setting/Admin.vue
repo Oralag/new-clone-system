@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getAdminList"
           :batch-del-api="batchDeleteAdmin"
-          export-file-name="管理员" :params="searchForm">
+          :export-file-name="$t('route.SettingAdmin')" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item :label="$t('setting.admin.searchAccount')">

@@ -1,23 +1,23 @@
-// Translations for src/views/sale/SaleOut.vue (Sale Outbound)
+// Translations for src/views/sale/SaleOut.vue (Sales Shipment)
 export default {
   // ScTable export
-  exportFileName: 'Sale Outbound Orders',
-  exportColOrderSn: 'Outbound Order No.',
+  exportFileName: 'Sales Shipments',
+  exportColOrderSn: 'Shipment No.',
   exportColCustomerName: 'Customer Name',
   exportColWarehouseName: 'Warehouse',
-  exportColOutDate: 'Outbound Date',
+  exportColOutDate: 'Shipment Date',
   exportColAdminName: 'Handler',
-  exportColTotalAmount: 'Outbound Amount',
+  exportColTotalAmount: 'Shipment Amount',
   exportColAfterDiscount: 'After Discount',
   exportColStatus: 'Status',
-  exportColRemark: 'Remark',
+  exportColRemark: 'Notes',
 
   // Search bar
-  searchOrderNo: 'Outbound Order No.',
+  searchOrderNo: 'Shipment No.',
   searchCustomerName: 'Customer Name',
   searchStatus: 'Status',
   statusPending: 'Pending',
-  statusAudited: 'Audited',
+  statusAudited: 'Approved',
   statusRejected: 'Rejected',
   statusUnreconciled: 'Unreconciled',
 
@@ -30,25 +30,25 @@ export default {
   colNum: 'Qty',
   colPriceTaxIncl: 'Unit Price (Tax Incl.)',
   colSubtotalTaxIncl: 'Subtotal (Tax Incl.)',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
 
   // List columns
   colIndex: 'No.',
-  colOrderNo: 'Outbound Order No.',
+  colOrderNo: 'Shipment No.',
   colCustomerName: 'Customer Name',
   colWarehouse: 'Warehouse',
-  colOutDate: 'Outbound Date',
+  colOutDate: 'Shipment Date',
   colAdminName: 'Handler',
-  colOutAmount: 'Outbound Amount',
+  colOutAmount: 'Shipment Amount',
   colActions: 'Actions',
   dash: '—',
 
   // Action buttons
   btnView: 'View',
   btnEdit: 'Edit',
-  btnAudit: 'Audit',
+  btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Reverse Audit',
+  btnUnaudit: 'Revoke Approval',
   btnViewReceivable: 'View Receivable',
   btnViewStock: 'View Stock',
   btnReconciled: 'Reconciled',
@@ -56,23 +56,23 @@ export default {
   btnDelete: 'Delete',
   rejectDisabledTip: 'Reject disabled: order already rejected, please resubmit or delete',
   deleteEmptyTestTip: 'Empty test order can be deleted directly',
-  deleteUnauditFirstTip: 'Please reverse audit before deleting',
+  deleteUnauditFirstTip: 'Please revoke approval before deleting',
 
   // Form top bar
   btnBack: 'Back',
-  formTitleView: 'View Outbound Order',
-  formTitleEdit: 'Edit Outbound Order',
-  formTitleCreate: 'New Outbound',
-  tagAudited: 'Audited',
+  formTitleView: 'View Shipment',
+  formTitleEdit: 'Edit Shipment',
+  formTitleCreate: 'New Shipment',
+  tagAudited: 'Approved',
   tagFromContract: 'From Contract',
-  btnPrint: 'Print Outbound Order',
+  btnPrint: 'Print Shipment',
   btnSave: 'Save',
   saveShortcut: '(Ctrl+S)',
-  btnSaveAndAudit: 'Save & Audit',
+  btnSaveAndAudit: 'Save & Approve',
 
   // Basic info
   secBasic: 'Basic Info',
-  fieldOrderNo: 'Outbound Order No.',
+  fieldOrderNo: 'Shipment No.',
   orderNoAutoGen: '(Auto-generated on save)',
   orderNoPlaceholder: 'Auto-generated',
   fieldCustomerName: 'Customer',
@@ -80,7 +80,7 @@ export default {
   customerRequired: 'Please select a customer',
   fieldAdminName: 'Handler',
   adminPlaceholder: 'Select or enter handler',
-  fieldOutDate: 'Outbound Date',
+  fieldOutDate: 'Shipment Date',
   outDatePlaceholder: 'Select date',
   fieldWarehouse: 'Warehouse',
   warehousePlaceholder: 'Select warehouse',
@@ -90,8 +90,8 @@ export default {
   fieldReceiveAccount: 'Receipt Account',
   receiveAccountPlaceholder: 'Select account',
   cashOption: 'Cash',
-  fieldRemark: 'Remark',
-  remarkPlaceholder: 'Enter remark',
+  fieldRemark: 'Notes',
+  remarkPlaceholder: 'Enter notes',
   fieldAttachment: 'Attachment',
   btnUploadAttachment: 'Upload Attachment',
 
@@ -115,7 +115,7 @@ export default {
   itemColCate: 'Category',
   itemColUnit: 'Unit',
   itemUnitPlaceholder: 'Unit',
-  itemColNum: 'Outbound Qty',
+  itemColNum: 'Shipped Qty',
   itemColPriceNoTax: 'Unit Price (Ex-Tax)',
   itemColTaxRate: 'Tax Rate (%)',
   itemColTax: 'Tax',
@@ -124,8 +124,8 @@ export default {
   itemColSubtotalTaxIncl: 'Subtotal (Tax Incl.)',
   itemColBatch: 'Batch',
   itemBatchPlaceholder: 'Batch / Production Date',
-  itemColRemark: 'Remark',
-  itemRemarkPlaceholder: 'Remark',
+  itemColRemark: 'Notes',
+  itemRemarkPlaceholder: 'Notes',
   btnBatch: 'Batch',
 
   // Settlement info
@@ -167,7 +167,7 @@ export default {
   manualSpecPlaceholder: 'Spec / model (optional)',
   manualUnit: 'Unit',
   manualUnitPlaceholder: 'e.g. pcs, kg',
-  manualNum: 'Outbound Qty',
+  manualNum: 'Shipped Qty',
   manualPrice: 'Unit Price (Tax Incl.)',
   btnCancel: 'Cancel',
   btnConfirmAdd: 'Confirm Add',
@@ -190,7 +190,7 @@ export default {
   btnConfirmAddFund: 'Confirm Add',
 
   // Field label map (batch edit)
-  fieldLabelNum: 'Outbound Qty',
+  fieldLabelNum: 'Shipped Qty',
   fieldLabelPriceNoTax: 'Unit Price (Ex-Tax)',
   fieldLabelTaxRate: 'Tax Rate (%)',
   fieldLabelPrice: 'Unit Price (Tax Incl.)',
@@ -208,20 +208,20 @@ export default {
   msgSaveSuccess: 'Saved successfully',
   msgSaveFail: 'Save failed',
 
-  msgUnauditFirst: 'Please reverse audit before deleting',
+  msgUnauditFirst: 'Please revoke approval before deleting',
   msgDeleteEmptyTestConfirm: 'This is an empty test order. Delete directly?',
-  msgDeleteConfirm: 'Delete this outbound order?',
+  msgDeleteConfirm: 'Delete this shipment?',
   msgPromptTitle: 'Confirm',
   msgDeleteSuccess: 'Deleted successfully',
   msgDeleteFail: 'Delete failed, please try again',
 
-  msgReturnExists: 'This outbound order has {count} audited sale return(s). Please reverse audit them in [Sale Returns] first.',
-  msgManualReceiptExists: 'This outbound order has {count} linked receipt(s). Please delete them in [Finance > Receipts] before reversing audit.',
+  msgReturnExists: 'This shipment has {count} audited sale return(s). Please revoke approval them in [Sale Returns] first.',
+  msgManualReceiptExists: 'This shipment has {count} linked receipt(s). Please delete them in [Finance > Receipts] before reversing audit.',
 
   actionAudit: 'Audit Approved',
   actionReject: 'Reject',
-  actionUnaudit: 'Reverse Audit',
-  msgConfirmAudit: 'Confirm {action} this outbound order?',
+  actionUnaudit: 'Revoke Approval',
+  msgConfirmAudit: 'Confirm {action} this shipment?',
 
   warnStockDeduct: 'Stock deduction failed',
   warnStockDeductSuffix: 'Stock deduction failed, please update manually',
@@ -259,8 +259,8 @@ export default {
   msgFundCreateFail: 'Add failed',
 
   // Print
-  printTitle: 'Outbound Order',
-  printSaleOutTitle: 'Sale Outbound Order',
+  printTitle: 'Shipment',
+  printSaleOutTitle: 'Sales Shipment',
   printOrderLabel: 'No.: ',
   printOrderPending: 'Pending',
   printCustomerLabel: 'Customer: ',
@@ -281,9 +281,9 @@ export default {
 
   // Contract source remark
   fromContractRemark: 'From Sale Order {sn}',
-  saleOutForStock: 'Sale Outbound #{id}',
+  saleOutForStock: 'Sales Shipment #{id}',
   stockEffectFailLog: 'Sale outbound stock change failed',
 
   // Auto receipt remark
-  autoReceiptRemark: 'Outbound Order {sn} auto-generated on audit',
+  autoReceiptRemark: 'Shipment {sn} auto-generated on audit',
 }

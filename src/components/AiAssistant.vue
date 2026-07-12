@@ -375,7 +375,7 @@ import adamAvatarUrl from '@/assets/adam-avatar.png'
 import { getScopedStorageKey } from '@/utils/storageScope'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 function getResponseId(res: any) {
   return Number(res?.data?.id || res?.data?.data?.id || res?.data || 0)
@@ -876,7 +876,7 @@ function toggleChat() {
 }
 
 function getNow() {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  return new Date().toLocaleTimeString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 // ── Data query helpers ────────────────────────────────────────────────────────
@@ -1359,7 +1359,7 @@ function onMicDown(e: MouseEvent | TouchEvent) {
   window.addEventListener('touchmove', onPointerMove as any, { passive: true })
 
   recognition = new SpeechRecognitionAPI()
-  recognition.lang = 'zh-CN'
+  recognition.lang = locale.value === 'en-US' ? 'en-US' : 'zh-CN'
   recognition.continuous = true
   recognition.interimResults = false
   isRecording.value = true  // 立即设置，不等 onstart（避免授权弹窗期间卡住）

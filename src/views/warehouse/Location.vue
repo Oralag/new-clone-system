@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getLocationList"
           del-path="/stock/Location/batchDel"
-          export-file-name="库位管理" :params="searchForm">
+      :export-file-name="$t('route.WarehouseLocation')" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.name" :placeholder="$t('warehouse.location.searchLocationName')" clearable style="width: 180px" />
           <el-input v-model="searchForm.warehouse_name" :placeholder="$t('warehouse.location.searchWarehouseName')" clearable style="width: 180px" />

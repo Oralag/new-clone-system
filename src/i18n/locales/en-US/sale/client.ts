@@ -49,7 +49,7 @@ export default {
   descSaleAmount: 'Sales order amount',
   descBalance: 'Balance',
   descAddress: 'Address',
-  descRemark: 'Remarks',
+  descRemark: 'Notes',
   descCreateTime: 'Created at',
   btnClose: 'Close',
 
@@ -62,10 +62,10 @@ export default {
   formLevel: 'Level',
   formSource: 'Source',
   formAddress: 'Address',
-  formRemark: 'Remarks',
+  formRemark: 'Notes',
   ruleNameRequired: 'Please enter customer name',
   inputPlaceholder: 'Please enter',
-  selectPlaceholder: 'Please select',
+  selectPlaceholder: 'Select',
   selectLevelPlaceholder: 'Please select level',
   selectSourcePlaceholder: 'Please select source',
 
@@ -90,7 +90,7 @@ export default {
   prepayColDate: 'Date',
   prepayColAmount: 'Amount',
   prepayColAccount: 'Account',
-  prepayColRemark: 'Remarks',
+  prepayColRemark: 'Notes',
   prepayColActions: 'Actions',
   createTimeNotePrefix: 'Created at: ',
 
@@ -106,7 +106,7 @@ export default {
   prepayFormAccountPlaceholder: 'Select account',
   prepayFormCash: 'Cash',
   prepayFormDate: 'Receipt date',
-  prepayFormRemark: 'Remarks',
+  prepayFormRemark: 'Notes',
   prepayFormRemarkPlaceholder: 'e.g. Prepayment recharge',
   btnConfirmRecharge: 'Confirm recharge',
 
@@ -151,7 +151,7 @@ export default {
   exportColMobile: 'Phone',
   exportColEmail: 'Email',
   exportColAddress: 'Address',
-  exportColRemark: 'Remarks',
+  exportColRemark: 'Notes',
   exportFileName: 'Customer list',
   msgExportedPrefix: 'Exported ',
   msgExportedSuffix: ' records',

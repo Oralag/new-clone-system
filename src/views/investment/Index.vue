@@ -7,7 +7,7 @@
       <!-- 左列：色彩条 + 页码点 + 大标题 + 行动按钮 -->
       <aside class="fh-left">
         <div class="fh-colors">
-          <span class="fh-colors-label">Colors</span>
+          <span class="fh-colors-label">{{ t('investmentHome.colorsLabel') }}</span>
           <div class="fh-rail">
             <span class="rail-chevron">⌃</span>
             <router-link to="/investment/market" class="rail-dot rail-dot--gray" :title="t('investment.market')" />

@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getBatchList"
           del-path="/stock/Batch/batchDel"
-          export-file-name="批次管理" :params="searchForm">
+      :export-file-name="$t('route.WarehouseBatch')" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.goods_name" :placeholder="$t('warehouse.batch.searchGoodsName')" clearable style="width: 180px" />
           <el-input v-model="searchForm.batch_no" :placeholder="$t('warehouse.batch.searchBatchNo')" clearable style="width: 160px" />

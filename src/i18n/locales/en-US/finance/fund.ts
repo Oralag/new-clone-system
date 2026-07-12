@@ -8,7 +8,7 @@ export default {
   descAccountName: 'Account Name',
   descAccountType: 'Account Type',
   descBalance: 'Balance',
-  descRemark: 'Remark',
+  descRemark: 'Notes',
 
   // Detail filter buttons
   filterAll: 'All',
@@ -23,7 +23,7 @@ export default {
   colCounterpart: 'Counterpart',
   colSource: 'Source',
   colAmount: 'Amount',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
 
   // Type tags
   tagIncome: 'Income',
@@ -41,7 +41,7 @@ export default {
   colTypeName: 'Account Type',
   colRefundAmount: 'Purchase Return Refund',
   colBalanceAmount: 'Balance',
-  colRemarkList: 'Remark',
+  colRemarkList: 'Notes',
   colActions: 'Actions',
 
   // Action buttons
@@ -61,8 +61,8 @@ export default {
   typeCash: 'Cash',
   typeThirdParty: 'Third Party',
   formBalance: 'Balance',
-  formRemark: 'Remark',
-  formRemarkPlaceholder: 'Enter remark',
+  formRemark: 'Notes',
+  formRemarkPlaceholder: 'Enter notes',
 
   // View dialog
   viewTitleSuffix: '— Account Detail',

@@ -4,14 +4,14 @@ export default {
   exportFileName: 'Price Management',
 
   // Search
-  searchGoodsNameLabel: 'Goods Name',
+  searchGoodsNameLabel: 'Product Name',
   searchGoodsNamePlaceholder: 'Enter goods name',
   btnSearch: 'Search',
   btnReset: 'Reset',
 
   // Table columns
-  colGoodsSn: 'Goods Code',
-  colGoodsName: 'Goods Name',
+  colGoodsSn: 'Product Code',
+  colGoodsName: 'Product Name',
   colCostPrice: 'Cost Price',
   colSellPrice: 'Sell Price',
   colMinPrice: 'Min Price',

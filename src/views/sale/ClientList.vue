@@ -391,7 +391,7 @@ import { loadLevels, loadLevelMap, saveLevelMap, type LevelItem } from '@/utils/
 import { getCollectReceiptList, createCollectReceipt, updateCollectReceipt, getReceivableList, getFundList, createFund } from '@/api/finance'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_customer_cates'
@@ -794,7 +794,7 @@ function handleExport() {
   }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
-  XLSX.writeFile(wb, `${t('sale.client.exportFileName')}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  XLSX.writeFile(wb, `${t('sale.client.exportFileName')}_${new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN').replace(/\//g, '-')}.xlsx`)
   ElMessage.success(`${t('sale.client.msgExportedPrefix')}${rows.length}${t('sale.client.msgExportedSuffix')}`)
 }
 

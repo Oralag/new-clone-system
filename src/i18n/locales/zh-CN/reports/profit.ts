@@ -49,4 +49,10 @@ export default {
   customerOrders: '单据明细（共 {n} 张）',
   noOrderData: '无单据数据',
   noGoodsDetailInner: '无商品明细',
+  sourceRetail: '零售',
+  sourceExchange: '换货',
+  sourceShipment: '出库单',
+  orderProfitTitle: '{orderNo} 商品利润明细',
+  profitSummary: '销售额 ¥{sales} / 成本 ¥{cost} / 毛利 {profit}',
+  customerOrderTitle: '{customer} 单据明细（共 {count} 张）',
 }

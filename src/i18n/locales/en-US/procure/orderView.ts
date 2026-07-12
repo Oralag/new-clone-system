@@ -16,7 +16,7 @@ export default {
   labelWarehouse: 'Warehouse',
   labelPayAccount: 'Payment Account',
   labelNeedInvoice: 'Invoice Required',
-  labelRemark: 'Remark',
+  labelRemark: 'Notes',
   invoiceYes: 'Yes',
   invoiceNo: 'No',
 

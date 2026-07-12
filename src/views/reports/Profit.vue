@@ -131,7 +131,7 @@
         </el-table-column>
         <el-table-column :label="$t('reports.profit.colSource')" align="center" width="70">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ sourceLabel(row.source) }}</el-tag>
           </template>
         </el-table-column>
         <template #empty><div style="padding:40px 0;color:#aaa">{{ $t('reports.profit.noData') }}</div></template>
@@ -143,8 +143,8 @@
           <template #default="{ row }">
             <div class="order-detail">
               <div class="order-detail-head">
-                <span>{{ row.order_no }} 商品利润明细</span>
-                <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
+                <span>{{ t('reports.profit.orderProfitTitle', { orderNo: row.order_no }) }}</span>
+                <span>{{ t('reports.profit.profitSummary', { sales: fmt(row.sale_amount), cost: fmt(row.cost_amount), profit: `${row.profit >= 0 ? '+' : ''}¥${fmt(row.profit)}` }) }}</span>
               </div>
               <el-table :data="row.items" size="small" border style="width:100%">
                 <el-table-column prop="goods_name" :label="$t('reports.profit.colGoodsName')" min-width="160" show-overflow-tooltip />
@@ -194,7 +194,7 @@
         </el-table-column>
         <el-table-column :label="$t('reports.profit.colOrderType')" align="center" width="80">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ row.source }}</el-tag>
+            <el-tag size="small" :type="row.source === '零售' ? 'success' : row.source === '换货' ? 'danger' : row.source === '出库单' ? 'warning' : 'primary'">{{ sourceLabel(row.source) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="order_no" :label="$t('reports.profit.colOrderNo')" min-width="150" show-overflow-tooltip />
@@ -247,8 +247,8 @@
           <template #default="{ row }">
             <div class="order-detail">
               <div class="order-detail-head">
-                <span>{{ row.customer_name }} 单据明细（共 {{ row.orders.length }} 张）</span>
-                <span>销售额 ¥{{ fmt(row.sale_amount) }} / 成本 ¥{{ fmt(row.cost_amount) }} / 毛利 {{ row.profit >= 0 ? '+' : '' }}¥{{ fmt(row.profit) }}</span>
+                <span>{{ t('reports.profit.customerOrderTitle', { customer: row.customer_name, count: row.orders.length }) }}</span>
+                <span>{{ t('reports.profit.profitSummary', { sales: fmt(row.sale_amount), cost: fmt(row.cost_amount), profit: `${row.profit >= 0 ? '+' : ''}¥${fmt(row.profit)}` }) }}</span>
               </div>
               <el-table :data="row.orders" size="small" border style="width:100%">
                 <el-table-column type="expand" width="32">
@@ -295,7 +295,7 @@
                 </el-table-column>
                 <el-table-column :label="$t('reports.profit.colOrderType')" align="center" width="80">
                   <template #default="{ row: o }">
-                    <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '换货' ? 'danger' : o.source === '出库单' ? 'warning' : 'primary'">{{ o.source }}</el-tag>
+                    <el-tag size="small" :type="o.source === '零售' ? 'success' : o.source === '换货' ? 'danger' : o.source === '出库单' ? 'warning' : 'primary'">{{ sourceLabel(o.source) }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column prop="order_no" :label="$t('reports.profit.colOrderNo')" min-width="150" show-overflow-tooltip />
@@ -385,7 +385,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+function sourceLabel(source: string): string {
+  if (source === '零售') return t('reports.profit.sourceRetail')
+  if (source === '换货') return t('reports.profit.sourceExchange')
+  if (source === '出库单') return t('reports.profit.sourceShipment')
+  return source || '-'
+}
 import { InfoFilled, Loading } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { getContractList, getSaleExchangeList } from '@/api/sale'
@@ -581,12 +588,12 @@ const netRate = computed(() => totalSale.value > 0 ? (netProfit.value / totalSal
 
 function fmt(v: number | string): string {
   const n = Number(v)
-  return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return isNaN(n) ? '0.00' : n.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function fmtQty(v: number | string): string {
   const n = Number(v)
-  return isNaN(n) ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
+  return isNaN(n) ? '0' : n.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { maximumFractionDigits: 3 })
 }
 
 async function loadData() {

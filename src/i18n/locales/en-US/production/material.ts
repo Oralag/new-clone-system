@@ -27,10 +27,10 @@ export default {
   actionEdit: 'Edit',
   actionAudit: 'Approve',
   actionReject: 'Reject',
-  actionUnaudit: 'Unapprove',
+  actionUnaudit: 'Revoke Approval',
   actionReturn: 'Return',
   actionDelete: 'Delete',
-  actionDeleteDisabledTip: 'Please unapprove before deleting',
+  actionDeleteDisabledTip: 'Please revoke approval before deleting',
 
   // Form page – top bar
   formTitleView: 'View Requisition',
@@ -62,13 +62,13 @@ export default {
   colPickQty: 'Requisition Qty',
   colOutPrice: 'Issue Unit Price',
   colSubtotal: 'Subtotal',
-  colRemark: 'Remark',
-  colRemarkPlaceholder: 'Remark',
+  colRemark: 'Notes',
+  colRemarkPlaceholder: 'Notes',
   btnBatch: 'Batch',
 
   // Footer
   footerTotal: 'Total: Qty {qty}  Amount {price}',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Batch set dialog
   batchSetTitle: 'Batch Set: {label}',
@@ -91,7 +91,7 @@ export default {
   returnColReason: 'Return Reason',
   returnColReasonPlaceholder: 'Reason',
   returnTotalPrice: 'Return Total: ',
-  returnFieldRemark: 'Remark',
+  returnFieldRemark: 'Notes',
   returnBtnCancel: 'Cancel',
   returnBtnSave: 'Save',
 
@@ -105,7 +105,7 @@ export default {
   msgAlreadyAudited: 'This requisition is already approved',
   msgNotAudited: 'This requisition has not been approved yet',
   msgAuditSuccess: 'Approved. {count} inventory item(s) deducted',
-  msgUnauditSuccess: 'Unapproved. {count} inventory item(s) restored',
+  msgUnauditSuccess: 'Approval Revoked. {count} inventory item(s) restored',
   msgActionSuccess: 'Success',
   msgActionFailed: 'Operation failed',
   msgDeleteConfirm: 'Confirm delete?',
@@ -133,5 +133,5 @@ export default {
   // Audit labels (used in doAudit labels record)
   auditLabelApprove: 'Approve',
   auditLabelReject: 'Reject',
-  auditLabelUnapprove: 'Unapprove',
+  auditLabelUnapprove: 'Revoke Approval',
 }

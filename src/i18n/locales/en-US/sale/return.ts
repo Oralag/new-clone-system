@@ -35,18 +35,18 @@ export default {
   colQty: 'Qty',
   colTaxPrice: 'Unit Price (incl. tax)',
   colTaxTotal: 'Total (incl. tax)',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
 
   // Inline actions
   btnView: 'View',
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  warnUnauditBeforeDelete: 'Please unapprove first before deleting this return order',
+  warnUnauditBeforeDelete: 'Please revoke approval before deleting this return order',
 
   // Form page header
   btnBack: 'Back',
@@ -88,7 +88,7 @@ export default {
   labelNeedInvoice: 'Invoice Required',
   switchYes: 'Yes',
   switchNo: 'No',
-  labelRemark: 'Remark',
+  labelRemark: 'Notes',
   placeholderRemark: 'Please enter a remark',
   labelAttachment: 'Attachment',
   btnUploadAttachment: 'Upload',
@@ -113,7 +113,7 @@ export default {
   colTaxPriceShort: 'Unit Price (incl.)',
   colTaxTotalShort: 'Total (incl.)',
   btnBatch: 'Batch',
-  placeholderRemarkShort: 'Remark',
+  placeholderRemarkShort: 'Notes',
   tooltipNoLevelPrice: 'No agent price for this product. Click to save current price as the fixed agent price.',
   btnRecordLevelPrice: 'Save Agent Price',
 
@@ -175,7 +175,7 @@ export default {
   confirmAuditAction: '{action} this return order?',
   actionApprove: 'Approve',
   actionReject: 'Reject',
-  actionUnaudit: 'Unapprove',
+  actionUnaudit: 'Revoke Approval',
   msgActionSuccess: '{action} succeeded',
   msgActionFailed: 'Operation failed',
 

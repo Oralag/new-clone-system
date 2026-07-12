@@ -1,7 +1,7 @@
 // Translations for src/views/finance/PayReceiptNew.vue
 export default {
   // ── Page header ──
-  pageTitle: 'New Payment Receipt',
+  pageTitle: 'New Payment',
   btnBack: 'Back',
   btnSave: 'Save (Ctrl+S)',
 
@@ -30,8 +30,8 @@ export default {
   labelVerifyType: 'Verification Mode',
   radioManual: 'Manual',
   radioAuto: 'Auto',
-  labelRemark: 'Remark',
-  placeholderRemark: 'Remark',
+  labelRemark: 'Notes',
+  placeholderRemark: 'Notes',
   labelAttachment: 'Attachment',
   btnSelectFile: 'Select File',
 
@@ -56,7 +56,7 @@ export default {
   msgSelectFundAccount: 'Please select a payment account for each line',
   msgSaveMultiSuccess: 'Recorded against {count} purchase orders, {total} payments total',
   msgSaveSuccess: 'Payment receipt saved successfully',
-  msgSaveSplitSuccess: 'Split into {count} payment receipts by account',
+  msgSaveSplitSuccess: 'Split into {count} payments by account',
   msgSaveFailed: 'Save failed',
   msgSupplierNameRequired: 'Please enter a name',
   msgSupplierAddSuccess: 'Added successfully',

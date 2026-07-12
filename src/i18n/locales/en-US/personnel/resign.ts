@@ -14,7 +14,7 @@ export default {
   colStaff: 'Employee Name',
   colResignType: 'Resignation Type',
   colResignDate: 'Resignation Date',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colStatus: 'Status',
   colActions: 'Actions',
 
@@ -28,7 +28,7 @@ export default {
   ruleStaffRequired: 'Please enter employee name',
   fieldResignType: 'Resignation Type',
   fieldResignDate: 'Resignation Date',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgOpSuccess: 'Operation succeeded',

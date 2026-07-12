@@ -32,7 +32,7 @@ export default {
   unit: 'Unit',
   qty: 'Qty',
   costUnitPrice: 'Unit Cost',
-  remark: 'Remark',
+  remark: 'Notes',
 
   // Main table columns
   sampleNo: 'Sample No.',
@@ -55,7 +55,7 @@ export default {
   edit: 'Edit',
   approve: 'Approve',
   reject: 'Reject',
-  unapprove: 'Unapprove',
+  unapprove: 'Revoke Approval',
   reconciled: 'Reconciled',
   reconcile: 'Reconcile',
   delete: 'Delete',
@@ -110,7 +110,7 @@ export default {
   expenseFund: 'Payment Account',
   courier: 'Courier',
   trackingNoLabel: 'Tracking No.',
-  remarkLabel: 'Remark',
+  remarkLabel: 'Notes',
 
   // Freight short labels (table)
   freightCompany: 'Company',

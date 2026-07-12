@@ -19,7 +19,7 @@ export default {
   reconciled: 'Reconciled',
   reconcile: 'Reconcile',
   delete: 'Delete',
-  deleteAuditedTip: 'Please unapprove before deleting',
+  deleteAuditedTip: 'Please revoke approval before deleting',
   formTitleAdd: 'Add Invoice',
   formTitleEdit: 'Edit Invoice',
   amountLabel: 'Amount',

@@ -1,4 +1,4 @@
-// Translations for src/views/warehouse/OtherOut.vue (Other Outbound)
+// Translations for src/views/warehouse/OtherOut.vue (Other Stock-Out)
 export default {
   // Search
   searchOutNo: 'Outbound Order No.',
@@ -9,7 +9,7 @@ export default {
   btnReset: 'Reset',
 
   // Toolbar
-  btnAdd: 'New Other Outbound',
+  btnAdd: 'New Other Stock-Out',
 
   // List table columns
   colOutNo: 'Outbound No.',
@@ -31,16 +31,16 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form page
-  formTitleView: 'View Other Outbound',
-  formTitleEdit: 'Edit Other Outbound',
-  formTitleAdd: 'New Other Outbound',
+  formTitleView: 'View Other Stock-Out',
+  formTitleEdit: 'Edit Other Stock-Out',
+  formTitleAdd: 'New Other Stock-Out',
   btnBack: 'Back',
   btnSave: 'Save (Ctrl+S)',
 
@@ -50,7 +50,7 @@ export default {
   fieldOutDate: 'Outbound Date',
   fieldWarehouse: 'Warehouse',
   fieldReason: 'Reason',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderOutNo: 'Auto-generated if left blank',
   placeholderOutMan: 'Issued by',
   placeholderWarehouse: 'Select warehouse',
@@ -76,12 +76,12 @@ export default {
   colOutTotal: 'Line Total',
   colBatchNo: 'Batch No.',
   colWarehouse: 'Warehouse',
-  colItemRemark: 'Remark',
+  colItemRemark: 'Notes',
   placeholderGoodsName: 'Product name',
   placeholderGoodsSn: 'Code',
   placeholderSpec: 'Spec',
   placeholderBatchNo: 'Batch No.',
-  placeholderItemRemark: 'Remark',
+  placeholderItemRemark: 'Notes',
   emptyTableText: 'Click "Select Products" to add items',
 
   // Footer summary
@@ -97,7 +97,7 @@ export default {
   // Audit confirm
   auditLabel: 'Approve',
   rejectLabel: 'Reject',
-  unauditLabel: 'Unapprove',
+  unauditLabel: 'Revoke Approval',
   msgAuditConfirm: 'Confirm {action} this outbound order?',
   msgConfirmTitle: 'Notice',
   msgSuccess: 'Operation succeeded',

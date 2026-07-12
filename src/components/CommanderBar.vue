@@ -578,7 +578,7 @@ let recognition: any = null
 function startVoice() {
   if (isRecording.value || !SpeechRecognitionAPI) return
   recognition = new SpeechRecognitionAPI()
-  recognition.lang = 'zh-CN'
+  recognition.lang = locale.value === 'en-US' ? 'en-US' : 'zh-CN'
   recognition.continuous = false
   recognition.interimResults = false
   recognition.onstart = () => { isRecording.value = true }

@@ -19,7 +19,7 @@ export default {
   fundAccount: 'Fund Account',
   date: 'Date',
   handler: 'Handler',
-  remark: 'Remark',
+  remark: 'Notes',
   operation: 'Action',
 
   // Row actions
@@ -45,7 +45,7 @@ export default {
   formFundAccount: 'Fund Account',
   formFundAccountPlaceholder: 'Select account',
   formDate: 'Date',
-  formRemark: 'Remark',
+  formRemark: 'Notes',
 
   // Validation messages
   ruleType: 'Please select a type',

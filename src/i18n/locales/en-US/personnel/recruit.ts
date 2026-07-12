@@ -29,7 +29,7 @@ export default {
   fieldDept: 'Department',
   ruleDeptRequired: 'Please enter department',
   fieldNum: 'Headcount',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgOpSuccess: 'Operation succeeded',

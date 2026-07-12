@@ -26,8 +26,8 @@ export default {
   formNameLabel: 'Spec Name',
   formNamePlaceholder: 'Enter spec name',
   formNameRequired: 'Spec name is required',
-  formRemarkLabel: 'Remark',
-  formRemarkPlaceholder: 'Enter remark',
+  formRemarkLabel: 'Notes',
+  formRemarkPlaceholder: 'Enter notes',
 
   // Messages
   msgSuccess: 'Operation successful',

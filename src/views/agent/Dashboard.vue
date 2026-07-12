@@ -77,7 +77,7 @@
     <section class="wb-row">
       <div class="workflow-banner" @click="$router.push(ap('/agent/studio'))">
         <div class="wb-left">
-          <div class="wb-badge" style="background:#10b981">HOT</div>
+          <div class="wb-badge" style="background:#10b981">{{ t('agentDashboard.hotBadge') }}</div>
           <div class="wb-text">
             <div class="wb-title">🖼️ {{ t('agentDashboard.workbenchContentTitle') }}</div>
             <div class="wb-desc">{{ t('agentDashboard.workbenchContentDesc') }}</div>
@@ -89,7 +89,7 @@
       </div>
       <div class="workflow-banner" @click="$router.push(ap('/agent/workflow'))">
         <div class="wb-left">
-          <div class="wb-badge">NEW</div>
+          <div class="wb-badge">{{ t('agentDashboard.newBadge') }}</div>
           <div class="wb-text">
             <div class="wb-title">{{ t('agentDashboard.workbenchPublishTitle') }}</div>
             <div class="wb-desc">{{ t('agentDashboard.workbenchPublishDesc') }}</div>

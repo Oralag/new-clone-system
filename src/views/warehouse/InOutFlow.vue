@@ -2,7 +2,7 @@
   <div class="page-container">
     <el-card>
       <ScTable ref="tableRef" :api-obj="getFlowList"
-          export-file-name="出入库流水" :params="searchForm">
+      :export-file-name="$t('route.WarehouseFlow')" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.goods_name" :placeholder="$t('warehouse.inOutFlow.searchGoodsName')" clearable style="width: 180px" />
           <el-select v-model="searchForm.type" :placeholder="$t('warehouse.inOutFlow.searchType')" clearable style="width: 140px">

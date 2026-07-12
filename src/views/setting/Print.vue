@@ -35,7 +35,7 @@
       <el-divider>{{ $t('setting.print.dividerCustom') }}</el-divider>
 
       <ScTable ref="tableRef" :api-obj="getPrintList" del-path="/setting/print/batchDel"
-          export-file-name="打印模板" :params="searchForm">
+      :export-file-name="$t('route.SettingPrint')" :params="searchForm">
         <template #search>
           <el-input v-model="searchForm.name" :placeholder="$t('setting.print.searchPlaceholder')" clearable style="width:180px" />
           <el-button type="primary" @click="tableRef?.loadData()">{{ $t('setting.print.btnSearch') }}</el-button>

@@ -387,7 +387,7 @@
         <div class="kdp-guide">
           <div class="guide-title">🧩 Gumroad 上架步骤</div>
           <ol class="guide-steps">
-            <li>访问 <a href="https://gumroad.com" target="_blank">gumroad.com</a> 登录 → New product → Digital product</li>
+            <li>访问 <a href="https://gumroad.com" target="_blank">gumroad.com</a> 登录 → 新建商品 → 数字商品</li>
             <li>Notion 类：先照"模板内容(.md)"在自己 Notion 里搭好 → Share → 复制模板链接，作为交付内容</li>
             <li>表格/清单/提示词包：直接把 .md 整理成 PDF 或表格文件上传</li>
             <li>粘贴标题、一句话卖点、销售文案（按钮一键复制）</li>

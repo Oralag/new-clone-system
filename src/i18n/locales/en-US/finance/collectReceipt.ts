@@ -1,4 +1,4 @@
-// Translations for src/views/finance/CollectReceipt.vue (Collection Receipt)
+// Translations for src/views/finance/CollectReceipt.vue (Receipt)
 export default {
   // Search bar
   searchReceiptNo: 'Receipt No.',
@@ -33,26 +33,26 @@ export default {
   colNet: 'Net',
   colAccount: 'Account',
   colDate: 'Date',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // Action buttons
   btnOriginalOrder: 'Source',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
   labelPrepay: 'Prepay',
 
   // Create drawer
-  drawerTitle: 'New Collection Receipt',
+  drawerTitle: 'New Receipt',
   formContactType: 'Recipient Type',
   ruleContactTypeRequired: 'Please select a type',
   formContact: 'Recipient',
   ruleContactRequired: 'Please select a recipient',
   formContactOther: 'Recipient',
   ruleContactNameRequired: 'Please enter a name',
-  formContactPlaceholder: 'Please select',
+  formContactPlaceholder: 'Select',
   formContactOtherPlaceholder: 'Enter recipient name',
   formAmount: 'Amount',
   ruleAmountRequired: 'Please enter an amount',
@@ -61,8 +61,8 @@ export default {
   formDate: 'Date',
   formOrderNo: 'Linked Order',
   formOrderNoPlaceholder: 'Order / contract number (optional)',
-  formRemark: 'Remark',
-  formRemarkPlaceholder: 'Remark',
+  formRemark: 'Notes',
+  formRemarkPlaceholder: 'Notes',
   btnCancel: 'Cancel',
   btnSave: 'Save',
 
@@ -86,11 +86,11 @@ export default {
   msgSaveSuccess: 'Saved successfully',
   msgSaveFailed: 'Save failed',
   confirmDeleteTitle: 'Notice',
-  confirmDeleteMsg: 'Delete this collection receipt? The corresponding fund account balance will be reversed.',
+  confirmDeleteMsg: 'Delete this receipt? The corresponding fund account balance will be reversed.',
   msgDeleteSuccess: 'Deleted successfully',
   confirmUnauditTitle: 'Notice',
-  confirmUnauditMsg: 'Unapprove this collection receipt? It can be deleted after unapproval.',
-  msgUnauditSuccess: 'Unapproved successfully',
+  confirmUnauditMsg: 'Revoke approval for this receipt? It can be deleted after its approval is revoked.',
+  msgUnauditSuccess: 'Approval revoked successfully',
   msgQuickAddNameRequired: 'Please enter a name',
   msgQuickAddSuccess: 'Added successfully',
   msgQuickAddFailed: 'Add failed',

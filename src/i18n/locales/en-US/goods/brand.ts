@@ -14,7 +14,7 @@ export default {
 
   // Table columns
   colName: 'Brand Name',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
   btnView: 'View',
   btnEdit: 'Edit',
@@ -26,8 +26,8 @@ export default {
   formNameLabel: 'Brand Name',
   formNamePlaceholder: 'Enter brand name',
   formNameRequired: 'Brand name is required',
-  formRemarkLabel: 'Remark',
-  formRemarkPlaceholder: 'Enter remark',
+  formRemarkLabel: 'Notes',
+  formRemarkPlaceholder: 'Enter notes',
 
   // Messages
   msgSuccess: 'Operation successful',

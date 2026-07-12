@@ -216,7 +216,7 @@
         </div>
         <div class="flow-grid">
           <div class="flow-card main-flow">
-            <span class="flow-label">TODAY_NET</span>
+            <span class="flow-label">{{ t('investmentMarket.todayNet') }}</span>
             <span class="flow-val" :class="{ positive: northboundNet > 0, negative: northboundNet < 0 }">
               {{ northboundNet > 0 ? '+' : '' }}{{ northboundNet.toFixed(2) }}
               <span class="flow-unit">{{ t('investmentMarket.yiUnit') }}</span>

@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getDeptList"
           del-path="/setting/dept/batchDel"
-          export-file-name="部门管理" :params="searchForm">
+      :export-file-name="$t('route.SettingDept')" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item :label="$t('setting.dept.searchName')">

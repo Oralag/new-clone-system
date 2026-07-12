@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getParamsList"
           del-path="/setting/params/batchDel"
-          export-file-name="系统参数" :params="searchForm">
+      :export-file-name="$t('route.SettingParams')" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item :label="$t('setting.params.searchName')">

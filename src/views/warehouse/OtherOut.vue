@@ -7,7 +7,7 @@
         <ScTable ref="tableRef"
           :row-class-name="({ row }: any) => row._reconciled ? 'row-reconciled' : ''" :api-obj="reconcileFilteredApi"
           del-path="/stock/OtherOut/batchDel"
-          export-file-name="其他出库" :params="searchForm">
+      :export-file-name="$t('route.WarehouseOtherOut')" :params="searchForm">
           <template #search>
             <el-input v-model="searchForm.out_no" :placeholder="$t('warehouse.otherOut.searchOutNo')" clearable style="width:160px" />
             <el-input v-model="searchForm.goods_name" :placeholder="$t('warehouse.otherOut.searchGoodsName')" clearable style="width:160px" />

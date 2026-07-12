@@ -3,7 +3,7 @@
     <el-card>
       <ScTable ref="tableRef" :api-obj="getRoleList"
           del-path="/setting/role/batchDel"
-          export-file-name="角色管理" :params="searchForm">
+      :export-file-name="$t('route.SettingRole')" :params="searchForm">
         <template #search>
           <el-form inline>
             <el-form-item :label="$t('setting.role.searchName')">

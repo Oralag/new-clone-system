@@ -1,6 +1,7 @@
 import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAdamStore } from '@/stores/adam'
+import { getStoredLocale } from '@/i18n'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -34,7 +35,7 @@ function getHistoryKey(): string {
 }
 
 function getNow() {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  return new Date().toLocaleTimeString(getStoredLocale() === 'en-US' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 function isToolResultError(result: unknown): boolean {

@@ -2,7 +2,7 @@
 export default {
   back: 'Back',
   pageTitle: 'View Sales Order',
-  statusAudited: 'Audited',
+  statusAudited: 'Approved',
   statusPending: 'Pending Audit',
   contractNotFound: 'Order not found',
   emptyDash: '—',
@@ -18,7 +18,7 @@ export default {
   needInvoice: 'Invoice Required',
   yes: 'Yes',
   no: 'No',
-  remark: 'Remark',
+  remark: 'Notes',
 
   // Goods detail
   goodsDetail: 'Product Details',
@@ -31,7 +31,7 @@ export default {
   colPrice: 'Unit Price',
   colSubtotal: 'Subtotal',
   colReturnPrice: 'Return Price',
-  colGiftRemark: 'Remark',
+  colGiftRemark: 'Notes',
   exchangeTag: 'Ex',
 
   // Extra fees

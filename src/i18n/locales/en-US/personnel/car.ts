@@ -17,7 +17,7 @@ export default {
   colDestination: 'Destination',
   colStartDate: 'Start Date',
   colEndDate: 'End Date',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colStatus: 'Status',
   colActions: 'Actions',
 
@@ -33,7 +33,7 @@ export default {
   fieldDestination: 'Destination',
   fieldStartDate: 'Start Date',
   fieldEndDate: 'End Date',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgOpSuccess: 'Operation succeeded',

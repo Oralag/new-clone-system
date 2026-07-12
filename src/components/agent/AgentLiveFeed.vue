@@ -3,7 +3,7 @@
     <div class="lf-hd">
       <span class="lf-dot"></span>
       <span class="lf-title">{{ t('agentLiveFeed.title') }}</span>
-      <span class="lf-live-badge" v-if="storeItems.length > 0">LIVE</span>
+      <span class="lf-live-badge" v-if="storeItems.length > 0">{{ t('agentLiveFeed.liveBadge') }}</span>
     </div>
     <div class="lf-list" ref="listEl">
       <TransitionGroup name="feed">

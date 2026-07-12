@@ -2,7 +2,7 @@
 export default {
   // Search
   searchQualityNoPlaceholder: 'Inspection No.',
-  searchGoodsNamePlaceholder: 'Goods Name',
+  searchGoodsNamePlaceholder: 'Product Name',
   searchReconcileFilterPlaceholder: 'Reconcile Status',
   optionUnreconciled: 'Unreconciled',
   btnSearch: 'Search',
@@ -30,11 +30,11 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleDeleteDisabled: 'Please unapprove before deleting',
+  titleDeleteDisabled: 'Please revoke approval before deleting',
 
   // Form page titles
   formTitleView: 'View Inspection',
@@ -59,8 +59,8 @@ export default {
   // Goods table
   btnSelectGoods: 'Select Goods',
   btnAddRow: 'Add Row Manually',
-  colGoodsName: 'Goods Name',
-  colGoodsSn: 'Goods Code',
+  colGoodsName: 'Product Name',
+  colGoodsSn: 'Product Code',
   colSpec: 'Spec',
   colUnit: 'Unit',
   colInspectQty: 'Inspected Qty',
@@ -72,7 +72,7 @@ export default {
   emptyText: 'Please add goods for inspection',
 
   // Footer remark
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgSelectSupplier: 'Please select a supplier',

@@ -46,7 +46,7 @@
       <!-- 结算栏 -->
       <div class="bc-checkout">
         <div>
-          <p class="bc-total-label">Order Total</p>
+          <p class="bc-total-label">订单合计</p>
           <p class="bc-total-num">¥{{ shopStore.totalAmount }}</p>
         </div>
         <button class="bc-pay-btn" @click="$router.push('/brand/checkout')">立即结算</button>

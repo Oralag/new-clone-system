@@ -122,7 +122,7 @@ interface FlowRow {
   link: string
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const keyword = ref('')
@@ -134,7 +134,7 @@ const pageSize = ref(20)
 
 function fmt(v: number | string) {
   const n = Number(v || 0)
-  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function getRows(res: any): any[] {

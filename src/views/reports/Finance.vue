@@ -127,7 +127,7 @@
         <el-table v-else-if="viewMode === 'order'" :data="orderRows" style="width:100%" :default-sort="{ prop: 'profit', order: 'descending' }">
           <el-table-column :label="$t('reports.finance.colType')" align="center" width="80">
             <template #default="{ row }">
-              <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
+              <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ sourceLabel(row.source) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="order_no" :label="$t('reports.finance.colOrderNo')" min-width="150" show-overflow-tooltip />
@@ -197,7 +197,7 @@
           </el-table-column>
           <el-table-column :label="$t('reports.finance.colSource')" align="center" width="70">
             <template #default="{ row }">
-              <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ row.source }}</el-tag>
+              <el-tag size="small" :type="row.source === '零售' ? 'success' : 'primary'">{{ sourceLabel(row.source) }}</el-tag>
             </template>
           </el-table-column>
           <template #empty><div style="padding:40px 0;color:#aaa">{{ $t('reports.finance.noData') }}</div></template>
@@ -251,7 +251,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+function sourceLabel(source: string): string {
+  if (source === '零售') return t('reports.finance.sourceRetail')
+  if (source === '销售单' || source === '出库单') return t('reports.finance.sourceSales')
+  return source || '-'
+}
 import { fmtDt } from '@/utils/date'
 import { getContractList } from '@/api/sale'
 import { getRetailOrderList } from '@/api/retail'
@@ -390,7 +396,7 @@ function getSummary() {
 }
 
 function fmt(v: number): string {
-  return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return isNaN(v) ? '0.00' : v.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 async function loadData() {

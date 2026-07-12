@@ -1,4 +1,4 @@
-// Translations for src/views/warehouse/OtherIn.vue (Other Inbound)
+// Translations for src/views/warehouse/OtherIn.vue (Other Stock-In)
 export default {
   // Search
   searchInNo: 'Inbound Order No.',
@@ -9,7 +9,7 @@ export default {
   btnReset: 'Reset',
 
   // Toolbar
-  btnAdd: 'New Other Inbound',
+  btnAdd: 'New Other Stock-In',
 
   // List table columns
   colInNo: 'Inbound No.',
@@ -17,7 +17,7 @@ export default {
   colInDate: 'Inbound Date',
   colWarehouseName: 'Warehouse',
   colTotalPrice: 'Total Value',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colStatus: 'Status',
   colActions: 'Actions',
 
@@ -31,16 +31,16 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form page
-  formTitleView: 'View Other Inbound',
-  formTitleEdit: 'Edit Other Inbound',
-  formTitleAdd: 'New Other Inbound',
+  formTitleView: 'View Other Stock-In',
+  formTitleEdit: 'Edit Other Stock-In',
+  formTitleAdd: 'New Other Stock-In',
   btnBack: 'Back',
   btnSave: 'Save (Ctrl+S)',
 
@@ -49,7 +49,7 @@ export default {
   fieldInMan: 'Received By',
   fieldInDate: 'Inbound Date',
   fieldWarehouse: 'Warehouse',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderInNo: 'Auto-generated if left blank',
   placeholderInMan: 'Received by',
   placeholderWarehouse: 'Select warehouse',
@@ -73,12 +73,12 @@ export default {
   colInTotal: 'Line Total',
   colBatchNo: 'Batch No.',
   colWarehouse: 'Warehouse',
-  colItemRemark: 'Remark',
+  colItemRemark: 'Notes',
   placeholderGoodsName: 'Product name',
   placeholderGoodsSn: 'Code',
   placeholderSpec: 'Spec',
   placeholderBatchNo: 'Batch No.',
-  placeholderItemRemark: 'Remark',
+  placeholderItemRemark: 'Notes',
   emptyTableText: 'Click "Select Products" to add items',
 
   // Footer summary
@@ -94,7 +94,7 @@ export default {
   // Audit confirm
   auditLabel: 'Approve',
   rejectLabel: 'Reject',
-  unauditLabel: 'Unapprove',
+  unauditLabel: 'Revoke Approval',
   msgAuditConfirm: 'Confirm {action} this inbound order?',
   msgConfirmTitle: 'Notice',
   msgSuccess: 'Operation succeeded',

@@ -4,6 +4,6 @@ export default {
   type: 'Type',
   points: 'Points',
   balance: 'Balance',
-  remark: 'Remark',
+  remark: 'Notes',
   exportFileName: 'Points Records',
 }

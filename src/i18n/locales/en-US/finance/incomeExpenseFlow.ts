@@ -1,7 +1,7 @@
 export default {
   // Page header
   pageTitle: 'Income & Expense Flow',
-  pageSub: 'Only sales order income and purchase order expenditure are counted. Collection receipts, payment receipts, expenses, retail, or other transactions are excluded.',
+  pageSub: 'Only sales order income and purchase order expenditure are counted. Collection receipts, payments, expenses, retail, or other transactions are excluded.',
   refresh: 'Refresh',
 
   // Summary cards
@@ -30,7 +30,7 @@ export default {
   orderNo: 'Order No.',
   amount: 'Amount',
   status: 'Status',
-  remark: 'Remark',
+  remark: 'Notes',
   operation: 'Action',
   view: 'View',
 

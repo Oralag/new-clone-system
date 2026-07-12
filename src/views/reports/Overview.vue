@@ -177,7 +177,7 @@
           <div class="ro-section-label" style="margin-top:12px">{{ $t('reports.overview.retailSection', { n: retailOrders.length }) }}</div>
           <div v-if="retailOrders.length === 0 && !loading" class="ro-empty-sm">{{ $t('reports.overview.noRetailOrder') }}</div>
           <div v-for="row in retailOrders.slice(0, 6)" :key="row.id" class="ro-detail-row">
-            <span class="ro-dr-name">{{ row.member_name || row.customer_name || '散客' }}</span>
+            <span class="ro-dr-name">{{ row.member_name || row.customer_name || t('reports.overview.walkInCustomer') }}</span>
             <span class="ro-dr-date">{{ fmtDt(row.order_date || row.created_at) }}</span>
             <span class="ro-dr-amt green">+¥{{ fmt(row.pay_amount || row.total_amount || 0) }}</span>
           </div>
@@ -376,7 +376,7 @@
         <div v-if="retailCustomerRows.length === 0 && !loading" class="ro-empty">{{ $t('reports.overview.noRetailData') }}</div>
         <div v-else class="ro-sale-list">
           <div v-for="row in retailCustomerRows.slice(0, 8)" :key="row.customer_name" class="ro-sale-row">
-            <span class="ro-sale-name">{{ row.customer_name || '散客' }}</span>
+            <span class="ro-sale-name">{{ row.customer_name || t('reports.overview.walkInCustomer') }}</span>
             <div class="ro-sale-bar-wrap">
               <div class="ro-sale-bar" style="background:linear-gradient(to right,#16a34a,#4ade80)"
                    :style="{ width: getBarWidth(retailCustomerRows, row.amount, 'amount') }" />
@@ -428,7 +428,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
+const { t, locale } = useI18n()
 import { Refresh, Money, ShoppingCart, TrendCharts, Shop } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -627,7 +627,7 @@ const goodsProfitRows = computed(() => {
 function fmt(v: number | string): string {
   const n = Number(v)
   if (isNaN(n)) return '0.00'
-  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const reportChartW = 480

@@ -42,5 +42,7 @@ export default {
   colOrderCount: 'Orders',
   colSource: 'Source',
   noData: 'No data',
+  sourceRetail: 'Retail',
+  sourceSales: 'Sales Order',
   note: 'Revenue: sales orders + retail orders. Cost priority: moving average, fallback to purchase price. Net Profit = Gross − Expenses − Our Freight − Document Expenses (purchase + sales)',
 }

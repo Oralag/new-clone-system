@@ -5,7 +5,7 @@
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-left">
-          <p class="eyebrow">Wholesale Partnership</p>
+          <p class="eyebrow">批发合作</p>
           <h1 class="hero-title">合作伙伴<br>价格手册</h1>
           <p class="hero-sub">{{ brandName }}</p>
         </div>

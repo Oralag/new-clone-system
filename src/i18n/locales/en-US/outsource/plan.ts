@@ -2,7 +2,7 @@
 export default {
   // Search
   searchPlanNoPlaceholder: 'Plan No.',
-  searchGoodsNamePlaceholder: 'Goods Name',
+  searchGoodsNamePlaceholder: 'Product Name',
   searchReconcileFilterPlaceholder: 'Reconcile Status',
   optionUnreconciled: 'Unreconciled',
   btnSearch: 'Search',
@@ -30,11 +30,11 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleDeleteDisabled: 'Please unapprove before deleting',
+  titleDeleteDisabled: 'Please revoke approval before deleting',
 
   // Form page titles
   formTitleView: 'View Outsource Plan',
@@ -59,8 +59,8 @@ export default {
   btnSelectGoods: 'Select Goods',
   btnAddRow: 'Add Row Manually',
   totalAmountLabel: 'Total Amount: ',
-  colGoodsName: 'Goods Name',
-  colGoodsSn: 'Goods Code',
+  colGoodsName: 'Product Name',
+  colGoodsSn: 'Product Code',
   colSpec: 'Spec',
   colUnit: 'Unit',
   colPlanQty: 'Plan Qty',
@@ -68,8 +68,8 @@ export default {
   colUnitPrice: 'Unit Price',
   colUnitPriceBatch: 'Batch',
   colSubtotal: 'Subtotal',
-  colRemark: 'Remark',
-  remarkPlaceholder: 'Remark',
+  colRemark: 'Notes',
+  remarkPlaceholder: 'Notes',
   emptyText: 'Please add outsource goods',
 
   // Footer summary
@@ -77,7 +77,7 @@ export default {
   footerTotalAmount: 'Amount',
 
   // Footer remark
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Batch dialog
   batchDialogTitle: 'Batch Set: {label}',

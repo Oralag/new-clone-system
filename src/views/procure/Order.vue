@@ -1132,7 +1132,7 @@ import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── 税率选项 ──────────────────────────────────────────────────────────────────
 const taxRates = TAX_RATES
@@ -3749,7 +3749,7 @@ async function generatePurchaseOrderPdf(rows: any[]) {
       return s + Math.max(0, amt - Number(r.pay_amount || 0))
     }, 0)
     const supplierName = rows[0]?.supplier_name || ''
-    const dateStr = new Date().toLocaleDateString('zh-CN')
+    const dateStr = new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN')
 
     const _useLogo = showLogoForCurrentUser()
     const coverBlock = `

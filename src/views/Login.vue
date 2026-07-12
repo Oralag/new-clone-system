@@ -26,7 +26,7 @@
         <div class="mobile-tagline-inner">
           <div class="next-gen-badge" style="margin-bottom:12px">
             <span class="badge-star">✦</span>
-            <span>NEXT-GEN PLATFORM</span>
+            <span>{{ t('login.nextGenPlatform') }}</span>
           </div>
           <h2 class="hero-title" style="font-size:32px;margin-bottom:8px">
             <span class="line-white">{{ t('login.heroLine1') }}</span>
@@ -136,7 +136,7 @@
       <div class="left-footer">
         <div class="status-row">
           <span class="status-dot" :class="serverStatus"></span>
-          <span class="status-label">SYSTEM STATUS</span>
+          <span class="status-label">{{ t('login.systemStatus') }}</span>
           <span v-if="serverStatus === 'checking'" class="status-checking">{{ t('login.statusChecking') }}</span>
           <span v-else-if="serverStatus === 'online'" class="status-ok">{{ t('login.statusOnline') }}</span>
           <span v-else class="status-sleeping">{{ t('login.statusSleeping') }}</span>
@@ -144,7 +144,7 @@
         <div class="footer-meta">
           <span>{{ t('app.name') }}</span>
           <span class="dot-sep">·</span>
-          <span>V3.0 STABLE BUILD</span>
+          <span>{{ t('login.stableBuild') }}</span>
         </div>
       </div>
     </div>
@@ -157,7 +157,7 @@
       <div class="right-content">
         <div class="next-gen-badge">
           <span class="badge-star">✦</span>
-          <span>NEXT-GEN PLATFORM</span>
+          <span>{{ t('login.nextGenPlatform') }}</span>
         </div>
 
         <h2 class="hero-title">
@@ -187,12 +187,12 @@
               <div class="av" v-for="(c, i) in avatarColors" :key="i" :style="{ background: c, left: i * 22 + 'px' }"></div>
             </div>
             <div class="trust-text">
-              <div class="trust-label">TRUSTED BY</div>
-              <div class="trust-count">10,000+ FOUNDERS</div>
+              <div class="trust-label">{{ t('login.trustedBy') }}</div>
+              <div class="trust-count">{{ t('login.founderCount') }}</div>
             </div>
           </div>
           <div class="uptime-block">
-            <div class="uptime-label">GLOBAL UPTIME</div>
+            <div class="uptime-label">{{ t('login.globalUptime') }}</div>
             <div class="uptime-num">99.999%</div>
           </div>
         </div>

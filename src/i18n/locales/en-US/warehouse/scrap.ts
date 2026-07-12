@@ -25,7 +25,7 @@ export default {
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form
   formTitle: 'New Scrap Order',

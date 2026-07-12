@@ -8,7 +8,7 @@
       </button>
       <span class="mobile-title">{{ currentPageTitle }}</span>
       <span class="budget-cta budget-cta--sm">
-        <span class="budget-cta-label">ASSETS</span>
+        <span class="budget-cta-label">{{ t('investment.assets') }}</span>
         <span class="budget-cta-val">{{ assetsStr }}</span>
       </span>
     </div>
@@ -73,7 +73,7 @@
             <span class="status-text">{{ statusLabel }}</span>
           </span>
           <span class="budget-cta" :title="assetsTitle">
-            <span class="budget-cta-label">ASSETS</span>
+            <span class="budget-cta-label">{{ t('investment.assets') }}</span>
             <span class="budget-cta-val">{{ assetsStr }}</span>
           </span>
           <router-link to="/portal" class="nav-back" :title="t('investment.backToPortal')">

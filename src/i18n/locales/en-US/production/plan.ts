@@ -49,14 +49,14 @@ export default {
   stepMaterialPending: 'Pending Pick',
   stepMaterialDone: 'Picked',
   stepInhousePending: 'Pending Inbound',
-  stepInhouseDone: 'Inbounded',
+  stepInhouseDone: 'Received',
 
   // Row actions
   actionView: 'View',
   actionEdit: 'Edit',
   actionPickMaterial: 'Pick Material',
   actionMaterialDone: 'Picked ✓',
-  actionInhouseDone: 'Inbounded ✓',
+  actionInhouseDone: 'Received ✓',
   actionInhouse: 'Inbound',
   actionReconciled: 'Reconciled',
   actionReconcile: 'Reconcile',
@@ -87,8 +87,8 @@ export default {
   fieldPlanDate: 'Order Date',
   fieldFinishDate: 'Delivery Date',
   fieldPriority: 'Priority',
-  fieldRemark: 'Remark',
-  fieldRemarkPlaceholder: 'Remark (optional)',
+  fieldRemark: 'Notes',
+  fieldRemarkPlaceholder: 'Notes (optional)',
 
   // Goods section
   goodsSectionTitle: 'Product List',
@@ -140,10 +140,10 @@ export default {
   bomConsumeGapSufficient: 'Sufficient',
 
   // Delete / block messages
-  msgCannotDeleteHasMaterial: 'This production plan has an approved requisition and cannot be deleted directly.<br/>Please go to <b>Production → Material Management</b> to <b>unapprove</b> the requisition first.',
+  msgCannotDeleteHasMaterial: 'This production plan has an approved requisition and cannot be deleted directly.<br/>Please go to <b>Production → Material Management</b> to <b>revoke approval</b> the requisition first.',
   msgCannotDeleteTitle: 'Cannot Delete',
   msgCannotDeleteConfirm: 'Go to Material Management',
-  msgCannotBatchDeleteHasMaterial: '{count} selected plan(s) have approved requisitions and cannot be deleted.<br/>Please go to <b>Production → Material Management</b> to <b>unapprove</b> the requisitions first.',
+  msgCannotBatchDeleteHasMaterial: '{count} selected plan(s) have approved requisitions and cannot be deleted.<br/>Please go to <b>Production → Material Management</b> to <b>revoke approval</b> the requisitions first.',
   msgDeleteConfirm: 'Confirm delete this production plan?',
   msgDeleteTip: 'Notice',
   msgDeleteSuccess: 'Deleted successfully',

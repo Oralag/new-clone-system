@@ -228,7 +228,7 @@ import http from '@/api/http'
 import { readScopedJson, writeScopedJson } from '@/utils/storageScope'
 import * as XLSX from 'xlsx'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── 本地分类（localStorage） ──────────────────────────────────────────────────
 const CATE_KEY = 'erp_supplier_cates'
@@ -626,7 +626,7 @@ function handleExport() {
   }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Sheet1')
-  XLSX.writeFile(wb, `${t('procure.supplier.exportFilePrefix')}${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`)
+  XLSX.writeFile(wb, `${t('procure.supplier.exportFilePrefix')}${new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN').replace(/\//g, '-')}.xlsx`)
   ElMessage.success(`${t('procure.supplier.msgExportSuccess')} ${rows.length} ${t('procure.supplier.msgExportSuccessSuffix')}`)
 }
 

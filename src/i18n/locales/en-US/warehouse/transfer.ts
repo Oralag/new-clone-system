@@ -16,7 +16,7 @@ export default {
   colFromWarehouse: 'From Warehouse',
   colToWarehouse: 'To Warehouse',
   colTotalAmount: 'Total Value',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colStatus: 'Status',
   colActions: 'Actions',
 
@@ -29,11 +29,11 @@ export default {
   btnView: 'View',
   btnEdit: 'Edit',
   btnAudit: 'Approve',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form page
   formTitleView: 'View Transfer',
@@ -47,7 +47,7 @@ export default {
   fieldAllotDate: 'Transfer Date',
   fieldFromWarehouse: 'From Warehouse',
   fieldToWarehouse: 'To Warehouse',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderTransferNo: 'Auto-generated if left blank',
   placeholderFromWarehouse: 'From warehouse',
   placeholderToWarehouse: 'To warehouse',
@@ -73,12 +73,12 @@ export default {
   colOutBatchNoBatch: 'Batch',
   colInBatchNo: 'To Batch No.',
   colInBatchNoBatch: 'Batch',
-  colItemRemark: 'Remark',
+  colItemRemark: 'Notes',
   placeholderGoodsName: 'Product name',
   placeholderGoodsSn: 'Code',
   placeholderOutBatchNo: 'From batch no.',
   placeholderInBatchNo: 'To batch no.',
-  placeholderItemRemark: 'Remark',
+  placeholderItemRemark: 'Notes',
   emptyTableText: 'Click "Select Products" to add items',
 
   // Footer summary
@@ -93,7 +93,7 @@ export default {
 
   // Audit confirm
   auditLabel: 'Approve',
-  unauditLabel: 'Unapprove',
+  unauditLabel: 'Revoke Approval',
   msgAuditConfirm: 'Confirm {action} this transfer?',
   msgConfirmTitle: 'Notice',
   msgSuccess: 'Operation succeeded',

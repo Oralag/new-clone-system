@@ -305,7 +305,7 @@
         </div>
       </div>
 
-      <div class="form-body" ref="formBodyRef" v-loading="loadingDetail" element-loading-text="加载中..." element-loading-background="rgba(255,255,255,0.85)">
+    <div class="form-body" ref="formBodyRef" v-loading="loadingDetail" :element-loading-text="$t('common.loading')" element-loading-background="rgba(255,255,255,0.85)">
 
         <!-- 基本信息：4列面板布局 -->
         <div class="form-section info-header-section">
@@ -1439,7 +1439,7 @@ const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
 const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 function parseRemarkTag(remark: string, tag: string): string {
   const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -3336,7 +3336,7 @@ async function handleBatchSharePdf(selRows: any[]) {
     const grandTotal = rows.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
     const grandPending = rows.reduce((s: number, r: any) => s + Math.max(0, Number(r.total_amount || 0) - Number(r.receive_amount || 0)), 0)
     const customerName = rows[0]?.customer_name || ''
-    const dateStr = new Date().toLocaleDateString('zh-CN')
+    const dateStr = new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN')
 
     // 封面汇总区
     const _useLogo = showLogoForCurrentUser()
@@ -3490,7 +3490,7 @@ async function handleBatchSharePdf(selRows: any[]) {
     }
 
     msg.close()
-    const filename = `${t('sale.contract.exportDocTitle')}_${customerName}_${t('sale.contract.exportOrderCount', { count: rows.length })}_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.pdf`
+    const filename = `${t('sale.contract.exportDocTitle')}_${customerName}_${t('sale.contract.exportOrderCount', { count: rows.length })}_${new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN').replace(/\//g, '-')}.pdf`
     const blob = doc.output('blob')
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
@@ -3686,7 +3686,7 @@ async function handleSharePdf() {
       ${giftSection}
 
       <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:flex-end">
-        <div style="font-size:11px;color:#c7c7cc">${t('sale.contract.exportGeneratedContract')} · ${new Date().toLocaleDateString('zh-CN')}</div>
+        <div style="font-size:11px;color:#c7c7cc">${t('sale.contract.exportGeneratedContract')} · ${new Date().toLocaleDateString(locale.value === 'en-US' ? 'en-US' : 'zh-CN')}</div>
         <div style="font-size:11px;color:#c7c7cc">${t('sale.contract.exportStatus')}：${(fd as any).status === 1 ? t('sale.contract.exportStatusAudited') : t('sale.contract.exportStatusPending')}</div>
       </div>`
 

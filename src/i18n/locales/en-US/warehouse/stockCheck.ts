@@ -20,7 +20,7 @@ export default {
   expandColSystemQty: 'System Qty',
   expandColCheckQty: 'Count Qty',
   expandColDiffQty: 'Difference',
-  expandColRemark: 'Remark',
+  expandColRemark: 'Notes',
 
   // List table columns
   colIndex: 'No.',
@@ -29,7 +29,7 @@ export default {
   colCheckDate: 'Check Date',
   colAdminName: 'Counter',
   colStatus: 'Status',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // Status labels
@@ -41,7 +41,7 @@ export default {
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form page
   formTitleAdd: 'New Check Order',
@@ -56,12 +56,12 @@ export default {
   fieldCheckDate: 'Check Date',
   fieldWarehouse: 'Warehouse',
   fieldAdminName: 'Counter',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderOrderSn: 'Auto-generated',
   placeholderCheckDate: 'Select date',
   placeholderWarehouse: 'Select warehouse',
   placeholderAdminName: 'Enter counter name',
-  placeholderRemark: 'Enter remark',
+  placeholderRemark: 'Enter notes',
   ruleCheckDateRequired: 'Required',
   ruleWarehouseRequired: 'Required',
 
@@ -75,11 +75,11 @@ export default {
   colItemSystemQty: 'System Qty',
   colItemCheckQty: 'Count Qty',
   colItemDiffQty: 'Difference',
-  colItemRemark: 'Remark',
+  colItemRemark: 'Notes',
   colItemActions: 'Actions',
   placeholderItemSpec: 'Spec',
   placeholderItemUnit: 'Unit',
-  placeholderItemRemark: 'Remark',
+  placeholderItemRemark: 'Notes',
   placeholderSelectGoods: 'Select product',
 
   // Messages

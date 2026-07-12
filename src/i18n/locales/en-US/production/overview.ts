@@ -33,8 +33,8 @@ export default {
   bomStatusLack: 'Material insufficient',
   bomStatusMore: '{count} more products →',
 
-  // Recent production inbound card
-  recentInhouseTitle: 'Recent Production Inbound',
+  // Recent production receipt card
+  recentInhouseTitle: 'Recent Production Receipt',
   recentInhouseViewAll: 'View All',
   recentColOrderSn: 'Inbound No.',
   recentColGoodsName: 'Product Name',
@@ -65,8 +65,8 @@ export default {
   genFieldWarehousePlaceholder: 'Select warehouse',
   genFieldDate: 'Plan Date',
   genFieldDatePlaceholder: 'Select date',
-  genFieldRemark: 'Remark',
-  genRemarkPlaceholder: 'Optional remark',
+  genFieldRemark: 'Notes',
+  genRemarkPlaceholder: 'Optional notes',
 
   genPreviewTitle: 'Production Preview (BOM Material Consumption)',
   genPreviewColGoods: 'Finished Good',

@@ -44,11 +44,11 @@ export default {
   colObject: 'Party',
   colOrderNo: 'Order No.',
   colAmount: 'Amount',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
 
   // Mobile card labels
   mobileAccount: 'Account',
   mobileOrderNo: 'Order No.',
-  mobileRemark: 'Remark',
+  mobileRemark: 'Notes',
   mobileNoData: 'No transactions',
 }

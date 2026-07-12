@@ -37,7 +37,7 @@
           <div class="brand-summary" v-if="store.isConfigured">
             <div class="bs-row"><span class="bs-label">品牌名</span><span class="bs-val">{{ store.brand.name }}</span></div>
             <div class="bs-row"><span class="bs-label">行业</span><span class="bs-val">{{ store.brand.industry }}</span></div>
-            <div class="bs-row" v-if="store.brand.slogan"><span class="bs-label">Slogan</span><span class="bs-val">{{ store.brand.slogan }}</span></div>
+            <div class="bs-row" v-if="store.brand.slogan"><span class="bs-label">品牌口号</span><span class="bs-val">{{ store.brand.slogan }}</span></div>
           </div>
           <div v-else class="output-empty">尚未配置品牌信息</div>
           <button class="config-btn" @click="goToBrandSettings()">
@@ -92,7 +92,7 @@
             </div>
             <div class="brand-attr-list">
               <div class="brand-attr" v-if="store.brand.slogan">
-                <span class="attr-label">Slogan</span>
+                <span class="attr-label">品牌口号</span>
                 <span class="attr-val">{{ store.brand.slogan }}</span>
               </div>
               <div class="brand-attr" v-if="store.brand.audienceDesc">

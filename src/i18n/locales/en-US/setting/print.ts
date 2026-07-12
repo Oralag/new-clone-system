@@ -54,7 +54,7 @@ export default {
   fieldAmount: 'Total Amount',
   fieldTaxRate: 'Tax Rate',
   fieldTaxAmount: 'Tax Amount',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   fieldSign: 'Signature Row',
 
   // Messages

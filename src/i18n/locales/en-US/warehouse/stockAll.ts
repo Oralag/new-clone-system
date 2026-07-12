@@ -89,7 +89,7 @@ export default {
   flowColQty: 'Qty',
   flowColPrice: 'Price',
   flowColDate: 'Date',
-  flowColPartner: 'Remark / Party',
+  flowColPartner: 'Notes / Counterparty',
   btnViewDoc: 'View',
   flowTotalIn: 'Total In: ',
   flowTotalOut: 'Total Out: ',

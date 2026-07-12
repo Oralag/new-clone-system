@@ -43,7 +43,7 @@ export default {
   // ── Toolbar buttons
   btnAdd: 'New Purchase Order',
   btnBatchAudit: 'Batch Approve',
-  btnBatchReverseAudit: 'Batch Unapprove',
+  btnBatchReverseAudit: 'Batch Revoke approval',
 
   // ── Share / selection-actions
   btnShare: 'Share',
@@ -60,7 +60,7 @@ export default {
   colExpandPriceWithTax: 'Unit Price (Inc-Tax)',
   colExpandTotalWithTax: 'Total (Inc-Tax)',
   colExpandSupplier: 'Supplier',
-  colExpandRemark: 'Remark',
+  colExpandRemark: 'Notes',
 
   // ── List table columns
   colIndex: 'No.',
@@ -77,7 +77,7 @@ export default {
   colPaidAmount: 'Amount Paid',
   colPayStatus: 'Pay Status',
   colAdditionalFees: 'Additional Fees',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // ── Row status tags
@@ -105,13 +105,13 @@ export default {
   actionEdit: 'Edit',
   actionAudit: 'Approve',
   actionPay: 'Pay',
-  actionReverseAudit: 'Unapprove',
+  actionReverseAudit: 'Revoke Approval',
   actionReconciled: 'Reconciled',
   actionReconcile: 'Reconcile',
   actionDelete: 'Delete',
 
   // ── Delete guard message
-  msgDeleteAuditedWarning: 'Please unapprove this order before deleting it',
+  msgDeleteAuditedWarning: 'Please revoke approval for this order before deleting it',
 
   // ── Form page - top bar
   formTitleView: 'View Purchase Order',
@@ -144,8 +144,8 @@ export default {
   invoiceNo: 'No',
   labelPayAccount: 'Payment Account',
   payAccountPlaceholder: 'Select account',
-  labelRemark: 'Remark',
-  remarkPlaceholder: 'Enter remark',
+  labelRemark: 'Notes',
+  remarkPlaceholder: 'Enter notes',
   labelAttachment: 'Attachments',
   btnUploadAttachment: 'Upload',
   attachDownloadTitle: 'Download',
@@ -179,7 +179,7 @@ export default {
   colTotalWithTax2: 'Total (Inc-Tax)',
   colBatch: 'Batch',
   colRowSupplier: 'Line Supplier',
-  colRowRemark: 'Remark',
+  colRowRemark: 'Notes',
   btnBatch: 'Batch',
 
   // ── Goods table placeholders
@@ -190,7 +190,7 @@ export default {
   unitPlaceholder: 'Unit',
   batchPlaceholder: 'Batch / Date',
   rowSupplierPlaceholder: 'Same as order',
-  remarkPlaceholder2: 'Remark',
+  remarkPlaceholder2: 'Notes',
 
   // ── Row supplier readonly fallback
   rowSupplierSame: 'Same as order',
@@ -275,7 +275,7 @@ export default {
   labelPayAmount: 'Payment Amount',
   labelPayAccount2: 'Payment Account',
   labelPayDate: 'Payment Date',
-  labelPayRemark: 'Remark',
+  labelPayRemark: 'Notes',
   payRemarkPlaceholder: 'Optional',
   btnConfirmPay: 'Confirm Payment',
 
@@ -289,7 +289,7 @@ export default {
   labelFeePayContact: 'Payee',
   feePayContactPlaceholder: 'Optional, e.g. courier, lab',
   labelFeePayDate: 'Payment Date',
-  labelFeePayRemark: 'Remark',
+  labelFeePayRemark: 'Notes',
   btnCancelPay: 'Cancel Payment',
   btnConfirmFeeManagePay: 'Confirm Payment',
   btnSave2: 'Save',
@@ -302,7 +302,7 @@ export default {
   labelFeeAccount: 'Payment Account',
   labelFeeContact: 'Payee',
   labelFeeDate: 'Payment Date',
-  labelFeeRemark: 'Remark',
+  labelFeeRemark: 'Notes',
   btnConfirmFeePayment: 'Confirm Payment',
 
   // ── Batch payment dialog
@@ -328,7 +328,7 @@ export default {
   colMaterialSn: 'Material Code',
   colMaterialNum: 'Qty per Unit',
   colMaterialUnit: 'Unit',
-  colMaterialRemark: 'Remark',
+  colMaterialRemark: 'Notes',
   bomSelectedCount: 'Selected:',
   bomSelectedUnit: 'material(s)',
   btnBomConfirm: 'Add Selected',
@@ -371,15 +371,15 @@ export default {
   msgAutoInhouse: 'Approved — stock received',
   msgDeleteConfirm: 'Delete this purchase order?',
   msgDeleteSuccess: 'Deleted successfully',
-  msgDeleteAuditedBlock: 'Please unapprove this order before deleting it',
+  msgDeleteAuditedBlock: 'Please revoke approval for this order before deleting it',
   msgPrompt: 'Prompt',
   msgBatchAuditConfirmPrefix: 'Approve the selected',
   msgBatchAuditConfirmSuffix: 'purchase order(s)?',
   msgBatchAuditSuccess: 'Batch approval done: succeeded',
   msgBatchAuditFailed: ', failed',
-  msgBatchReverseConfirmPrefix: 'Unapprove the selected',
+  msgBatchReverseConfirmPrefix: 'Revoke approval the selected',
   msgBatchReverseConfirmSuffix: 'purchase order(s)? This will reverse stock and finance entries.',
-  msgBatchReverseSuccess: 'Batch unapproval done: succeeded',
+  msgBatchReverseSuccess: 'Batch revoking approval done: succeeded',
   msgReverseAuditConfirm: 'This will reverse stock receipt and financial entries. Continue?',
   msgReverseAuditTitle: 'Confirm Unapproval',
   msgUnauditSuccessTitle: 'Unapproval Successful',
@@ -458,10 +458,10 @@ export default {
   msgPdfFailed: 'PDF generation failed, please try again',
   msgBatchAuditSelectFirst: 'Please select orders to approve',
   msgBatchAuditAllDone: 'All selected orders are already approved',
-  msgBatchReverseSelectFirst: 'Please select orders to unapprove',
+  msgBatchReverseSelectFirst: 'Please select orders to revoke approval',
   msgBatchReverseNoneAudited: 'None of the selected orders are approved',
   msgBatchAuditedBlockPrefix: '',
-  msgBatchAuditedBlockSuffix: 'approved order(s) cannot be deleted — please unapprove first',
+  msgBatchAuditedBlockSuffix: 'approved order(s) cannot be deleted — please revoke approval first',
   msgShareSelectFirst: 'Please select purchase orders first',
 
   // ── PDF content

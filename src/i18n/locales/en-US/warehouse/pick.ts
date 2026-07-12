@@ -21,17 +21,17 @@ export default {
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleAuditedCannotDelete: 'Unapprove before deleting',
+  titleAuditedCannotDelete: 'Revoke approval before deleting',
 
   // Form
   formTitle: 'New Pick Order',
   fieldGoodsName: 'Product Name',
   fieldNum: 'Quantity',
   fieldWarehouseName: 'Warehouse',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   placeholderGoodsName: 'Enter product name',
   placeholderWarehouseName: 'Enter warehouse name',
-  placeholderRemark: 'Enter remark',
+  placeholderRemark: 'Enter notes',
   ruleGoodsNameRequired: 'Product name is required',
   ruleNumRequired: 'Quantity is required',
 

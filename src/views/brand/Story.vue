@@ -5,7 +5,7 @@
       <img :src="cfg.storyHeroImage" alt="Story Hero" class="bs-hero-img" referrerpolicy="no-referrer" />
       <div class="bs-hero-overlay">
         <div class="bs-hero-text">
-          <p class="bs-eyebrow">Our Story</p>
+          <p class="bs-eyebrow">品牌故事</p>
           <h1 class="bs-hero-title">从一次亚洲之旅<br>诞生的品牌</h1>
         </div>
       </div>

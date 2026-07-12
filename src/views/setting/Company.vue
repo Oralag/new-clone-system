@@ -1,6 +1,6 @@
 <template>
   <div class="page-container">
-    <el-card title="企业信息">
+  <el-card :title="$t('route.SettingCompany')">
       <el-form :model="form" label-width="120px" label-position="right" v-loading="loading">
         <el-row :gutter="24">
           <el-col :span="12">

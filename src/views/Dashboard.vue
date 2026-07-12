@@ -226,7 +226,7 @@
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <div class="card-micro">Performance Metrics</div>
+            <div class="card-micro">{{ t('dashboard.performanceMetrics') }}</div>
             <h3 class="card-title">{{ t('dashboard.salesTrendTitle', { days: trendDays }) }}</h3>
           </div>
           <div class="chart-tabs">

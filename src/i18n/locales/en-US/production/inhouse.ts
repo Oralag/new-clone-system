@@ -1,4 +1,4 @@
-// Translations for src/views/production/Inhouse.vue (Production Inbound)
+// Translations for src/views/production/Inhouse.vue (Production Receipt)
 export default {
   // Search bar
   searchOrderSn: 'Inbound No.',
@@ -7,7 +7,7 @@ export default {
   searchUnreconciled: 'Unreconciled',
   btnSearch: 'Search',
   btnReset: 'Reset',
-  btnAdd: 'Add Production Inbound',
+  btnAdd: 'Add Production Receipt',
 
   // Expand row – cost detail
   expandLoadingCost: 'Loading material cost...',
@@ -43,16 +43,16 @@ export default {
   actionEdit: 'Edit',
   actionAudit: 'Approve',
   actionReject: 'Reject',
-  actionUnaudit: 'Unapprove',
+  actionUnaudit: 'Revoke Approval',
   actionReconciled: 'Reconciled',
   actionReconcile: 'Reconcile',
   actionDelete: 'Delete',
-  actionDeleteDisabledTip: 'Please unapprove before deleting',
+  actionDeleteDisabledTip: 'Please revoke approval before deleting',
 
   // Form page – top bar
-  formTitleView: 'View Production Inbound',
-  formTitleEdit: 'Edit Production Inbound',
-  formTitleAdd: 'Add Production Inbound',
+  formTitleView: 'View Production Receipt',
+  formTitleEdit: 'Edit Production Receipt',
+  formTitleAdd: 'Add Production Receipt',
   formBtnBack: 'Back',
   formBtnSave: 'Save',
   formBtnSaveAndAudit: 'Save & Approve',
@@ -70,7 +70,7 @@ export default {
   fieldBackFlushOn: 'Enabled',
   fieldBackFlushOff: 'Disabled',
   fieldBackFlushDisabledTip: 'This plan already has a manual requisition, back-flush unavailable',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Goods list section
   goodsSectionTitle: 'Product List',
@@ -123,18 +123,18 @@ export default {
   msgBackFlushFailed: 'Back-flush failed: {error}. Please create a requisition manually',
   msgAutoMaterialCost: 'Material cost auto-filled: ¥{amount}',
   msgAutoMaterialCostSimple: 'Material cost auto-filled',
-  msgAuditConfirm: 'Confirm {action} this production inbound order?',
+  msgAuditConfirm: 'Confirm {action} this production receipt order?',
   msgAuditTip: 'Notice',
   msgAuditSuccess: '{action} succeeded. {count} inventory item(s) increased',
   msgUnauditSuccess: '{action} succeeded. {count} inventory item(s) rolled back',
   msgActionFailed: 'Operation failed',
-  msgDeleteConfirm: 'Confirm delete this production inbound record?',
+  msgDeleteConfirm: 'Confirm delete this production receipt record?',
   msgDeleteSuccess: 'Deleted successfully',
 
   // Audit action labels
   auditActionApprove: 'Approve',
   auditActionReject: 'Reject',
-  auditActionUnaudit: 'Unapprove',
+  auditActionUnaudit: 'Revoke Approval',
 
-  exportFileName: 'Production Inbound',
+  exportFileName: 'Production Receipt',
 }

@@ -12,7 +12,7 @@ export default {
   // Table columns
   colName: 'Position Name',
   colDept: 'Department',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colActions: 'Actions',
 
   // Action buttons
@@ -26,7 +26,7 @@ export default {
   fieldName: 'Position Name',
   ruleNameRequired: 'Please enter a position name',
   fieldDept: 'Department',
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Messages
   msgOpSuccess: 'Operation succeeded',

@@ -277,7 +277,7 @@ import GoodsSelect from '@/components/GoodsSelect.vue'
 import { stockEffect } from '@/utils/stockEffect'
 
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // ── 数据 ─────────────────────────────────────────────────────────────────────
 const offerRows = ref<any[]>([])
@@ -774,7 +774,7 @@ async function submitQuickSale() {
 
 // ── 工具 ──────────────────────────────────────────────────────────────────────
 function fmt(v: number): string {
-  return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return isNaN(v) ? '0.00' : v.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────

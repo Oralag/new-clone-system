@@ -5,7 +5,7 @@ export default {
   quickSaleSub: 'Select customer → Select products → Auto-create contract + outbound',
   quickAddOffer: 'New Quote',
   quickAddContract: 'New Contract',
-  quickAddOut: 'New Outbound',
+  quickAddOut: 'New Shipment',
   quickAddSample: 'Sample Order',
 
   // Period tabs
@@ -40,7 +40,7 @@ export default {
   colAction: 'Action',
 
   // Action buttons
-  btnAudit: 'Audit',
+  btnAudit: 'Approve',
   btnConvertToOut: 'To Outbound',
   btnView: 'View',
   btnConvertToContract: 'To Contract',
@@ -48,23 +48,23 @@ export default {
   // Empty states
   emptyContract: 'No contracts',
   emptyOffer: 'No quotes',
-  emptySaleOut: 'No outbound orders',
+  emptySaleOut: 'No shipments',
 
   // Contract status labels
   statusConverted: '✓ Converted',
   statusAuditedWithOut: 'Audited & Outbound',
-  statusAudited: 'Audited',
+  statusAudited: 'Approved',
   statusRejected: 'Rejected',
   statusPending: 'Pending',
 
   // Offer status
-  offerStatusAudited: 'Audited',
+  offerStatusAudited: 'Approved',
   offerStatusRejected: 'Rejected',
   offerStatusConverted: 'Converted',
   offerStatusPending: 'Pending',
 
   // Sale out status
-  saleOutStatusAudited: 'Audited',
+  saleOutStatusAudited: 'Approved',
   saleOutStatusPending: 'Pending',
 
   // Quick sale dialog
@@ -84,7 +84,7 @@ export default {
   qsColDelete: 'Del',
   qsDiscountLabel: 'Discount',
   qsFreightLabel: 'Freight',
-  qsRemarkLabel: 'Remark',
+  qsRemarkLabel: 'Notes',
   qsDiscountPlaceholder: 'Discount amount',
   qsFreightPlaceholder: 'Freight',
   qsRemarkPlaceholder: 'Optional',
@@ -105,15 +105,15 @@ export default {
 
   // Messages
   confirmAuditContract: 'Confirm audit of contract "{sn}"?',
-  confirmAuditTitle: 'Audit',
+  confirmAuditTitle: 'Approve',
   msgAuditSuccess: 'Audited successfully',
   warnSelectCustomer: 'Please select a customer',
   warnSelectWarehouse: 'Please select a warehouse',
   warnSelectGoods: 'Please select products',
   errContractCreate: 'Failed to create contract',
-  errSaleOutCreate: 'Failed to create outbound order',
+  errSaleOutCreate: 'Failed to create shipment',
   msgQuickSaleDoneCollectedOwed: 'Quick sale complete! Collected ¥{amount}, Owed ¥{owed}',
   msgQuickSaleDoneCollected: 'Quick sale complete! Collected ¥{amount}',
-  msgQuickSaleDoneSimple: 'Quick sale complete! Contract + outbound order created and audited',
+  msgQuickSaleDoneSimple: 'Quick sale complete! Contract + shipment created and audited',
   errOperationFailed: 'Operation failed, please try again',
 }

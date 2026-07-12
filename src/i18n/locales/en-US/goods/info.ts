@@ -63,7 +63,7 @@ export default {
   tabUnit: 'Unit',
   tabSpec: 'Specifications',
   tabPrice: 'Price & Barcode',
-  tabRemark: 'Remarks',
+  tabRemark: 'Notes',
   tabBrand: 'Brand Center',
 
   // ① Basic Info
@@ -167,9 +167,9 @@ export default {
   barcodePh: 'Enter barcode',
 
   // ⑤ Remarks
-  secRemark: 'Remarks',
-  remarkField: 'Remark',
-  remarkPh: 'Enter remarks',
+  secRemark: 'Notes',
+  remarkField: 'Notes',
+  remarkPh: 'Enter notes',
 
   // ⑥ Brand Center
   secBrand: 'Brand Center',
@@ -256,7 +256,7 @@ export default {
   importBarcode: 'Barcode',
   importSellPrice: 'Selling Price',
   importCostPrice: 'Cost Price',
-  importRemark: 'Remark',
+  importRemark: 'Notes',
   importStatus: 'Status',
   importNormal: 'OK',
   importError: 'Error',

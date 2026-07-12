@@ -8,7 +8,7 @@ export default {
 
   // Search
   searchCustomerPlaceholder: 'Customer Name',
-  searchOrderSnPlaceholder: 'Outbound Order No.',
+  searchOrderSnPlaceholder: 'Shipment No.',
   searchDateFrom: 'Start Date',
   searchDateTo: 'End Date',
   searchDateSeparator: 'to',
@@ -56,7 +56,7 @@ export default {
   detailBtnCollect: 'Collect',
 
   // Collect drawer
-  drawerTitle: 'New Collection Receipt',
+  drawerTitle: 'New Receipt',
   formContact: 'Customer',
   ruleContactRequired: 'Please select a customer',
   formCurrentDebt: 'Current Outstanding',
@@ -66,8 +66,8 @@ export default {
   formFundPlaceholder: 'Select account',
   ruleFundRequired: 'Please select an account',
   formDate: 'Collection Date',
-  formRemark: 'Remark',
-  formRemarkPlaceholder: 'Remark',
+  formRemark: 'Notes',
+  formRemarkPlaceholder: 'Notes',
   drawerBtnCancel: 'Cancel',
   drawerBtnSave: 'Save',
 

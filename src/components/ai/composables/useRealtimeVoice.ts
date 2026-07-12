@@ -5,6 +5,7 @@
  * TTS: 浏览器原生 speechSynthesis（免费）
  */
 import { ref, onUnmounted } from 'vue'
+import { getStoredLocale } from '@/i18n'
 
 export interface VoiceToolCall {
   name: string
@@ -50,14 +51,16 @@ export function useRealtimeVoice() {
     window.speechSynthesis.cancel()
     await new Promise<void>((resolve) => {
       const utter = new SpeechSynthesisUtterance(text)
-      utter.lang = 'zh-CN'
+      const speechLocale = getStoredLocale()
+      utter.lang = speechLocale
       utter.rate = 1.0
       utter.onend = () => resolve()
       utter.onerror = () => resolve()
       const voices = window.speechSynthesis.getVoices()
-      const zhVoice = voices.find(v => v.lang.startsWith('zh') && v.name.includes('Female'))
-        || voices.find(v => v.lang.startsWith('zh'))
-      if (zhVoice) utter.voice = zhVoice
+      const voicePrefix = speechLocale.startsWith('en') ? 'en' : 'zh'
+      const matchedVoice = voices.find(v => v.lang.startsWith(voicePrefix) && v.name.includes('Female'))
+        || voices.find(v => v.lang.startsWith(voicePrefix))
+      if (matchedVoice) utter.voice = matchedVoice
       window.speechSynthesis.speak(utter)
     })
     isAiSpeaking.value = false
@@ -132,7 +135,7 @@ export function useRealtimeVoice() {
     }
 
     recognition = new SpeechRecognition()
-    recognition.lang = 'zh-CN'
+    recognition.lang = getStoredLocale()
     recognition.continuous = false
     recognition.interimResults = false
     recognition.maxAlternatives = 1

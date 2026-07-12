@@ -55,7 +55,7 @@ export default {
   mobilePlaceholder: 'Enter',
   labelAddress: 'Address',
   addressPlaceholder: 'Enter',
-  labelRemark: 'Remark',
+  labelRemark: 'Notes',
   remarkPlaceholder: 'Enter',
 
   // Finance panel (in form)
@@ -118,5 +118,5 @@ export default {
   exportMobile: 'Phone',
   exportAddress: 'Address',
   exportBank: 'Bank Account',
-  exportRemark: 'Remark',
+  exportRemark: 'Notes',
 }

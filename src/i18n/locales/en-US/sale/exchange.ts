@@ -58,9 +58,9 @@ export default {
   edit: 'Edit',
   approve: 'Approve',
   reject: 'Reject',
-  unapprove: 'Unapprove',
+  unapprove: 'Revoke Approval',
   delete: 'Delete',
-  deleteAuditedWarning: 'Please unapprove this order before deleting it.',
+  deleteAuditedWarning: 'Please revoke approval for this order before deleting it.',
 
   // Form topbar
   back: 'Back',
@@ -101,7 +101,7 @@ export default {
   selectDate: 'Select date',
   exchangeReasonPlaceholder: 'Enter reason for exchange',
   reissueReasonPlaceholder: 'Enter reason for reissue (damaged / missing, etc.)',
-  remarkPlaceholder: 'Remark (optional)',
+  remarkPlaceholder: 'Notes (optional)',
 
   // Return goods toolbar
   importedFromOrder: 'Imported from source order — adjust qty as needed',
@@ -113,14 +113,14 @@ export default {
   emptyReissueGoods: 'Please add reissue products',
 
   // Exchange goods toolbar
-  importFromOutOrder: 'Import from Outbound Order',
+  importFromOutOrder: 'Import from Shipment',
   reselectSource: 'Change source: {no}',
 
   // Table columns (goods detail)
   returnQty: 'Return Qty',
   exchangeQty: 'Exchange Qty',
-  remark: 'Remark',
-  remarkPlaceholderShort: 'Remark',
+  remark: 'Notes',
+  remarkPlaceholderShort: 'Notes',
   specPlaceholder: 'Spec',
 
   // Settlement grid
@@ -152,9 +152,9 @@ export default {
   feePayeePlaceholder: 'Payee',
 
   // Sale out picker dialog
-  saleOutPickerTitle: 'Select Source Sale Outbound Order',
+  saleOutPickerTitle: 'Select Source Sales Shipment',
   saleOutSearchPlaceholder: 'Search by order no. / customer',
-  colOutOrderNo: 'Outbound Order No.',
+  colOutOrderNo: 'Shipment No.',
   colOutCustomer: 'Customer',
   colOutWarehouse: 'Warehouse',
   colOutAmount: 'Amount',
@@ -163,7 +163,7 @@ export default {
   confirmSelect: 'Confirm',
 
   // Exchange out picker dialog
-  exchangeOutPickerTitle: 'Select Exchange Source Outbound Order',
+  exchangeOutPickerTitle: 'Select Exchange Source Shipment',
 
   // Fee manage dialog
   feeManageTitle: 'Manage Additional Fees',
@@ -192,7 +192,7 @@ export default {
   promptTitle: 'Notice',
   auditSuccess: '{action} successful',
   auditLabel1: 'Approve',
-  auditLabel0: 'Unapprove',
+  auditLabel0: 'Revoke Approval',
   auditLabel2: 'Reject',
 
   // Delete

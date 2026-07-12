@@ -20,7 +20,7 @@ export default {
   colRefund: 'Refund',
   colDebtStatus: 'Status',
   colContractStatus: 'Contract Status',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   statusUnpaid: 'Outstanding',
   statusPaid: 'Settled',
   statusInProgress: 'Active',

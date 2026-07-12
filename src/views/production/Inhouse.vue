@@ -316,7 +316,7 @@ import {
   syncProductionLaborExpense,
 } from '@/utils/productionInhouse'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const permStore = usePermissionStore()
 const stockRefreshStore = useStockRefreshStore()
@@ -920,7 +920,7 @@ function resetSearch() {
 
 function fmtN(v: any): string {
   const n = Number(v || 0)
-  return isNaN(n) ? '0.00' : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return isNaN(n) ? '0.00' : n.toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function parseCostItems(row: any): any[] {

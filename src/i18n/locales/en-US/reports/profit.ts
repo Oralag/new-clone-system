@@ -49,4 +49,10 @@ export default {
   customerOrders: 'Orders ({n} total)',
   noOrderData: 'No order data',
   noGoodsDetailInner: 'No product details',
+  sourceRetail: 'Retail',
+  sourceExchange: 'Exchange',
+  sourceShipment: 'Shipment',
+  orderProfitTitle: '{orderNo} · Product Profit Details',
+  profitSummary: 'Sales ¥{sales} / Cost ¥{cost} / Gross Profit {profit}',
+  customerOrderTitle: '{customer} · Orders ({count})',
 }

@@ -140,7 +140,7 @@
         </button>
       </div>
       <div class="brand-philosophy-text">
-        <p class="brand-section-eyebrow">Our Philosophy</p>
+        <p class="brand-section-eyebrow">品牌理念</p>
         <h2 class="brand-section-title">我们相信，<br>工作不应受制于地点。</h2>
         <p class="brand-section-desc">{{ cfg.storyText }}</p>
         <div class="brand-feature-list">
@@ -161,7 +161,7 @@
     <section class="brand-categories">
       <div class="brand-cat-header">
         <div>
-          <p class="brand-section-eyebrow">Categories</p>
+          <p class="brand-section-eyebrow">商品分类</p>
           <h2 class="brand-section-title">探索我们的系列</h2>
         </div>
         <button class="brand-cat-all" @click="$router.push('/brand/products')">

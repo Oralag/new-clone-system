@@ -1,15 +1,15 @@
-// Translations for src/views/outsource/Inhouse.vue (Outsource Inbound)
+// Translations for src/views/outsource/Inhouse.vue (Outsourcing Receipt)
 export default {
   // Search
   searchInNoPlaceholder: 'Inbound No.',
-  searchGoodsNamePlaceholder: 'Goods Name',
+  searchGoodsNamePlaceholder: 'Product Name',
   searchReconcileFilterPlaceholder: 'Reconcile Status',
   optionUnreconciled: 'Unreconciled',
   btnSearch: 'Search',
   btnReset: 'Reset',
 
   // Toolbar
-  btnAdd: 'New Outsource Inbound',
+  btnAdd: 'New Outsourcing Receipt',
 
   // Table columns
   colInNo: 'Inbound No.',
@@ -31,16 +31,16 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
   btnDelete: 'Delete',
-  titleDeleteDisabled: 'Please unapprove before deleting',
+  titleDeleteDisabled: 'Please revoke approval before deleting',
 
   // Form page titles
-  formTitleView: 'View Outsource Inbound',
-  formTitleEdit: 'Edit Outsource Inbound',
-  formTitleAdd: 'New Outsource Inbound',
+  formTitleView: 'View Outsourcing Receipt',
+  formTitleEdit: 'Edit Outsourcing Receipt',
+  formTitleAdd: 'New Outsourcing Receipt',
   btnSave: 'Save',
   btnBack: 'Back',
 
@@ -64,8 +64,8 @@ export default {
   btnSelectGoods: 'Select Goods',
   btnAddRow: 'Add Row Manually',
   totalPriceLabel: 'Total Amount: ',
-  colGoodsName: 'Goods Name',
-  colGoodsSn: 'Goods Code',
+  colGoodsName: 'Product Name',
+  colGoodsSn: 'Product Code',
   colSpec: 'Spec',
   colUnit: 'Unit',
   colInQty: 'Inbound Qty',
@@ -73,7 +73,7 @@ export default {
   colInPrice: 'Unit Price',
   colInPriceBatch: 'Batch',
   colSubtotal: 'Subtotal',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   emptyText: 'Please add goods',
 
   // Footer summary
@@ -82,7 +82,7 @@ export default {
   footerUnpaid: 'Unpaid',
 
   // Footer remark
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
 
   // Batch dialog
   batchDialogTitle: 'Batch Set: {label}',

@@ -88,4 +88,5 @@ export default {
   viewProcure: 'View Procurement →',
   noProcureData: 'No procurement data',
   noSupplier: 'No supplier',
+  walkInCustomer: 'Walk-in Customer',
 }

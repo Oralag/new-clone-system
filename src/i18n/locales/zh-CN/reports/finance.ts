@@ -42,5 +42,7 @@ export default {
   colOrderCount: '订单数',
   colSource: '来源',
   noData: '暂无数据',
+  sourceRetail: '零售',
+  sourceSales: '销售单',
   note: '收入来源：销售订单 + 零售订单；成本优先取库存移动均价，无均价时取商品采购价；净利润 = 毛利润 − 费用 − 我方运费 − 单据支出（采购+销售）',
 }

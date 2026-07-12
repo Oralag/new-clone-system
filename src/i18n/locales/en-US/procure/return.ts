@@ -22,7 +22,7 @@ export default {
   statusUnreconciled: 'Unreconciled',
 
   // Expand detail
-  expandTitle: 'Return Goods Detail',
+  expandTitle: 'Return Product Details',
   colExpandGoodsName: 'Product Name',
   colExpandSpec: 'Spec',
   colExpandUnit: 'Unit',
@@ -69,7 +69,7 @@ export default {
   emptyOrder: '—',
 
   // Form - goods section
-  sectionGoods: 'Return Goods Detail',
+  sectionGoods: 'Return Product Details',
   hintSelectOrderFirst: 'Please select a linked purchase order first',
   hintSelectAndFill: 'Check items to return and enter return quantity (cannot exceed purchase quantity)',
   colGoodsName: 'Product Name',
@@ -90,8 +90,8 @@ export default {
   settleRefundAccount: 'Refund to Account',
   settleHint: 'Approval will automatically deduct stock; return amount offsets unpaid first, remainder refunded to fund account',
 
-  // Form - remark section
-  labelRemark: 'Remark',
+  // Form - notes section
+  labelRemark: 'Notes',
   remarkPlaceholder: 'Return reason (optional)',
 
   // Order picker dialog
@@ -116,9 +116,9 @@ export default {
   msgAuditPrefix: 'Confirm to ',
   msgAuditSuffix: ' this return?',
   msgAuditPassHint: '\nApproval will automatically deduct stock and refund to fund account.',
-  msgReverseHint: '\nUnapprove will undo stock and financial changes.',
+  msgReverseHint: '\nRevoke approval will undo stock and financial changes.',
   actionAuditPass: 'approve',
   actionReject: 'reject',
-  actionReverseAudit: 'unapprove',
+  actionReverseAudit: 'revoke approval',
   msgOperationFailed: 'Operation failed',
 }

@@ -29,9 +29,9 @@ export default {
   btnEdit: 'Edit',
   btnAudit: 'Approve',
   btnReject: 'Reject',
-  btnUnaudit: 'Unapprove',
+  btnUnaudit: 'Revoke Approval',
   btnDelete: 'Delete',
-  titleDeleteDisabled: 'Please unapprove before deleting',
+  titleDeleteDisabled: 'Please revoke approval before deleting',
 
   // Form page titles
   formTitleView: 'View Payment',
@@ -64,7 +64,7 @@ export default {
   optionBalance: 'Final Payment',
   fieldReceiverAccount: "Payee's Account",
   receiverAccountPlaceholder: "Supplier's receiving account",
-  fieldRemark: 'Remark',
+  fieldRemark: 'Notes',
   remarkPlaceholder: 'Notes',
 
   // Summary cards

@@ -27,7 +27,7 @@ export default {
   colFundAccount: 'Fund Account',
   colAmount: 'Amount',
   colAuditStatus: 'Status',
-  colRemark: 'Remark',
+  colRemark: 'Notes',
   colAction: 'Actions',
 
   // ── Audit status tags ──
@@ -36,7 +36,7 @@ export default {
 
   // ── Row action buttons ──
   btnView: 'View',
-  btnReverseAudit: 'Unapprove',
+  btnReverseAudit: 'Revoke Approval',
   btnAudit: 'Approve',
   btnReconciled: 'Reconciled',
   btnReconcile: 'Reconcile',
@@ -53,8 +53,8 @@ export default {
   labelFundAccountForm: 'Fund Account',
   placeholderFundAccount: 'Select account',
   labelAmountForm: 'Amount',
-  labelRemarkForm: 'Remark',
-  placeholderRemark: 'Enter remark',
+  labelRemarkForm: 'Notes',
+  placeholderRemark: 'Enter notes',
   btnCancel: 'Cancel',
   btnConfirm: 'Confirm',
 
@@ -76,7 +76,7 @@ export default {
   msgDeleteConfirm: 'Delete expense record for "{name}"?',
   msgDeleteTip: 'Notice',
   msgDeleteSuccess: 'Deleted successfully',
-  msgAuditFirst: 'Please unapprove before deleting',
+  msgAuditFirst: 'Please revoke approval before deleting',
 
   // ── Import: invalid amount ──
   msgAmountInvalid: 'Invalid amount',

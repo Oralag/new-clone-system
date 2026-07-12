@@ -1,5 +1,5 @@
 export default {
-  badge: 'Reports Dashboard',
+  badge: '经营报表',
   title: '报表总览',
   subtitle: '基于销售订单 · 零售订单 · 采购订单的实时核算',
   refresh: '刷新',
@@ -88,4 +88,5 @@ export default {
   viewProcure: '查看采购 →',
   noProcureData: '暂无采购数据',
   noSupplier: '无供应商',
+  walkInCustomer: '散客',
 }
