@@ -3521,5 +3521,6 @@ export default {
     SettingParams: '参数设置',
     SettingPrint: '打印模板',
     SettingCompany: '企业信息',
+    GoodsInfo: '商品资料',
   },
 }

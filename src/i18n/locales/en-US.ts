@@ -3520,5 +3520,6 @@ export default {
     SettingParams: 'System Parameters',
     SettingPrint: 'Print Templates',
     SettingCompany: 'Company Information',
+    GoodsInfo: 'Product Information',
   },
 }

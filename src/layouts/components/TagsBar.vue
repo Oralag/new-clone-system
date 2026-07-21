@@ -16,7 +16,7 @@
         @click="router.push(tab.path)"
         @contextmenu.prevent="showContextMenu($event, tab.path)"
       >
-        {{ tab.titleKey ? t(tab.titleKey) : tab.title }}
+        {{ tabTitle(tab) }}
         <span class="tag-close" @click.stop="tabsStore.closeTab(tab.path)">
           <el-icon><Close /></el-icon>
         </span>
@@ -46,6 +46,12 @@ const { t } = useI18n()
 const tabsStore = useTabsStore()
 const route = useRoute()
 const router = useRouter()
+
+function tabTitle(tab: { title: string; titleKey?: string }) {
+  if (!tab.titleKey) return tab.title
+  const translated = t(tab.titleKey)
+  return translated === tab.titleKey ? tab.title : translated
+}
 
 const contextMenu = reactive({ visible: false, x: 0, y: 0, path: '' })
 
