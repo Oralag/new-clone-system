@@ -2,9 +2,9 @@
 -- PostgreSQL database dump
 --
 
-\restrict dQfcTSq5SeS63h3VkRsAaklq2SX2r70BoOnguc4ByufvJ4eivyDebr8rlQVa6wX
+\restrict skW6oOcC50oKTKWEzeNsNTRMveqQKi0cTqPuri42KgJZKIcSs6axvATnzdOI99U
 
--- Dumped from database version 17.10 (21f7c76)
+-- Dumped from database version 17.10 (2947584)
 -- Dumped by pg_dump version 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
 
 SET statement_timeout = 0;
@@ -602,6 +602,90 @@ ALTER SEQUENCE public.depts_id_seq OWNER TO neondb_owner;
 --
 
 ALTER SEQUENCE public.depts_id_seq OWNED BY public.depts.id;
+
+
+--
+-- Name: distributor_goods; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_goods (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    goods_id integer NOT NULL,
+    status integer DEFAULT 1,
+    sort integer DEFAULT 0,
+    custom_price numeric(10,2) DEFAULT 0,
+    commission_rate numeric(5,2),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.distributor_goods OWNER TO neondb_owner;
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.distributor_goods_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.distributor_goods_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.distributor_goods_id_seq OWNED BY public.distributor_goods.id;
+
+
+--
+-- Name: distributor_materials; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_materials (
+    id integer NOT NULL,
+    title character varying(120) DEFAULT ''::character varying NOT NULL,
+    type character varying(20) DEFAULT 'text'::character varying NOT NULL,
+    content text DEFAULT ''::text,
+    file_url text DEFAULT ''::text,
+    goods_id integer DEFAULT 0,
+    scope character varying(20) DEFAULT 'public'::character varying,
+    distributor_id integer DEFAULT 0,
+    status integer DEFAULT 1,
+    sort integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.distributor_materials OWNER TO neondb_owner;
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.distributor_materials_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.distributor_materials_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.distributor_materials_id_seq OWNED BY public.distributor_materials.id;
 
 
 --
@@ -1737,7 +1821,8 @@ CREATE TABLE public.mini_users (
     level smallint DEFAULT 0,
     vip_expire_at timestamp without time zone,
     birth_month smallint,
-    birth_day smallint
+    birth_day smallint,
+    distributor_code character varying(20) DEFAULT ''::character varying
 );
 
 
@@ -3721,6 +3806,90 @@ CREATE SEQUENCE trial.depts_id_seq
 ALTER SEQUENCE trial.depts_id_seq OWNER TO neondb_owner;
 
 --
+-- Name: distributor_goods; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_goods (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    goods_id integer NOT NULL,
+    status integer DEFAULT 1,
+    sort integer DEFAULT 0,
+    custom_price numeric(10,2) DEFAULT 0,
+    commission_rate numeric(5,2),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE trial.distributor_goods OWNER TO neondb_owner;
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.distributor_goods_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.distributor_goods_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.distributor_goods_id_seq OWNED BY trial.distributor_goods.id;
+
+
+--
+-- Name: distributor_materials; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_materials (
+    id integer NOT NULL,
+    title character varying(120) DEFAULT ''::character varying NOT NULL,
+    type character varying(20) DEFAULT 'text'::character varying NOT NULL,
+    content text DEFAULT ''::text,
+    file_url text DEFAULT ''::text,
+    goods_id integer DEFAULT 0,
+    scope character varying(20) DEFAULT 'public'::character varying,
+    distributor_id integer DEFAULT 0,
+    status integer DEFAULT 1,
+    sort integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE trial.distributor_materials OWNER TO neondb_owner;
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.distributor_materials_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.distributor_materials_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.distributor_materials_id_seq OWNED BY trial.distributor_materials.id;
+
+
+--
 -- Name: distributors; Type: TABLE; Schema: trial; Owner: neondb_owner
 --
 
@@ -4598,7 +4767,8 @@ CREATE TABLE trial.mini_users (
     level smallint DEFAULT 0,
     vip_expire_at timestamp without time zone,
     birth_month smallint,
-    birth_day smallint
+    birth_day smallint,
+    distributor_code character varying(20) DEFAULT ''::character varying
 );
 
 
@@ -6060,6 +6230,20 @@ ALTER TABLE ONLY public.depts ALTER COLUMN id SET DEFAULT nextval('public.depts_
 
 
 --
+-- Name: distributor_goods id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_goods ALTER COLUMN id SET DEFAULT nextval('public.distributor_goods_id_seq'::regclass);
+
+
+--
+-- Name: distributor_materials id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_materials ALTER COLUMN id SET DEFAULT nextval('public.distributor_materials_id_seq'::regclass);
+
+
+--
 -- Name: distributors id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
@@ -6508,6 +6692,20 @@ ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.w
 
 
 --
+-- Name: distributor_goods id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_goods ALTER COLUMN id SET DEFAULT nextval('trial.distributor_goods_id_seq'::regclass);
+
+
+--
+-- Name: distributor_materials id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_materials ALTER COLUMN id SET DEFAULT nextval('trial.distributor_materials_id_seq'::regclass);
+
+
+--
 -- Name: sale_exchange_order id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
 --
 
@@ -6527,6 +6725,7 @@ COPY public.admins (id, name, account, password, avatar, role_name, role_id, dep
 449	道力干	店员专用1	$2a$10$IUtwgf1Ak8JGR4VFaLuHQeIE.GwapgPKKBd61gMgLAtJB76qGMv1y		店长	11		0			1		2026-04-17 04:00:34.744569	2026-04-17 05:05:48.453224	2026-04-25 09:53:09.769124	1
 567	19900000099	19900000099	$2a$10$NOsKvOYod.tOY4J6Q.Df3.C8YeBYv4qrDLZduF8TTcLnd1KEXgMq2		超级管理员	0		0	19900000099		1		2026-06-11 07:30:59.369964	2026-06-11 07:30:59.369964	\N	4
 451	孟根	监督员	$2a$10$nIYpVE/takg9xA1S6wj5NOmMpx0MjeqGg4q1obLSNMPE1CxGW/qAe		股东专用	13		0			1		2026-04-18 03:26:07.204291	2026-06-12 03:12:33.720013	\N	1
+638	002/苏叶	店员专用	$2a$10$K/QlFEcdzWNMO4X7WfRewOe/KlE6WO5TsXEoZcFuMulLaWef3ypLO		店员	14		0			1		2026-07-12 06:14:38.271435	2026-07-19 14:26:20.174453	\N	1
 \.
 
 
@@ -6955,6 +7154,22 @@ COPY public.depts (id, name, parent_id, sort, status, created_at, shop_id) FROM 
 
 
 --
+-- Data for Name: distributor_goods; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_goods (id, distributor_id, goods_id, status, sort, custom_price, commission_rate, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_materials; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_materials (id, title, type, content, file_url, goods_id, scope, distributor_id, status, sort, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: distributors; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
@@ -7006,11 +7221,9 @@ COPY public.finance_funds (id, name, fund_type, balance, bank_name, bank_account
 20	沈阳东源包材厂	2	2381.12				1	2026-04-01 01:39:07.239587	2026-04-01 01:39:07.239587	2026-04-03 10:06:10.592153	1
 21	沈阳乾兴包装	2	254.80				1	2026-04-01 01:39:26.901642	2026-04-01 01:39:26.901642	2026-04-03 10:06:11.148388	1
 22	淘宝/江苏永发玻璃制品厂	2	1385.10				1	2026-04-01 01:39:41.946062	2026-04-01 01:39:41.946062	2026-04-03 10:06:11.685737	1
-7	公司支出账户	1	-97727.74				1	2026-03-29 15:37:30.872532	2026-06-19 06:50:57.38426	\N	1
 52	奥特尔奶食品店	2	526.00				1	2026-04-01 01:44:32.50387	2026-04-01 01:44:32.50387	2026-04-03 10:06:28.251099	1
 23	山东锦食食品	2	1630.18				1	2026-04-01 01:39:46.666249	2026-04-01 01:39:46.666249	2026-04-03 10:06:12.235733	1
 53	沈阳包装	2	2785.97				1	2026-04-01 01:44:34.60976	2026-04-01 01:44:34.60976	2026-04-03 10:06:28.796527	1
-59	零售收款账户	2	59045.68				1	2026-04-17 10:33:24.542601	2026-06-20 09:05:26.110422	\N	1
 54	小米厂家阿旗	2	573.00				1	2026-04-01 01:44:50.747105	2026-04-01 01:44:50.747105	2026-04-03 10:06:29.449655	1
 24	拼多多/木勺	2	223.86				1	2026-04-01 01:39:50.433555	2026-04-01 01:39:50.433555	2026-04-03 10:06:12.785309	1
 25	拼多多/热缩膜	2	635.49				1	2026-04-01 01:39:55.222563	2026-04-01 01:39:55.222563	2026-04-03 10:06:13.341214	1
@@ -7033,7 +7246,9 @@ COPY public.finance_funds (id, name, fund_type, balance, bank_name, bank_account
 37	民族印刷厂	2	192.00				1	2026-04-01 01:41:11.181848	2026-04-01 01:41:11.181848	2026-04-03 10:06:19.917713	1
 38	淘宝/杂	2	1850.00				1	2026-04-01 01:41:15.437281	2026-04-01 01:41:15.437281	2026-04-03 10:06:20.47073	1
 5	道力干记录付款单	1	0.00				1	2026-03-29 07:56:07.75335	2026-06-07 14:44:27.349323	2026-06-07 14:44:27.349323	1
+7	公司支出账户	1	-108813.74				1	2026-03-29 15:37:30.872532	2026-06-19 06:50:57.38426	\N	1
 39	纯净奶食品	2	21510.60				1	2026-04-01 01:41:22.119502	2026-04-01 01:41:22.119502	2026-04-03 10:06:21.01012	1
+59	零售收款账户	2	64046.58				1	2026-04-17 10:33:24.542601	2026-07-21 04:41:09.79114	\N	1
 9	乌日力格	1	-45905.93				1	2026-03-29 15:38:03.482551	2026-05-17 08:13:27.890335	\N	1
 \.
 
@@ -7084,7 +7299,6 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 818			171	酒	0	件	0		500ML*4	0.00	0.00	0	0	0		1		2026-03-29 06:46:07.26264	2026-03-29 06:46:07.26264	\N	四季红福	SP0000218			1	120.00	100.00		0	0	0	0	1	1	1	1	f	f	1
 819			171	酒	0	桶	0		2L	0.00	0.00	0	0	0		1		2026-03-29 06:46:08.168863	2026-03-29 06:46:08.168863	\N	红日桶装酒	SP0000217			1	28.00	21.00		0	0	0	0	1	1	1	1	f	f	1
 821			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.042136	2026-03-29 06:46:10.042136	\N	天山原浆/大	SP0000215			1	25.00	16.05	6926919861169	0	0	0	0	1	1	1	1	f	f	1
-827			175	成品	0	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:46:18.023543	2026-03-29 06:46:18.023543	\N	透明成品/奶锅巴/线下	SP0000209			1	27.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 832			167	广告物料	0	袋	0		100克	0.00	0.00	0	0	0		1		2026-03-29 06:46:22.622511	2026-03-29 06:46:22.622511	\N	8元烤奶皮/成品	SP0000204			1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 833			170	成品	0	袋	0		180	0.00	0.00	0	0	0		1		2026-03-29 06:46:23.576842	2026-03-29 06:46:23.576842	\N	10元/脆香奶条	SP0000203			1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 820			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:09.089646	2026-06-12 13:24:46.654613	\N	天山原浆/小	SP0000216	牧区纯坊 天山原浆40%vol/350ml/一瓶		1	15.00	9.23	6900002169910	0	0	0	0	1	1	1	1	f	f	1
@@ -7096,7 +7310,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 813			167	广告物料	0	张	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:01.045929	2026-05-30 11:33:05.113423	\N	奶豆腐/超大/乌日汗	SP0000223			1	85.00	60.00	6900002239603	0	0	0	0	1	1	1	1	f	f	1
 837			172	散装	55	袋	0		1一斤	0.00	0.00	0	0	0		1		2026-03-29 06:46:31.020745	2026-06-12 13:18:34.855367	\N	甜味奶豆腐块儿/大	SP0000198	牧区纯坊 纯手工奶豆微甜500克/块		1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1
 828			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:18.944102	2026-06-07 14:28:46.356594	\N	中等/奶豆腐/	SP0000208			1	32.00	30.00		0	0	0	0	1	1	1	1	f	f	1
-829			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:19.857632	2026-05-30 10:19:34.61467	\N	奶豆腐/原味/中/科尔沁	SP0000207			1	25.00	19.00		0	0	0	0	1	1	1	1	f	f	1
+829			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:19.857632	2026-07-21 04:03:15.726504	\N	奶豆腐/原味/中/科尔沁	SP0000207			1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1
 826			172	散装	0	盒	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:46:15.715184	2026-04-26 16:25:18.182639	\N	乌日汗酸奶	SP0000210			1	15.00	9.00	6900002102839	0	0	0	0	1	1	1	1	f	f	1
 834			167	广告物料	0	袋	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:24.537651	2026-06-07 09:22:49.339579	\N	新年福字袋/小	SP0000202			4	0.00	0.22		0	0	0	0	1	1	1	1	f	f	1
 804			167	广告物料	0	瓶	0		1L	0.00	0.00	0	0	0		1		2026-03-29 06:45:51.478038	2026-04-26 16:25:54.405513	\N	德吉酸奶/2斤装	SP0000232			1	18.00	15.00	6900002324565	0	0	0	0	1	1	1	1	f	f	1
@@ -7106,6 +7320,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 824			172	散装	62	斤	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:13.346968	2026-05-24 08:09:21.5788	\N	黄油/散装/纯净	SP0000212			5	48.00	25.00		0	0	0	0	1	1	1	1	f	f	1
 831			170	成品	0	袋	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:21.672573	2026-06-12 12:54:10.79056	\N	果条/阿润	SP0000205	牧区纯坊 散装手工油炸果条250g/袋		1	12.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 825			172	散装	0	盒	0		300ml	0.00	0.00	0	0	0		1		2026-03-29 06:46:14.691322	2026-05-30 11:33:06.035023	\N	故乡宝酸马奶	SP0000211			1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1
+827			175	成品	0	盒	0		200克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"headerImages":["/api/image/img_1784643974370_40fbis","/api/image/img_1784646925599_2qx78l"],"image":"/api/image/img_1784643974370_40fbis"}}	1		2026-03-29 06:46:18.023543	2026-07-21 15:15:28.869625	\N	透明成品/奶锅巴/线下	SP0000209			1	27.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 836			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:29.95024	2026-06-12 13:24:48.347172	\N	礼盒/2026	SP0000199	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒		4	8.00	5.16		0	0	0	0	1	1	1	1	f	f	1
 846			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:40.760643	2026-04-26 16:16:59.346294	\N	酸奶/额吉伊德	SP0000189			1	10.00	6.00		0	0	0	0	1	1	1	1	f	f	1
 861			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:56.438149	2026-06-12 12:54:11.261397	\N	五香瓜子	SP0000174	牧区纯坊 散装原味香瓜子500克/袋		1	18.00	15.00	6900001763790	0	0	0	0	1	1	1	1	f	f	1
@@ -7136,17 +7351,17 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 890			172	散装	62	斤	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.97204	2026-05-30 11:58:30.649672	\N	红枣	SP0000145			1	18.00	11.67	6900001459821	0	0	0	0	1	1	1	1	f	f	1
 856			170	成品	53	张	0		1.2	0.00	0.00	0	0	0		1		2026-03-29 06:46:51.851488	2026-05-28 15:39:30.126214	\N	科尔沁/大奶豆腐	SP0000179			1	48.00	33.00	6974218180685	0	0	0	0	1	1	1	1	f	f	1
 887			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:27.782543	2026-05-30 10:44:16.349627	\N	羊乳奶粉/奶茶专用	SP0000148			1	32.00	25.00	6900001481464	0	0	0	0	1	1	1	1	f	f	1
-845			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:39.821893	2026-06-13 06:44:53.73965	\N	乳清饮料	SP0000190	牧区纯乳清冷饮450克/杯		1	6.00	4.50	6943774380698	0	0	0	0	1	1	1	1	f	f	1
+882			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:23.133723	2026-07-19 14:05:41.408836	\N	阿润月饼/黄油渣馅	SP0000153			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 886			170	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:26.803653	2026-04-04 09:40:23.797224	\N	冻炒米/科尔沁	SP0000149			1	12.00	7.00	6900001499679	0	0	0	0	1	1	1	1	f	f	1
 870			180	成品	57	个	0		1.5kg	0.00	0.00	0	0	0		1		2026-03-29 06:47:07.159071	2026-04-26 15:29:41.524191	\N	大青砖茶砖	SP0000165			1	35.00	273.05	6910261376045	0	0	0	0	1	1	1	1	t	f	1
 888			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:29.077221	2026-05-30 10:44:15.900438	\N	河套奶粉	SP0000147			1	18.00	14.00	6900001473306	0	0	0	0	1	1	1	1	f	f	1
-880			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:21.300867	2026-06-12 12:42:25.633701	\N	阿润月饼/五仁馅	SP0000155	牧区纯坊 纯手工月饼 五仁馅350克/一袋		1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 860			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:55.53842	2026-04-26 16:20:29.366472	\N	普通瓜子	SP0000175			1	12.00	10.00	6915044718067	0	0	0	0	1	1	1	1	f	f	1
-881			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:22.211561	2026-04-04 09:40:28.613034	\N	阿润月饼/奶皮子馅	SP0000154			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-882			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:23.133723	2026-04-26 16:19:12.764659	\N	阿润月饼/黄油渣馅	SP0000153			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
+880			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:21.300867	2026-07-19 14:05:42.537837	\N	阿润月饼/五仁馅	SP0000155	牧区纯坊 纯手工月饼 五仁馅350克/一袋		1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
+881			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:22.211561	2026-07-19 14:05:41.956867	\N	阿润月饼/奶皮子馅	SP0000154			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 852			170	成品	62	斤	0		孜然	0.00	0.00	0	0	0		1		2026-03-29 06:46:48.134464	2026-04-26 16:12:05.210481	\N	牛肉干/散/孜然	SP0000183			1	115.00	98.00	6961257264978	0	0	0	0	1	1	1	1	f	f	1
 879			167	广告物料	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:20.325013	2026-06-13 03:10:18.675769	\N	干肉奶茶	SP0000156			1	15.00	6.00	6982118636994	0	0	0	0	1	1	1	1	f	f	1
 876			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-03-29 06:47:17.101234	2026-04-04 09:40:33.593086	\N	憨野/奶条	SP0000159			1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1
+845			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:39.821893	2026-07-12 06:09:21.749902	\N	乳清饮料	SP0000190	牧区纯乳清冷饮450克/杯		1	6.00	4.53	6943774380698	0	0	0	0	1	1	1	1	f	f	1
 873			192	牛肉干	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:12.37242	2026-06-07 09:22:51.546691	\N	专袋/牛肉干包装	SP0000162			4	0.00	1.47	6980832219752	0	0	0	0	1	1	1	1	f	f	1
 864			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:01.663181	2026-04-04 09:40:44.95816	\N	礼盒/腰封	SP0000171			1	0.50	0.37		0	0	0	0	1	1	1	1	f	f	1
 862			187	黄油	54	瓶	0		120mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:59.307415	2026-04-04 09:40:46.859721	\N	专瓶/黄油渣	SP0000173			1	0.00	1.80		0	0	0	0	1	1	1	1	f	f	1
@@ -7160,15 +7375,15 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 889			170	成品	56	盒	0		1盒	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.038654	2026-05-30 10:44:15.437713	\N	奶皮卷/科尔沁	SP0000146			1	30.00	15.00	6900001463143	0	0	0	0	1	1	1	1	f	f	1
 843			172	散装	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:38.007844	2026-04-26 16:16:24.906588	\N	阿依古丽奶茶专用红茶	SP0000192			1	0.00	22.00		0	0	0	0	1	1	1	1	f	f	1
 878			170	成品	56	盒	0		1一斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:19.354998	2026-04-26 15:27:11.664307	\N	羊奶粉/1斤	SP0000157			1	18.00	12.50		0	0	0	0	1	1	1	1	f	f	1
-901			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:47:43.221915	2026-06-09 02:17:56.149233	\N	手工白花炒米/散装	SP0000134			5	7.00	5.17	6900001345795	0	0	0	0	1	1	1	1	t	f	1
 923			172	散装	62	斤	0		{"unit_linked_goods":{"炒米海丰袋装":{"id":932,"name":"炒米海丰袋装"}}}	0.00	0.00	0	0	0		1		2026-03-29 06:48:04.51461	2026-06-09 02:17:57.541142	\N	海丰炒米/散装/硬口/	SP0000112			5	7.50	4.80	6900001127456	0	0	0	0	1	1	1	1	t	f	1
 938			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:18.849827	2026-04-04 09:39:32.368854	\N	透明成品/鲜奶酪/甜味/线下	SP0000097			1	29.80	0.00	6977375240277	0	0	0	0	1	1	1	1	f	f	1
 936			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:16.97035	2026-04-04 09:39:34.223162	\N	透明成品/奶条/甜味/线下	SP0000099			1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1
 934			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:15.030001	2026-04-04 09:39:36.112874	\N	透明成品/奶皮千层/线下	SP0000101			1	26.60	0.00	6900001013558	0	0	0	0	1	1	1	1	f	f	1
-908			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:49.741949	2026-06-12 13:04:55.945711	\N	哈斯乌拉牛肉干500g原味	SP0000127	牧区纯坊 风干牛肉干500克/袋		1	98.00	85.00	6900001278368	0	0	0	0	1	1	1	1	f	f	1
 928			178	塑料袋	55	袋	0		大/中/小	0.00	0.00	0	0	0		1		2026-03-29 06:48:09.276363	2026-04-04 09:39:41.706616	\N	塑料购物袋	SP0000107			1	0.00	0.00	6900001075048	0	0	0	0	1	1	1	1	f	f	1
 915			170	成品	56	盒	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:47:56.98916	2026-06-13 06:46:21.808426	\N	黄油渣/盒	SP0000120			1	12.00	10.00	6900001205597	0	0	0	0	1	1	1	1	f	f	1
 899			170	成品	54	瓶	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:41.411767	2026-06-12 13:08:30.931341	\N	纯净/黄油/斤	SP0000136	牧区纯坊 精品黄油420克/瓶		1	35.00	22.00	6900001367517	0	0	0	0	1	1	1	1	f	f	1
+908			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:49.741949	2026-06-22 03:42:25.218999	\N	哈斯乌拉牛肉干500g原味	SP0000127	牧区纯坊 风干牛肉干500克/袋		1	98.00	89.00	6900001278368	0	0	0	0	1	1	1	1	f	f	1
+901			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:47:43.221915	2026-06-30 02:18:32.40348	\N	手工白花炒米/散装	SP0000134			5	7.00	5.17	6900001345795	0	0	0	0	1	1	1	1	t	f	1
 912			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:53.899291	2026-04-04 09:39:57.700902	\N	蓝旗绿乳糖水果	SP0000123			1	6.00	4.00	6900001238866	0	0	0	0	1	1	1	1	f	f	1
 910			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:51.965511	2026-04-04 09:39:59.637306	\N	蓝旗绿乳糖奶香酥	SP0000125			1	6.00	4.00	6900001257630	0	0	0	0	1	1	1	1	f	f	1
 926			172	散装	57	个	0		1斤2两	0.00	0.00	0	0	0		1		2026-03-29 06:48:07.413569	2026-06-12 13:18:33.896029	\N	大奶豆腐砖/1.2斤	SP0000109	牧区纯坊 纯手工奶豆腐原味350克/块		1	35.00	25.00	6900001096391	0	0	0	0	1	1	1	1	f	f	1
@@ -7184,20 +7399,19 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 932			170	成品	55	袋	0		500克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:48:13.155796	2026-06-07 11:20:15.904649	\N	炒米海丰袋装	SP0000103			1	7.50	5.50	6958856810059	0	0	0	0	1	1	1	1	f	f	1
 914			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:55.689564	2026-04-04 09:39:55.808835	\N	蓝旗绿乳糖炼乳	SP0000121			1	6.00	4.00	6900001214103	0	0	0	0	1	1	1	1	f	f	1
 950			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:30.827947	2026-06-07 09:22:53.768889	\N	透专标签/奶皮卷	SP0000085			4	0.00	0.37	6900000856863	0	0	0	0	1	1	1	1	f	f	1
-920			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		0		2026-03-29 06:48:01.691012	2026-06-16 13:56:33.787569	\N	手工乌日末液体	SP0000115	牧区纯手工乌日莫（奶嚼口）原味500克		5	10.00	5.00	6900001151503	0	0	0	0	1	1	1	1	f	f	1
 951			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:32.155746	2026-06-07 09:23:01.276417	\N	透专标签/冻炒米	SP0000084			4	0.00	0.37	6900000847671	0	0	0	0	1	1	1	1	f	f	1
 949			184	袋子	53	张	0		500克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:29.858794	2026-04-04 09:39:21.82756	\N	专袋/乌日莫/炒米	SP0000086			1	0.00	0.79	6900000861218	0	0	0	0	1	1	1	1	f	f	1
 948			184	袋子	53	张	0		250克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:28.905411	2026-04-04 09:39:22.794312	\N	专袋/乌日莫	SP0000087			1	0.00	0.46	6900000874528	0	0	0	0	1	1	1	1	f	f	1
 947			167	广告物料	53	张	0		价格/规格/不定	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.999927	2026-04-04 09:39:23.781238	\N	展示用卡牌	SP0000088			1	0.00	0.00	6900000881797	0	0	0	0	1	1	1	1	f	f	1
 946			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.116959	2026-04-04 09:39:24.755591	\N	半成品/透明/鲜奶皮	SP0000089			2	26.60	14.00	6900000899530	0	0	0	0	1	1	1	1	f	f	1
 945			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:26.204461	2026-04-04 09:39:25.684083	\N	半成品/透明/奶皮卷	SP0000090			2	26.60	13.00	6900000907890	0	0	0	0	1	1	1	1	f	f	1
-931			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:48:12.214368	2026-05-28 16:13:48.969833	\N	炒米粉/aag	SP0000104			1	6.50	4.80	6900001043080	0	0	0	0	1	1	1	1	f	f	1
 943			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:24.289833	2026-04-04 09:39:27.623013	\N	半成品/透明/原味奶条	SP0000092			2	22.00	7.20	6900000924342	0	0	0	0	1	1	1	1	f	f	1
 942			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:23.394765	2026-04-04 09:39:28.545146	\N	半成品/透明/甜味奶条	SP0000093			2	22.00	6.80	6900000935538	0	0	0	0	1	1	1	1	f	f	1
 941			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:22.463963	2026-04-04 09:39:29.486763	\N	透明成品/鲜奶酪/原味/线下	SP0000094			1	29.80	0.00	6900000947515	0	0	0	0	1	1	1	1	f	f	1
 905			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:47.007702	2026-06-12 13:18:34.394702	\N	真空奶豆腐砖/甜味	SP0000130	牧区纯坊 纯手工奶豆腐微甜350克/块		1	26.00	17.00	6900001305887	0	0	0	0	1	1	1	1	f	f	1
 940			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:21.541764	2026-04-26 15:27:43.599047	\N	半成品/透明/甜味/鲜奶酪	SP0000095			2	29.80	13.00	6900000955561	0	0	0	0	1	1	1	1	f	f	1
 937			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:17.935558	2026-04-04 09:39:33.316193	\N	透明成品/鲜奶皮/线下	SP0000098			1	29.80	0.00	6900000986032	0	0	0	0	1	1	1	1	f	f	1
+916			172	散装	62	斤	0		半斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:57.888413	2026-06-22 03:38:38.718121	\N	脆奶条/散装/科尔沁	SP0000119			5	25.00	13.00	6900001196244	0	0	0	0	1	1	1	1	t	f	1
 933			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:14.106114	2026-04-04 09:39:37.040944	\N	透明成品/奶条/原味/线下	SP0000102			1	22.00	0.00	6900001026070	0	0	0	0	1	1	1	1	f	f	1
 904			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:46.093461	2026-05-29 11:29:06.786727	\N	盛宇燃奶豆腐/原味	SP0000131			1	26.00	19.00	6900001315573	0	0	0	0	1	1	1	1	f	f	1
 918			170	成品	54	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:59.814553	2026-06-12 13:08:29.071972	\N	黄油/半斤	SP0000117	牧区纯坊 纯手工熬制黄油250克/瓶		1	16.00	11.00	6900001176074	0	0	0	0	1	1	1	1	f	f	1
@@ -7205,7 +7419,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 925			172	散装	57	个	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:48:06.43905	2026-04-04 09:39:44.622632	\N	小/无印花/奶豆腐砖/1斤	SP0000110			1	32.00	20.00	6900001102849	0	0	0	0	1	1	1	1	f	f	1
 944			200	给组装好产品	56	盒	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:25.20265	2026-04-26 15:27:28.557107	\N	半成品/透明/奶皮千层	SP0000091			2	25.60	12.00	6900000917840	0	0	0	0	1	1	1	1	f	f	1
 929			170	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:48:10.195771	2026-05-30 10:26:42.193132	\N	白砂糖	SP0000106			1	5.00	3.50	6900001064304	0	0	0	0	1	1	1	1	f	f	1
-916			172	散装	62	斤	0		半斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:57.888413	2026-06-20 08:11:55.673552	\N	脆奶条/散装/科尔沁	SP0000119			5	25.00	13.00	6900001196244	0	0	0	0	1	1	1	1	t	f	1
+931			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:48:12.214368	2026-06-22 03:42:24.97059	\N	炒米粉/aag	SP0000104			1	6.50	4.80	6900001043080	0	0	0	0	1	1	1	1	f	f	1
 913			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:54.788268	2026-04-04 09:39:56.730814	\N	蓝旗绿乳糖黄油球	SP0000122			1	6.00	4.00	6900001223574	0	0	0	0	1	1	1	1	f	f	1
 911			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:52.948674	2026-04-04 09:39:58.67584	\N	蓝旗绿乳糖果仁酥	SP0000124			1	6.00	4.00	6900001241338	0	0	0	0	1	1	1	1	f	f	1
 909			181	糖果sugar	55	袋	0		450g	0.00	0.00	0	0	0		1		2026-03-29 06:47:50.676924	2026-04-04 09:40:00.640344	\N	蓝旗绿乳糖惠虹糖	SP0000126			1	9.00	7.00	6900001262639	0	0	0	0	1	1	1	1	f	f	1
@@ -7232,7 +7446,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 954			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:34.870605	2026-06-07 09:22:55.97699	\N	透专标签/乳清奶条/甜味	SP0000081			4	0.00	0.05	6900000815004	0	0	0	0	1	1	1	1	f	f	1
 984			205	青砖奶茶	53	张	0		一张	0.00	0.00	0	0	0		1		2026-03-29 06:49:07.274393	2026-04-04 09:38:47.474644	\N	茶包/类腰封纸	SP0000050			1	0.00	0.18	6900000504012	0	0	0	0	1	1	1	1	f	f	1
 982			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:04.122927	2026-04-04 09:38:49.420416	\N	塑料手提袋	SP0000052			1	0.00	0.19	6900000526367	0	0	0	0	1	1	1	1	f	f	1
-1010			189	半成品	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:49:36.02884	2026-06-07 11:58:10.98235	\N	奶油球	SP0000024			3	0.00	0.42	6900000243728	0	0	0	0	1	1	1	1	t	f	1
+1010			189	半成品	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:49:36.02884	2026-07-12 06:06:46.94148	\N	奶油球	SP0000024			3	0.00	0.45	6900000243728	0	0	0	0	1	1	1	1	t	f	1
 978			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:00.454145	2026-04-04 09:38:53.224677	\N	新茶专用标签纸	SP0000056			1	0.00	0.05	6900000561600	0	0	0	0	1	1	1	1	f	f	1
 999			205	青砖奶茶	53	张	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:24.473332	2026-06-07 09:23:04.603874	\N	茶专用/不干胶/标签	SP0000035			4	0.00	0.04	6900000358921	0	0	0	0	1	1	1	1	f	f	1
 962			201	亚克力	56	盒	0		85X85X63  鲜奶皮	0.00	0.00	0	0	0		1		2026-03-29 06:48:42.8266	2026-06-07 09:22:57.108143	\N	中/方形/亚克力盒/	SP0000072			4	2.50	0.85	6900000724486	0	0	0	0	1	1	1	1	f	f	1
@@ -7254,8 +7468,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 967			168	散货	63	桶	0		4斤装	0.00	0.00	0	0	0	4斤装/1元一斤	1		2026-03-29 06:48:48.573276	2026-06-13 06:46:21.333943	\N	查嘎/乳清	SP0000067	传统查嘎酸奶五斤大桶装		1	10.00	5.00	6900000679211	0	0	0	0	1	1	1	1	f	f	1
 1011			189	半成品	58	小包	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	已加运费平均采购价	1		2026-03-29 06:49:36.942129	2026-06-07 11:36:04.308945	\N	茶包	SP0000023			3	0.00	0.15	6900000233034	0	0	0	0	1	1	1	1	t	f	1
 979			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:01.363799	2026-05-28 17:22:09.625011	\N	新茶包/纸	SP0000055			1	0.00	0.02	6900000553413	0	0	0	0	1	1	1	1	t	f	1
-981			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:49:03.200495	2026-06-20 08:11:55.395376	\N	烤奶皮	SP0000053			5	30.00	20.00	6900000535282	0	0	0	0	1	1	1	1	t	f	1
-958			201	亚克力	56	盒	0		乳清奶条盒	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:48:39.011957	2026-06-07 10:24:09.33044	\N	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077			4	0.00	1.33	6900000778282	0	0	0	0	1	1	1	1	f	f	1
+981			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:49:03.200495	2026-07-21 04:02:48.955133	\N	烤奶皮	SP0000053			5	30.00	22.00	6900000535282	0	0	0	0	1	1	1	1	t	f	1
 1005			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:31.377292	2026-04-04 09:38:27.428664	\N	泰成物流费	SP0000029			1	0.00	0.00	6900000291007	0	0	0	0	1	1	1	1	f	f	1
 1003			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:29.482236	2026-04-04 09:38:29.357769	\N	热收缩膜机	SP0000031			1	0.00	1838.00	6900000316828	0	0	0	0	1	1	1	1	f	f	1
 1001			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:27.293725	2026-04-04 09:38:31.266689	\N	冷冻柜/冰箱	SP0000033			1	0.00	1609.48	6900000335117	0	0	0	0	1	1	1	1	f	f	1
@@ -7263,9 +7476,10 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 1000			205	青砖奶茶	57	个	0		袋100个/平均价0.1599	0.00	0.00	0	0	0		1		2026-03-29 06:49:25.419757	2026-06-07 10:19:59.557368	\N	木勺	SP0000034			4	0.00	0.11	6900000349016	0	0	0	0	1	1	1	1	t	f	1
 985			193	成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:49:08.209757	2026-05-23 04:35:17.121673	\N	甜味传统奶豆腐/袋装成品	SP0000049			1	42.00	12.78	6900000499096	0	0	0	0	1	1	1	1	t	f	1
 955			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:35.780754	2026-06-07 09:22:54.8772	\N	透专标签/乳清奶条/原味	SP0000080			4	0.00	0.05	6900000807613	0	0	0	0	1	1	1	1	f	f	1
+1013			189	半成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:38.797883	2026-06-22 06:19:25.280499	\N	冻炒米/给组装半成品/那牧尔	SP0000021			2	0.00	5.50	6900000218137	0	0	0	0	1	1	1	1	f	f	1
 960			201	亚克力	56	盒	0		31g	0.00	0.00	0	0	0		1		2026-03-29 06:48:40.941275	2026-06-07 09:22:52.095123	\N	三角/奶皮千层盒	SP0000075			4	0.00	0.85	6900000754498	0	0	0	0	1	1	1	1	f	f	1
 976			193	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:57.349972	2026-04-04 09:38:55.162679	\N	暂用/茶 新旧更替	SP0000058			1	58.00	0.00	6900000589769	0	0	0	0	1	1	1	1	f	f	1
-1013			189	半成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:38.797883	2026-06-09 06:47:33.38836	\N	冻炒米/给组装半成品/那牧尔	SP0000021			2	0.00	5.50	6900000218137	0	0	0	0	1	1	1	1	f	f	1
+958			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:39.011957	2026-06-23 09:40:38.097402	\N	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077	SSM-028注塑长方盒130+85*62（茶叶盒）		4	0.00	1.56	6900000778282	0	0	0	0	1	1	1	1	t	f	1
 975			187	黄油	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:56.402437	2026-06-07 09:23:02.390076	\N	黄油脖签	SP0000059			4	0.00	0.08	6900000598069	0	0	0	0	1	1	1	1	f	f	1
 971			172	散装	62	斤	0		45散称/斤/9元/100克	0.00	0.00	0	0	0		1		2026-03-29 06:48:52.219121	2026-04-04 09:39:00.03641	\N	甜味/散称/奶豆腐块儿	SP0000063			1	70.00	45.00	6900000639276	0	0	0	0	1	1	1	1	f	f	1
 969			172	散装	53	张	0		120-150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:50.432711	2026-04-04 09:39:01.907737	\N	小/奶皮	SP0000065			1	15.00	10.00	6900000651693	0	0	0	0	1	1	1	1	f	f	1
@@ -7289,10 +7503,9 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 1024			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:49.772554	2026-04-21 05:37:27.664081	\N	标签/不干胶/奶条/甜味	SP0000010			4	0.00	0.05	6900000108033	0	0	0	0	1	1	1	1	f	f	1
 3177			423	其他品牌成品	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:42:19.372797	2026-06-17 11:42:19.885769	\N	蒙古国饮料				1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 872			189	半成品	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:10.015007	2026-04-26 16:06:26.28185	\N	半成品/黄金纬度牛肉干/那牧尔	SP0000163			2	88.00	48.95	6973457825186	0	0	0	0	1	1	1	1	t	f	1
-1014			189	半成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:49:39.760183	2026-06-08 08:36:13.307296	\N	散装/甜味奶条	SP0000020			5	30.00	16.96	6962547070553	0	0	0	0	1	1	1	1	t	f	1
-963			201	亚克力	56	盒	0		7.4X7.4X7.8 奶豆腐/冻炒米通用	0.00	0.00	0	0	0		1		2026-03-29 06:48:43.763191	2026-06-07 09:22:59.087718	\N	小/方形/亚克力盒/	SP0000071			4	2.00	0.85	6900000719676	0	0	0	0	1	1	1	1	f	f	1
+963			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:43.763191	2026-06-23 09:45:18.072027	\N	小/方形/亚克力盒/	SP0000071	SSH-001正方食品盒7.4+7.4*7.8CM		4	2.00	1.00	6900000719676	0	0	0	0	1	1	1	1	t	f	1
 839			180	成品	55	袋	0		360克	0.00	0.00	0	0	0		1		2026-03-29 06:46:34.281064	2026-04-26 16:16:23.045852	\N	奶皮子粉	SP0000196			1	16.00	12.00		0	0	0	0	1	1	1	1	f	f	1
-996			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0	{"__brand__": {"show": true, "image": "/media/goods/996/header_1.jpg", "category": "食品", "detailImages": ["/media/goods/996/detail_1.jpg", "/media/goods/996/detail_2.jpg", "/media/goods/996/detail_3.jpg"], "headerImages": ["/media/goods/996/header_1.jpg", "/media/goods/996/header_2.jpg", "/media/goods/996/header_3.jpg"]}}	1		2026-03-29 06:49:21.709118	2026-06-10 03:55:18.644919	\N	青砖奶茶成品	SP0000038			1	58.00	15.00	6900000389670	0	0	1	0	1	1	1	1	f	f	1
+996			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/996/header_1.jpg","category":"精选","detailImages":["/media/goods/996/detail_1.jpg","/media/goods/996/detail_2.jpg","/media/goods/996/detail_3.jpg"],"headerImages":["/media/goods/996/header_1.jpg","/media/goods/996/header_2.jpg","/media/goods/996/header_3.jpg"],"baseSales":988}}	1		2026-03-29 06:49:21.709118	2026-07-04 14:14:57.699051	\N	青砖奶茶成品	SP0000038			1	58.00	15.00	6900000389670	0	0	1	0	1	1	1	1	f	f	1
 922			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:48:03.552073	2026-05-02 01:41:07.619808	\N	酸奶炒米糖/散装	SP0000113			5	20.00	10.00	6900001139227	0	0	0	0	1	1	1	1	t	f	1
 3148			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084176	2026-06-12 12:09:01.084176	\N	牧区纯坊 香蕉味蛋糕458克/盒				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3154			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088527	2026-06-12 12:09:01.088527	\N	牧区纯坊 蒙牛 0添加有机原味软牛奶200克10盒/箱				1	58.00	0.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7304,18 +7517,20 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3165			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.279842	2026-06-12 12:09:01.279842	2026-06-12 13:23:53.00308	牧区纯坊 牧区奶糖 爵口味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3145			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.988316	2026-06-12 12:09:00.988316	2026-06-12 13:59:51.600094	牧区纯坊 奶皮子有点卷草莓味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1
 3166			424	现制产品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.281385	2026-06-13 02:21:15.724742	\N	红糖枸杞红枣奶茶450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1
-989			193	成品	54	瓶	0		100克	0.00	0.00	0	0	0	{"__brand__": {"image": "https://nomaderp.pages.dev/media/goods/989/header_1.jpg", "headerImages": ["https://nomaderp.pages.dev/media/goods/989/header_1.jpg", "https://nomaderp.pages.dev/media/goods/989/header_2.jpg", "https://nomaderp.pages.dev/media/goods/989/header_3.jpg", "https://nomaderp.pages.dev/media/goods/989/header_4.jpg"], "show": true, "category": "食品", "tags": [], "skuVariants": [{"label": "1瓶", "erpId": 989, "price": 39}, {"label": "2瓶", "erpId": 989, "price": 75}, {"label": "3瓶", "erpId": 989, "price": 108}], "baseSales": 341}}	1		2026-03-29 06:49:12.346781	2026-06-12 13:08:28.599061	\N	蒙古黄油/瓶装成品	SP0000045	牧区纯坊品牌 蒙古 黄油 100克/瓶		1	39.00	8.05	6900000452315	0	0	4	0	1	1	1	1	t	f	1
-994			193	成品	56	盒	0		110克	0.00	0.00	0	0	0	{"__brand__": {"show": true, "image": "/media/goods/994/header_1.jpg", "category": "食品", "detailImages": ["/media/goods/994/detail_1.jpg", "/media/goods/994/detail_2.jpg", "/media/goods/994/detail_3.jpg"], "headerImages": ["/media/goods/994/header_1.jpg", "/media/goods/994/header_2.jpg", "/media/goods/994/header_3.jpg"]}}	1		2026-03-29 06:49:19.767881	2026-06-10 03:55:17.61339	\N	冻炒米成品盒	SP0000040			1	36.00	6.00	6900000408112	0	0	2	0	1	1	1	1	f	f	1
+1014			189	半成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:49:39.760183	2026-06-22 07:58:17.379209	\N	散装/甜味奶条	SP0000020			5	30.00	15.70	6962547070553	0	0	0	0	1	1	1	1	t	f	1
+989			193	成品	54	瓶	0		100克	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/989/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/989/header_1.jpg","https://nomaderp.pages.dev/media/goods/989/header_2.jpg","https://nomaderp.pages.dev/media/goods/989/header_3.jpg","https://nomaderp.pages.dev/media/goods/989/header_4.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1瓶","erpId":989,"price":39},{"label":"2瓶","erpId":989,"price":75},{"label":"3瓶","erpId":989,"price":108}],"baseSales":341}}	1		2026-03-29 06:49:12.346781	2026-07-04 14:14:54.941759	\N	蒙古黄油/瓶装成品	SP0000045	牧区纯坊品牌 蒙古 黄油 100克/瓶		1	39.00	8.05	6900000452315	0	0	4	0	1	1	1	1	t	f	1
+994			193	成品	56	盒	0		110克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/994/header_1.jpg","category":"精选","detailImages":["/media/goods/994/detail_1.jpg","/media/goods/994/detail_2.jpg","/media/goods/994/detail_3.jpg"],"headerImages":["/media/goods/994/header_1.jpg","/media/goods/994/header_2.jpg","/media/goods/994/header_3.jpg"],"baseSales":281}}	1		2026-03-29 06:49:19.767881	2026-07-15 03:29:28.696014	\N	冻炒米成品盒	SP0000040			1	36.00	6.00	6900000408112	0	0	2	0	1	1	1	1	f	f	1
 1007			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":false}}	1		2026-03-29 06:49:33.228395	2026-06-12 12:17:31.029808	\N	原味奶条成品	SP0000027	牧区纯坊 蒙古鲜奶制品奶条250克/袋		1	52.00	11.61	6900000277492	0	0	7	0	1	1	1	1	f	f	1
 3149			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084679	2026-06-12 12:09:01.084679	2026-06-12 13:15:30.366906	牧区纯坊 青砖茶 380克/块				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
+3179			175	成品	56	盒	0		120克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 06:56:45.322236	2026-06-22 06:56:45.576504	\N	透明成品/奶条/甜味/线下/方盒				1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1
+3180			188	牧区纯坊X游牧奇遇	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 07:01:15.052876	2026-06-22 07:01:15.306619	\N	透明奶茶杯				1	2.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3082			0		0	个	0			0.00	0.00	0	0	0		1		2026-04-20 13:43:39.305757	2026-04-20 13:43:39.305757	2026-04-20 15:34:47.155953	牛肉瓜				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3083			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.136041	2026-04-21 07:34:54.136041	\N	敖汉小米5㎏				1	90.00	65.00		0	0	0	0	1	1	1	1	f	f	1
 3084			0		0	盒	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.357518	2026-04-21 07:34:54.357518	\N	四色小米2㎏				1	69.00	42.00		0	0	0	0	1	1	1	1	f	f	1
-3085			0		0	桶	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.900679	2026-04-21 07:34:54.900679	\N	小米锅巴110g				1	8.50	6.50		0	0	0	0	1	1	1	1	f	f	1
 3086			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.113849	2026-04-21 07:34:55.113849	\N	布袋小米2.5㎏				1	50.00	37.00		0	0	0	0	1	1	1	1	f	f	1
 3087			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.313877	2026-04-21 07:34:55.313877	\N	郁金川2.5㎏				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1
 3089			0		0	箱	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.714876	2026-04-21 07:34:55.714876	\N	有机黄小米2㎏				1	59.50	43.00		0	0	0	0	1	1	1	1	f	f	1
-3107			168	散货	52	块	0			0.00	0.00	0	0	0		1		2026-05-14 09:01:46.065231	2026-06-12 03:24:09.734468	\N	科尔沁中奶豆腐				1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1
+3085			0		0	桶	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.900679	2026-06-22 07:32:27.764906	\N	小米锅巴110g				1	8.50	6.50		0	0	0	0	1	1	1	1	f	f	1
 3095			168	散货	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-05-04 02:50:29.320833	2026-05-04 02:51:20.172825	\N	牧区黄油小瓶				1	22.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3097			421	文创	56	盒	0			0.00	0.00	0	0	0		1		2026-05-04 03:05:14.20207	2026-05-04 03:05:14.20207	\N	明信片/风景版				1	22.90	0.00		0	0	0	0	1	1	1	1	f	f	1
 3100			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-08 03:59:32.917368	2026-05-08 03:59:32.917368	\N	楚楚给				1	12.00	0.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7334,6 +7549,7 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3112			421		57		0			0.00	0.00	0	0	0		1		2026-05-21 15:21:15.13533	2026-05-25 12:56:15.686673	\N	阿旗book				1	29.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 3091			168	散货	62	斤	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-04-27 11:01:48.030256	2026-06-08 04:17:14.094865	\N	牛肉干/散称				5	128.00	98.00		0	0	0	0	1	1	1	1	f	f	1
 3093			168	散货	63	桶	0			0.00	0.00	0	0	0		1		2026-04-30 01:28:05.174482	2026-05-28 14:17:30.039862	\N	烤奶花（小桶）				1	20.00	4.68		0	0	0	0	1	1	1	1	f	f	1
+3094			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-02 01:31:58.139275	2026-06-22 03:42:25.454283	\N	科尔沁糖（酸奶/嚼口/乌日末		牧区纯坊 牧区奶糖 酸奶味 250克		5	25.00	10.00		0	0	0	0	1	1	1	1	f	f	1
 3158			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.182427	2026-06-12 12:09:01.182427	2026-06-12 13:24:54.10506	牧区纯坊 天山原浆40%vol/350ml/一瓶				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 822			167	广告物料	0	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.970494	2026-05-29 11:29:09.116874	\N	黄油/大瓶/科尔沁	SP0000214			1	30.00	21.00	6907262383018	0	0	0	0	1	1	1	1	f	f	1
 3092			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-04-29 06:00:42.815829	2026-05-30 11:19:56.95243	\N	干噎酸奶				5	40.00	30.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7342,10 +7558,11 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3102			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:21:33.896996	2026-06-12 12:24:27.715355	\N	小米原浆		牧区纯坊 小米原浆 40度 清香型 500ml/瓶		1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3099			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-06 01:25:07.998513	2026-06-12 12:54:10.329039	\N	饺子		牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋		1	25.00	18.00		0	0	0	0	1	1	1	1	f	f	1
 3155			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088912	2026-06-12 12:09:01.088912	2026-06-12 13:18:49.1727	牧区纯坊 纯手工奶豆腐微甜350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3094			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-02 01:31:58.139275	2026-06-12 13:23:40.12132	\N	科尔沁糖（酸奶/嚼口/乌日末		牧区纯坊 牧区奶糖 酸奶味 250克		5	25.00	18.50		0	0	0	0	1	1	1	1	f	f	1
+3107			168	散货	52	块	0			0.00	0.00	0	0	0		1		2026-05-14 09:01:46.065231	2026-06-22 07:27:52.482911	\N	科尔沁中奶豆腐				1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1
 3157			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.180589	2026-06-12 12:09:01.180589	2026-06-12 13:24:58.80373	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3116			423	其他品牌成品	54	瓶	0		260mL	0.00	0.00	0	0	0		1		2026-05-25 11:44:00.104052	2026-05-25 11:45:22.760336	\N	酸马奶/蒙医院				1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1
 3114			421		67		0			0.00	0.00	0	0	0		1		2026-05-23 06:37:13.641868	2026-05-25 12:56:14.277143	\N	宋锦耳坠				1	58.00	23.00		0	0	0	0	1	1	1	1	f	f	1
+920			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		0		2026-03-29 06:48:01.691012	2026-07-20 13:34:58.0936	\N	手工乌日末液体	SP0000115	牧区纯手工乌日莫（奶嚼口）原味500克		5	10.00	5.00	6900001151503	0	0	0	0	1	1	1	1	f	f	1
 3117			421	文创	53	张	0			0.00	0.00	0	0	0		1		2026-05-25 12:35:05.059092	2026-05-25 12:56:16.137955	\N	车载香片	SP2605252385			1	8.80	0.85		0	0	0	0	1	1	1	1	f	f	1
 3126			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-06-03 08:08:35.434038	2026-06-03 08:08:35.434038	\N	120克透明/奶条				1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1
 3123			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-29 10:55:39.733893	2026-05-29 10:57:16.697245	\N	 蒙古国糖果				1	20.00	13.50		0	0	0	0	1	1	1	1	f	f	1
@@ -7353,14 +7570,17 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3121			423	其他品牌成品	62	斤	0		{"attrs":[{"name":"口味","values":["甜味","原味"]}],"skus":{"甜味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""},"原味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""}},"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-28 14:47:00.21195	2026-06-13 10:06:31.419865	\N	科尔沁奶豆腐/条/片/原/甜				5	80.00	38.00		0	0	0	0	1	1	1	1	t	t	1
 3124			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:28:32.161661	2026-05-30 11:33:04.219072	\N	彩色奶圈圈/袋装/果味奶渣				1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1
 3125			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:29:21.473675	2026-05-30 11:33:06.484099	\N	细奶条/原味/乌日汗				1	20.00	16.00		0	0	0	0	1	1	1	1	f	f	1
+3181			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-30 15:51:03.822543	2026-06-30 15:51:04.341485	\N	牛奶浓				1	2.50	0.00		0	0	0	0	1	1	1	1	f	f	1
 3120			423	其他品牌成品	55	袋	0		165克	0.00	0.00	0	0	0		1		2026-05-28 14:45:29.011446	2026-05-28 14:48:47.886402	\N	科尔沁袋装/——奶豆腐条/片/				1	25.00	12.50		0	0	0	0	1	1	1	1	f	f	1
 3128			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-04 14:47:51.447173	2026-06-14 05:25:13.879284	\N	专袋/冻炒米/真空袋				4	0.00	0.09	6900000028430	0	0	0	0	1	1	1	1	t	f	1
-3115			421		57		0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"文创","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-23 06:41:31.959491	2026-06-10 03:24:30.08094	\N	帆布包				1	39.00	7.00		0	0	0	0	1	1	1	1	f	f	1
-3119			423	其他品牌成品	63	桶	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-05-27 11:19:57.869477	2026-05-28 17:28:40.936199	\N	烤奶花/大桶装				1	25.00	5.40		0	0	0	0	1	1	1	1	t	f	1
+3118			423	其他品牌成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":false,"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-27 04:43:46.719064	2026-07-21 15:20:18.947859	\N	烤奶花				5	30.00	20.00		0	0	0	0	1	1	1	1	t	f	1
+3119			423	其他品牌成品	63	桶	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":true,"headerImages":["/api/image/img_1784644264548_libfla","/api/image/img_1784646968622_y3urcg","/api/image/img_1784646983501_kslr44"],"image":"/api/image/img_1784644264548_libfla","detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[{"name":"容量","values":[{"label":"大桶装"},{"label":"小桶装"}]}],"skuCombos":[{"combo":["大桶装"],"price":35,"erpId":3119},{"combo":["小桶装"],"price":30,"erpId":3119}],"skuVariants":[{"label":"大桶装","price":35,"erpId":3119},{"label":"小桶装","price":30,"erpId":3119}],"isRedeemable":false,"pointsCost":0}}	1		2026-05-27 11:19:57.869477	2026-07-21 15:20:15.091152	\N	烤奶花/大桶装				1	25.00	5.40		0	0	0	0	1	1	1	1	t	f	1
+907			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:48.812859	2026-07-02 08:14:55.045978	\N	风干牛肉500g大片	SP0000128	牧区纯坊 大片风干牛肉500g/袋		1	128.00	95.00	6900001286630	0	0	0	0	1	1	1	1	f	f	1
 3152			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.086448	2026-06-12 12:09:01.086448	2026-06-12 13:08:37.237757	牧区纯坊品牌 蒙古 黄油 100克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3153			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088094	2026-06-12 12:09:01.088094	2026-06-12 13:35:46.45875	牧区纯乳清冷饮450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1
 3127			193	成品	62	斤	0		一斤装/拆装/定制	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-04 13:40:02.960069	2026-06-13 05:03:41.268039	\N	冻炒米成品/散装/小袋装				5	36.00	32.20	6900000408112	0	0	2	0	1	1	1	1	f	f	1
-3118			423	其他品牌成品	62	斤	0		斤/大桶装/小桶装	0.00	0.00	0	0	0	{"__brand__":{"show":false}}	1		2026-05-27 04:43:46.719064	2026-06-13 06:37:35.154989	\N	烤奶花				1	0.00	22.00		0	0	0	0	1	1	1	1	t	f	1
+3182			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-03 02:50:44.713096	2026-07-03 02:50:55.99174	\N	郁金川小米2.5㎏  				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1
+3115			421		57		0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784643891975_n8hlq7","headerImages":["/api/image/img_1784643891975_n8hlq7"],"detailImages":[],"tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":80,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-23 06:41:31.959491	2026-07-21 14:24:57.24183	\N	帆布包				1	39.00	7.00		0	0	999	0	1	1	1	1	f	f	1
 3129			185	包材	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-07 07:31:34.248809	2026-06-07 07:32:55.376336	\N	专标签/亚克力/奶锅巴				1	0.00	0.10		0	0	0	0	1	1	1	1	f	f	1
 3164			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.278585	2026-06-12 12:09:01.278585	2026-06-12 12:16:10.826099	牧区纯坊 纯手工月饼 黄油渣馅350g/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3167			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.282711	2026-06-12 12:09:01.282711	2026-06-12 12:17:37.204941	牧区纯坊 大片风干牛肉500g/袋				1	138.00	0.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7370,9 +7590,9 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3163			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.276507	2026-06-12 12:09:01.276507	2026-06-12 13:23:51.554095	牧区纯坊 牧区奶糖 酸奶味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3161			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.187229	2026-06-12 12:09:01.187229	2026-06-12 13:59:53.19333	牧区纯坊 奶皮子有点卷220克 果味夹层/盒				1	28.80	0.00		0	0	0	0	1	1	1	1	f	f	1
 3162			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.188614	2026-06-12 12:09:01.188614	2026-06-12 14:05:16.949552	牧区纯坊 纯手工奶豆腐1000g原味350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-1008			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__": {"show": true, "image": "/media/goods/1008/header_1.jpg", "category": "食品", "detailImages": ["/media/goods/1008/detail_1.jpg", "/media/goods/1008/detail_2.jpg", "/media/goods/1008/detail_3.jpg"], "headerImages": ["/media/goods/1008/header_1.jpg", "/media/goods/1008/header_2.jpg", "/media/goods/1008/header_3.jpg"]}}	1		2026-03-29 06:49:34.136449	2026-06-10 03:55:20.703139	\N	甜味奶条成品	SP0000026			1	52.00	10.61	6900000265125	0	0	6	0	1	1	1	1	f	f	1
 3160			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.185601	2026-06-12 12:09:01.185601	\N	牧区纯坊 无糖饼干500克/盒				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-988			193	成品	55	袋	0		150	0.00	0.00	0	0	0	{"__brand__": {"show": true, "image": "/media/goods/988/header_1.jpg", "category": "食品", "detailImages": ["/media/goods/988/detail_1.jpg", "/media/goods/988/detail_2.jpg", "/media/goods/988/detail_3.jpg"], "headerImages": ["/media/goods/988/header_1.jpg", "/media/goods/988/header_2.jpg", "/media/goods/988/header_3.jpg"]}}	1		2026-03-29 06:49:11.402339	2026-06-10 03:55:16.568239	\N	品牌传统奶豆腐/袋装成品	SP0000046			1	42.00	12.78	6900000461987	0	0	5	0	1	1	1	1	t	f	1
+1008			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/1008/header_1.jpg","category":"精选","detailImages":["/media/goods/1008/detail_1.jpg","/media/goods/1008/detail_2.jpg","/media/goods/1008/detail_3.jpg"],"headerImages":["/media/goods/1008/header_1.jpg","/media/goods/1008/header_2.jpg","/media/goods/1008/header_3.jpg"],"baseSales":111}}	1		2026-03-29 06:49:34.136449	2026-07-04 14:15:02.586218	\N	甜味奶条成品	SP0000026			1	52.00	10.61	6900000265125	0	0	6	0	1	1	1	1	f	f	1
+988			193	成品	55	袋	0		150	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/988/header_1.jpg","category":"精选","detailImages":["/media/goods/988/detail_1.jpg","/media/goods/988/detail_2.jpg","/media/goods/988/detail_3.jpg"],"headerImages":["/media/goods/988/header_1.jpg","/media/goods/988/header_2.jpg","/media/goods/988/header_3.jpg"],"baseSales":287}}	1		2026-03-29 06:49:11.402339	2026-07-04 14:15:00.447328	\N	品牌传统奶豆腐/袋装成品	SP0000046			1	42.00	12.78	6900000461987	0	0	5	0	1	1	1	1	t	f	1
 3172			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.37861	2026-06-12 12:09:01.37861	2026-06-12 12:52:19.598618	牧区纯手工乌日莫（奶嚼口）原味500克				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3175			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.383092	2026-06-12 12:09:01.383092	2026-06-12 12:54:19.499984	牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋				1	26.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3169			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.286609	2026-06-12 12:09:01.286609	2026-06-12 12:54:22.846708	牧区纯坊 散装原味香瓜子500克/袋				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7381,12 +7601,10 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 3174			193	成品	63	桶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.381346	2026-06-12 12:09:01.381346	2026-06-12 13:35:48.562796	牧区纯坊 传统老酸奶(查嘎)原味五斤大桶装				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3171			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.376247	2026-06-12 12:09:01.376247	2026-06-12 13:59:53.678358	牧区纯坊 奶皮子有点卷青果味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1
 3170			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.288295	2026-06-12 12:09:01.288295	2026-06-13 02:19:12.306096	赛汗塔拉手工制作奶豆腐原味约400g/块				1	45.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-992			193	成品	56	盒	0		240克	0.00	0.00	0	0	0	{"__brand__": {"image": "https://nomaderp.pages.dev/media/goods/992/header_1.jpg", "headerImages": ["https://nomaderp.pages.dev/media/goods/992/header_1.jpg", "https://nomaderp.pages.dev/media/goods/992/header_2.jpg", "https://nomaderp.pages.dev/media/goods/992/header_3.jpg", "https://nomaderp.pages.dev/media/goods/992/header_4.jpg", "https://nomaderp.pages.dev/media/goods/992/header_5.jpg"], "detailImages": ["https://nomaderp.pages.dev/media/goods/992/detail_1.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_2.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_3.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_4.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_5.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_6.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_7.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_8.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_9.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_10.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_11.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_12.jpg", "https://nomaderp.pages.dev/media/goods/992/detail_13.jpg"], "show": true, "category": "食品", "tags": [], "skuVariants": [{"label": "1盒", "erpId": 992, "price": 58}, {"label": "2盒", "erpId": 992, "price": 110}, {"label": "3盒", "erpId": 992, "price": 159}], "baseSales": 634}}	1		2026-03-29 06:49:16.624293	2026-06-09 13:24:21.762161	\N	牧区奶豆腐/盒装/成品	SP0000042			1	58.00	13.21	6900000427543	0	0	3	0	1	1	1	1	f	f	1
+874			193	成品	55	袋	0		140克	0.00	0.00	0	0	0	{"__brand__":{"image":"/media/goods/874/header_3.jpg","headerImages":["/media/goods/874/header_3.jpg","/media/goods/874/header_2.jpg","/media/goods/874/header_1.jpg"],"detailImage":"","tags":[],"category":"精选","wholesalePrice":0,"minOrderQuantity":1,"baseSales":365,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true}}	1		2026-03-29 06:47:13.890147	2026-07-04 14:14:56.146736	\N	黄金纬度/牛肉干/成品袋	SP0000161	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋		1	98.00	48.95		0	0	0	0	1	1	1	1	f	f	1
 3140			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.883276	2026-06-12 12:09:00.883276	2026-06-12 12:16:10.82737	牧区纯坊 纯手工月饼 奶豆腐馅儿350克/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-874			193	成品	55	袋	0		140克	0.00	0.00	0	0	0	{"__brand__": {"show": true, "image": "/media/goods/874/header_1.jpg", "category": "食品", "detailImages": ["/media/goods/874/detail_1.jpg", "/media/goods/874/detail_2.jpg", "/media/goods/874/detail_3.jpg"], "headerImages": ["/media/goods/874/header_1.jpg", "/media/goods/874/header_2.jpg", "/media/goods/874/header_3.jpg"]}}	1		2026-03-29 06:47:13.890147	2026-06-12 12:17:31.024911	\N	黄金纬度/牛肉干/成品袋	SP0000161	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋		1	98.00	48.95		0	0	0	0	1	1	1	1	f	f	1
-907			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:48.812859	2026-06-12 12:17:31.026002	\N	风干牛肉500g大片	SP0000128	牧区纯坊 大片风干牛肉500g/袋		1	128.00	95.00	6900001286630	0	0	0	0	1	1	1	1	f	f	1
+883			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.030271	2026-07-19 14:05:40.938075	\N	阿润月饼/奶豆腐馅	SP0000152			1	15.00	10.00	6922814823197	0	0	0	0	1	1	1	1	f	f	1
 3134			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679641	2026-06-12 12:09:00.679641	2026-06-12 13:05:05.221909	牧区纯坊 风干牛肉干500克/袋				1	108.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-883			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.030271	2026-06-11 11:23:50.785935	\N	阿润月饼/奶豆腐馅	SP0000152			1	15.00	10.00	6922814823197	0	0	0	0	1	1	1	1	f	f	1
 3144			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.986052	2026-06-12 12:09:00.986052	\N	牧区纯坊 泰象苏打水352ml/瓶				1	5.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3141			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.982681	2026-06-12 12:09:00.982681	2026-06-12 12:17:37.202047	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋				1	118.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3150			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.085034	2026-06-12 12:09:01.085034	2026-06-12 12:18:40.519752	牧区纯坊 纯手工熬制黄油500克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1
@@ -7405,6 +7623,11 @@ COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand
 803			167	广告物料	62	斤	0		斤	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:45:50.485118	2026-06-13 06:37:35.618029	\N	炒米/散/巴林	SP0000233			5	7.00	5.00		0	0	0	0	1	1	1	1	f	f	1
 3176			423	其他品牌成品	55	袋	0		360克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:40:59.451893	2026-06-17 11:41:00.017816	\N	奶皮子粉麦西来普				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 3178			423		52		0			0.00	0.00	0	0	0		1		2026-06-18 03:26:30.481528	2026-06-18 03:26:30.481528	\N	佳赫蛋糕				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
+992			193	成品	56	盒	0		240克	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/992/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/992/header_1.jpg","https://nomaderp.pages.dev/media/goods/992/header_2.jpg","https://nomaderp.pages.dev/media/goods/992/header_3.jpg","https://nomaderp.pages.dev/media/goods/992/header_4.jpg","https://nomaderp.pages.dev/media/goods/992/header_5.jpg"],"detailImages":["https://nomaderp.pages.dev/media/goods/992/detail_1.jpg","https://nomaderp.pages.dev/media/goods/992/detail_2.jpg","https://nomaderp.pages.dev/media/goods/992/detail_3.jpg","https://nomaderp.pages.dev/media/goods/992/detail_4.jpg","https://nomaderp.pages.dev/media/goods/992/detail_5.jpg","https://nomaderp.pages.dev/media/goods/992/detail_6.jpg","https://nomaderp.pages.dev/media/goods/992/detail_7.jpg","https://nomaderp.pages.dev/media/goods/992/detail_8.jpg","https://nomaderp.pages.dev/media/goods/992/detail_9.jpg","https://nomaderp.pages.dev/media/goods/992/detail_10.jpg","https://nomaderp.pages.dev/media/goods/992/detail_11.jpg","https://nomaderp.pages.dev/media/goods/992/detail_12.jpg","https://nomaderp.pages.dev/media/goods/992/detail_13.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1盒","erpId":992,"price":58},{"label":"2盒","erpId":992,"price":110},{"label":"3盒","erpId":992,"price":159}],"baseSales":1288}}	1		2026-03-29 06:49:16.624293	2026-07-04 14:14:53.7387	\N	牧区奶豆腐/盒装/成品	SP0000042			1	58.00	13.21	6900000427543	0	0	3	0	1	1	1	1	f	f	1
+3183			188	牧区纯坊X游牧奇遇	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-12 06:10:54.579751	2026-07-12 06:10:55.070756	\N	阿旗礼袋蒙文				1	10.00	1.90		0	0	0	0	1	1	1	1	f	f	1
+3184			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-12 06:12:16.47886	2026-07-12 06:12:16.947793	\N	阿旗冰箱贴				1	46.00	16.50		0	0	0	0	1	1	1	1	f	f	1
+3185			188	牧区纯坊X游牧奇遇	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"牧区纯坊X游牧奇遇","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-19 14:33:54.908607	2026-07-19 14:36:52.606007	\N	憨野 黄油/50克				1	0.00	3.50		0	0	0	0	1	1	1	1	f	f	1
+3186			421	周边	52	块	0			0.00	0.00	0	0	0	{"__brand__":{"image":"/api/image/img_1784645654789_vxxn2y","headerImages":["/api/image/img_1784645654789_vxxn2y","/api/image/img_1784645670190_yg6qbu"],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true}}	1		2026-07-21 14:52:53.947001	2026-07-21 14:54:33.330072	\N	阴山岩画羊毛毡香皂				1	88.00	0.00		0	0	0	0	1	1	1	1	f	f	1
 \.
 
 
@@ -7465,7 +7688,6 @@ COPY public.goods_cate (id, name, parent_id, sort, status, create_time, shop_id)
 213	机器	0	0	1	2026-03-29 06:49:25.88655	1
 214	设备	213	0	1	2026-03-29 06:49:26.381084	1
 215	奶条	211	0	1	2026-03-29 06:49:47.902666	1
-421	文创	0	0	1	2026-05-04 03:04:50.881512	1
 422	BOM产品	0	0	1	2026-05-11 14:20:12.514681	1
 176	通用礼盒	0	1	1	2026-03-29 06:46:26.217205	1
 168	散货	0	5	1	2026-03-29 06:45:53.755009	1
@@ -7473,6 +7695,7 @@ COPY public.goods_cate (id, name, parent_id, sort, status, create_time, shop_id)
 424	现制产品	0	10	1	2026-06-13 02:21:06.04776	1
 188	牧区纯坊X游牧奇遇	0	0	1	2026-03-29 06:47:08.592627	1
 185	包材	0	3	1	2026-03-29 06:46:56.913169	1
+421	周边	0	0	1	2026-05-04 03:04:50.881512	1
 \.
 
 
@@ -7519,6 +7742,9 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 201	1015	斤	2.0000	2026-05-08 03:50:30.70408
 5	1031	捆	50.0000	2026-04-02 02:57:34.445093
 6	1031	张	1.0000	2026-04-02 02:57:34.447622
+605	3118	斤	1.0000	2026-06-22 06:39:46.949067
+606	3118	大桶装	0.3000	2026-06-22 06:39:46.952117
+607	3118	小桶装	0.2600	2026-06-22 06:39:46.95496
 539	1014	斤	1.0000	2026-06-08 08:36:12.686588
 540	1014	袋	0.5000	2026-06-08 08:36:12.703116
 408	3090	个	0.0300	2026-05-31 06:22:17.693945
@@ -7528,19 +7754,19 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 26	997	小包	1.0000	2026-04-02 02:58:02.512739
 27	995	捆	100.0000	2026-04-02 02:58:05.246556
 28	995	袋	1.0000	2026-04-02 02:58:05.248898
+618	958	个	1.0000	2026-06-23 09:40:37.664729
 31	990	捆	100.0000	2026-04-02 02:58:10.753354
 32	990	袋	1.0000	2026-04-02 02:58:10.757403
 33	989	斤	5.0000	2026-04-02 02:58:14.582466
 34	989	瓶	1.0000	2026-04-02 02:58:14.584355
+619	958	件	183.0000	2026-06-23 09:40:37.667316
 483	1011	小包	1.0000	2026-06-07 11:36:03.464654
 484	1011	件	2000.0000	2026-06-07 11:36:03.467621
 41	979	件	16.0000	2026-04-02 02:58:26.577307
 42	979	张	1.0000	2026-04-02 02:58:26.579331
 43	974	斤	5.0000	2026-04-02 02:58:28.728815
 44	974	瓶	1.0000	2026-04-02 02:58:28.731103
-287	3118	斤	1.0000	2026-05-27 10:37:52.36892
-288	3118	大桶装	0.3000	2026-05-27 10:37:52.476311
-289	3118	小桶装	0.2600	2026-05-27 10:37:52.478902
+628	963	个	1.0000	2026-06-23 09:45:17.637688
 220	916	盒	1.0000	2026-05-10 08:06:33.715778
 55	872	斤	4.0000	2026-04-02 02:58:46.169468
 56	872	袋	1.0000	2026-04-02 02:58:46.171617
@@ -7555,6 +7781,7 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 65	867	件	60.0000	2026-04-02 02:59:01.556829
 66	867	盒	1.0000	2026-04-02 02:59:01.559101
 221	916	盒	0.5000	2026-05-10 08:06:33.739031
+629	963	件	240.0000	2026-06-23 09:45:17.640735
 493	1010	个	1.0000	2026-06-07 11:58:10.498174
 494	1010	箱	400.0000	2026-06-07 11:58:10.500292
 83	1025	张	1.0000	2026-04-11 11:51:26.739474
@@ -7589,9 +7816,9 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 255	988	斤	3.0000	2026-05-23 04:35:02.895427
 256	985	袋	1.0000	2026-05-23 04:35:17.646577
 257	985	斤	3.0000	2026-05-23 04:35:17.649308
-594	981	斤	1.0000	2026-06-20 08:10:59.073251
-595	981	盒	0.5000	2026-06-20 08:10:59.089715
-329	3119	桶	1.0000	2026-05-28 17:28:40.490877
+660	981	斤	1.0000	2026-07-21 04:02:49.472697
+661	981	盒	0.5000	2026-07-21 04:02:49.484824
+662	3119	桶	1.0000	2026-07-21 15:18:19.937418
 \.
 
 
@@ -9251,6 +9478,129 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 1647	2026-06-20	expense	cash	付款单	330.00	科尔沁奶食品	825	FK202606202438	公司支出账户	采购单PO202606201610588640审核自动生成	t	trigger	2026-06-20 08:11:55.109764
 1648	2026-06-20	expense	payable	采购单	330.00	科尔沁奶食品	602	PO202606201610588640	公司支出账户		t	trigger	2026-06-20 08:11:55.148808
 1649	2026-06-20	income	cash	零售单	9.50		1500	LS202606202584			t	trigger	2026-06-20 09:05:22.497953
+1650	2026-06-22	income	cash	零售单	38.00		1501	LS202606224429			t	trigger	2026-06-22 03:33:11.480559
+1651	2026-06-22	expense	cash	付款单	640.00	科尔沁奶食品	826	FK202606226939	公司支出账户	采购单PO2026062211360496627审核自动生成	t	trigger	2026-06-22 03:38:38.443941
+1652	2026-06-22	expense	payable	采购单	640.00	科尔沁奶食品	603	PO2026062211360496627	公司支出账户		t	trigger	2026-06-22 03:38:38.46726
+1653	2026-06-13	expense	cash	付款单	656.00	科尔沁奶食品	827	FK202606228627	公司支出账户	采购单PO2026062211385423444审核自动生成	t	trigger	2026-06-22 03:42:24.727378
+1654	2026-06-13	expense	payable	采购单	656.00	科尔沁奶食品	604	PO2026062211385423444	公司支出账户		t	trigger	2026-06-22 03:42:24.729287
+1655	2026-06-21	expense	cash	付款单	200.00	科尔沁奶食品	828	FK202606221666	公司支出账户	采购单PO2026062211424384186审核自动生成	t	trigger	2026-06-22 03:43:26.350675
+1656	2026-06-21	expense	payable	采购单	200.00	科尔沁奶食品	605	PO2026062211424384186	公司支出账户		t	trigger	2026-06-22 03:43:26.352921
+1657	2026-06-22	expense	cash	付款单	550.00	那牧尔乳制品厂/纯净之源	829	FK202606223308	公司支出账户	采购单PO2026062214182043723审核自动生成	t	trigger	2026-06-22 06:19:24.982317
+1658	2026-06-22	expense	payable	采购单	550.00	那牧尔乳制品厂/纯净之源	606	PO2026062214182043723	公司支出账户		t	trigger	2026-06-22 06:19:25.020229
+1659	2026-06-22	income	cash	零售单	7.00		1502	LS202606223263			t	trigger	2026-06-22 06:38:02.44867
+1660	2026-06-22	income	cash	零售单	15.00		1503	LS202606227684			t	trigger	2026-06-22 06:39:57.870405
+1661	2026-06-22	expense	cash	付款单	340.00	科尔沁奶食品	830	FK202606229868	公司支出账户	采购单PO2026062215271297352审核自动生成	t	trigger	2026-06-22 07:27:51.994528
+1662	2026-06-22	expense	payable	采购单	340.00	科尔沁奶食品	607	PO2026062215271297352	公司支出账户		t	trigger	2026-06-22 07:27:52.044424
+1663	2026-06-22	expense	payable	采购单	1300.00	孟克河	608	PO2026062215312473851	公司支出账户		t	trigger	2026-06-22 07:32:27.526729
+1664	2026-06-22	expense	cash	付款单	470.00	巴音珠萨朗	831	FK202606225637	公司支出账户	采购单PO2026062215561861413审核自动生成	t	trigger	2026-06-22 07:58:17.05122
+1665	2026-06-22	expense	payable	采购单	471.00	巴音珠萨朗	609	PO2026062215561861413	公司支出账户		t	trigger	2026-06-22 07:58:17.105471
+1666	2026-06-22	income	cash	零售单	22.00		1504	LS202606226191			t	trigger	2026-06-22 10:17:35.111575
+1667	2026-06-22	income	cash	零售单	247.00		1505	LS202606223999			t	trigger	2026-06-22 10:42:21.969821
+1668	2026-06-22	income	cash	零售单	400.00		1506	LS202606222455			t	trigger	2026-06-22 11:58:00.41912
+1669	2026-06-22	income	cash	零售单	130.00		1507	LS202606228144			t	trigger	2026-06-22 11:59:13.738802
+1670	2026-06-22	income	cash	零售单	26.00		1508	LS202606223795			t	trigger	2026-06-22 12:26:29.04122
+1671	2026-06-22	income	cash	零售单	33.50		1509	LS202606228943			t	trigger	2026-06-22 12:27:11.425278
+1672	2026-06-22	income	cash	零售单	81.00		1510	LS202606227378			t	trigger	2026-06-22 12:55:03.113441
+1673	2026-06-22	income	cash	零售单	9.50		1511	LS202606229051			t	trigger	2026-06-22 13:04:30.371446
+1674	2026-06-22	income	cash	零售单	34.00		1512	LS202606223800			t	trigger	2026-06-22 13:30:52.28798
+1675	2026-06-22	income	cash	零售单	81.50		1513	LS202606228455			t	trigger	2026-06-22 14:00:32.452641
+1676	2026-06-23	expense	cash	付款单	205.00	科尔沁奶食品	832	FK202606238949	公司支出账户	采购单PO202606231742474342审核自动生成	t	trigger	2026-06-23 09:44:38.691626
+1677	2026-06-23	expense	payable	采购单	205.00	科尔沁奶食品	611	PO202606231742474342	公司支出账户		t	trigger	2026-06-23 09:44:38.727017
+1678	2026-06-23	income	cash	零售单	52.00		1514	LS202606237910			t	trigger	2026-06-23 14:28:45.784574
+1679	2026-06-24	income	cash	零售单	77.00		1515	LS202606244564			t	trigger	2026-06-24 11:42:29.660012
+1681	2026-06-26	income	cash	零售单	32.00		1517	LS202606264858			t	trigger	2026-06-26 08:41:12.129641
+1682	2026-06-26	income	cash	零售单	25.00		1518	LS202606262056			t	trigger	2026-06-26 12:44:16.488635
+1683	2026-06-26	income	cash	零售单	12.00		1519	LS202606268956			t	trigger	2026-06-26 12:44:31.543514
+1684	2026-06-28	income	cash	零售单	40.00		1520	LS202606287451			t	trigger	2026-06-28 02:46:13.579572
+1685	2026-06-28	income	cash	零售单	160.00		1521	LS202606286161			t	trigger	2026-06-28 06:12:39.746891
+1686	2026-06-29	income	cash	零售单	90.00		1522	LS202606292596			t	trigger	2026-06-29 01:33:01.134672
+1687	2026-06-29	income	cash	零售单	50.00		1523	LS202606291397			t	trigger	2026-06-29 01:36:45.8855
+1688	2026-06-29	income	cash	零售单	68.00		1524	LS202606294293			t	trigger	2026-06-29 11:01:40.488557
+1689	2026-06-30	expense	cash	付款单	155.00	科尔沁奶食品	833	FK202606305600	公司支出账户	采购单PO2026063010174698423审核自动生成	t	trigger	2026-06-30 02:18:31.903611
+1690	2026-06-30	expense	payable	采购单	155.00	科尔沁奶食品	612	PO2026063010174698423	公司支出账户		t	trigger	2026-06-30 02:18:31.93744
+1691	2026-06-30	expense	cash	付款单	50.00	科尔沁奶食品	834	FK202606307003	公司支出账户	采购单PO2026063010302146351审核自动生成	t	trigger	2026-06-30 02:30:57.767806
+1692	2026-06-30	expense	payable	采购单	50.00	科尔沁奶食品	613	PO2026063010302146351	公司支出账户		t	trigger	2026-06-30 02:30:57.81869
+1693	2026-06-30	income	cash	零售单	42.00		1525	LS202606309574			t	trigger	2026-06-30 04:30:12.355409
+1694	2026-06-30	income	cash	零售单	147.00		1526	LS202606306649			t	trigger	2026-06-30 15:52:33.609318
+1695	2026-07-01	income	cash	零售单	25.00		1527	LS202607019836			t	trigger	2026-07-01 04:11:43.130411
+1696	2026-07-01	income	cash	零售单	26.80		1528	LS202607015390			t	trigger	2026-07-01 06:21:05.95009
+1697	2026-07-01	income	cash	零售单	36.00		1529	LS202607013539			t	trigger	2026-07-01 08:07:54.014576
+1698	2026-07-02	income	cash	零售单	153.00		1530	LS202607029919			t	trigger	2026-07-02 08:14:08.322553
+1699	2026-07-02	expense	cash	付款单	475.00	科尔沁奶食品	835	FK202607026195	公司支出账户	采购单PO2026070216142419815审核自动生成	t	trigger	2026-07-02 08:14:54.559381
+1700	2026-07-02	expense	payable	采购单	475.00	科尔沁奶食品	614	PO2026070216142419815	公司支出账户		t	trigger	2026-07-02 08:14:54.584549
+1701	2026-07-03	income	cash	零售单	63.00		1531	LS202607037361			t	trigger	2026-07-03 02:16:58.117296
+1702	2026-07-03	income	cash	零售单	25.00		1532	LS202607036601			t	trigger	2026-07-03 02:51:43.619226
+1703	2026-07-04	income	cash	零售单	25.00		1533	LS202607048145			t	trigger	2026-07-04 08:50:19.861365
+1704	2026-07-04	expense	cash	付款单	1690.00	广州维记	836	FK202607047081	公司支出账户	采购单PO2026070416575364554审核自动生成	t	trigger	2026-07-04 08:58:38.409787
+1705	2026-07-04	expense	payable	采购单	1690.00	广州维记	615	PO2026070416575364554	公司支出账户		t	trigger	2026-07-04 08:58:38.421304
+1706	2026-07-04	income	cash	零售单	20.00		1534	LS202607049176			t	trigger	2026-07-04 12:51:52.82825
+1708	2026-07-05	income	cash	零售单	10.00		1535	LS202607057228			t	trigger	2026-07-05 02:39:44.506703
+1709	2026-07-06	income	cash	零售单	14.00		1536	LS202607069573			t	trigger	2026-07-06 13:49:56.174679
+1710	2026-07-07	expense	cash	付款单	50.00	科尔沁奶食品	837	FK202607075423	公司支出账户	采购单PO2026070711073264031审核自动生成	t	trigger	2026-07-07 03:07:55.854025
+1711	2026-07-07	expense	payable	采购单	50.00	科尔沁奶食品	616	PO2026070711073264031	公司支出账户		t	trigger	2026-07-07 03:07:55.888496
+1712	2026-07-08	income	cash	零售单	300.00		1537	LS202607086067			t	trigger	2026-07-08 03:53:56.680625
+1713	2026-07-08	income	cash	零售单	29.00		1538	LS202607084670			t	trigger	2026-07-08 03:55:10.831107
+1714	2026-07-08	income	cash	零售单	75.00		1539	LS202607086403			t	trigger	2026-07-08 08:39:30.707344
+1715	2026-07-08	expense	cash	付款单	340.00	科尔沁奶食品	838	FK202607082802	公司支出账户	采购单PO2026070816402254688审核自动生成	t	trigger	2026-07-08 08:40:58.891513
+1716	2026-07-08	expense	payable	采购单	340.00	科尔沁奶食品	617	PO2026070816402254688	公司支出账户		t	trigger	2026-07-08 08:40:58.902706
+1717	2026-07-08	income	cash	零售单	46.80		1540	LS202607083141			t	trigger	2026-07-08 10:08:15.180239
+1718	2026-07-09	income	cash	零售单	25.00		1541	LS202607094726			t	trigger	2026-07-09 10:36:14.92672
+1719	2026-07-10	income	cash	零售单	10.00		1542	LS202607108272			t	trigger	2026-07-10 02:33:10.80528
+1720	2026-07-10	income	cash	零售单	30.00		1543	LS202607105750			t	trigger	2026-07-10 03:19:38.624791
+1721	2026-07-10	income	cash	零售单	45.00		1544	LS202607105346			t	trigger	2026-07-10 10:54:01.325763
+1722	2026-07-10	income	cash	零售单	65.00		1545	LS202607105663			t	trigger	2026-07-10 12:23:19.582148
+1723	2026-07-10	income	cash	零售单	50.00		1546	LS202607107356			t	trigger	2026-07-10 12:23:38.51129
+1724	2026-07-12	income	cash	零售单	15.00		1547	LS202607129222			t	trigger	2026-07-12 04:24:39.540646
+1725	2026-07-12	income	cash	零售单	21.00		1548	LS202607127997			t	trigger	2026-07-12 04:25:14.173978
+1726	2026-07-12	income	cash	零售单	9.00		1549	LS202607123035			t	trigger	2026-07-12 04:25:41.594132
+1727	2026-07-12	income	cash	零售单	17.00		1550	LS202607126167			t	trigger	2026-07-12 04:26:31.322935
+1728	2026-07-12	income	cash	零售单	25.00		1551	LS202607122628			t	trigger	2026-07-12 04:48:32.977001
+1729	2026-07-12	income	cash	零售单	6.00		1552	LS202607124146			t	trigger	2026-07-12 05:46:54.242064
+1730	2026-07-12	income	receivable	销售合同	225.00	阿斯娜	419	HT20260712001		[NO:HT20260712001]	t	trigger	2026-07-12 06:01:17.065934
+1731	2026-07-10	expense	cash	付款单	1807.00	广州维记	839	FK202607126700	公司支出账户	采购单PO2026071214043411525审核自动生成	t	trigger	2026-07-12 06:06:45.995088
+1732	2026-07-10	expense	payable	采购单	1807.00	广州维记	618	PO2026071214043411525	公司支出账户		t	trigger	2026-07-12 06:06:46.006135
+1733	2026-07-09	expense	cash	付款单	68.00	额吉伊德	840	FK202607124673	公司支出账户	采购单PO202607121407018203审核自动生成	t	trigger	2026-07-12 06:09:21.250016
+1734	2026-07-09	expense	payable	采购单	68.00	额吉伊德	619	PO202607121407018203	公司支出账户		t	trigger	2026-07-12 06:09:21.254589
+1735	2026-07-12	expense	cash	付款单	50.00	科尔沁奶食品	841	FK202607126953	公司支出账户	采购单PO202607121533349182审核自动生成	t	trigger	2026-07-12 07:34:05.36926
+1736	2026-07-12	expense	payable	采购单	50.00	科尔沁奶食品	620	PO202607121533349182	公司支出账户		t	trigger	2026-07-12 07:34:05.404759
+1737	2026-07-12	income	cash	零售单	52.50		1553	LS202607127315			t	trigger	2026-07-12 12:01:41.918594
+1738	2026-07-13	income	cash	零售单	25.00		1554	LS202607137687			t	trigger	2026-07-13 03:08:17.73027
+1739	2026-07-13	income	cash	零售单	10.00		1555	LS202607138929			t	trigger	2026-07-13 09:09:38.092032
+1740	2026-07-14	income	cash	零售单	10.00		1556	LS202607146696			t	trigger	2026-07-14 02:11:41.962065
+1741	2026-07-15	income	cash	零售单	40.00		1557	LS202607158006			t	trigger	2026-07-15 02:06:51.665192
+1742	2026-07-15	income	cash	零售单	5.00		1558	LS202607159364			t	trigger	2026-07-15 02:08:43.636082
+1743	2026-07-15	income	cash	零售单	53.00		1559	LS202607155798			t	trigger	2026-07-15 03:48:46.979164
+1744	2026-07-15	income	cash	零售单	40.00		1560	LS202607151273			t	trigger	2026-07-15 15:41:43.778087
+1745	2026-07-16	income	cash	零售单	53.00		1561	LS202607163095			t	trigger	2026-07-16 11:18:49.776533
+1746	2026-07-16	income	cash	零售单	10.00		1562	LS202607163641			t	trigger	2026-07-16 11:19:25.002305
+1747	2026-07-16	income	cash	零售单	100.00		1563	LS202607167705			t	trigger	2026-07-16 12:05:18.296189
+1748	2026-07-17	income	cash	零售单	130.00		1564	LS202607175391			t	trigger	2026-07-17 11:00:55.253519
+1749	2026-07-18	income	cash	零售单	168.00		1565	LS202607181944			t	trigger	2026-07-18 02:44:28.713983
+1750	2026-07-18	income	cash	零售单	25.00		1566	LS202607181969			t	trigger	2026-07-18 06:39:58.088691
+1751	2026-07-19	income	cash	零售单	40.00		1567	LS202607199458			t	trigger	2026-07-19 04:13:33.815451
+1752	2026-07-19	income	cash	零售单	25.00		1568	LS202607196811			t	trigger	2026-07-19 13:59:37.96183
+1753	2026-07-19	income	cash	零售单	100.00		1569	LS202607195585			t	trigger	2026-07-19 14:00:51.29293
+1754	2026-07-19	income	cash	零售单	30.00		1570	LS202607199620			t	trigger	2026-07-19 14:01:23.727938
+1755	2026-07-19	income	cash	零售单	195.50		1571	LS202607198133			t	trigger	2026-07-19 14:03:17.666797
+1756	2026-07-19	expense	cash	付款单	120.00	阿润查干	842	FK202607199080	公司支出账户	采购单PO2026071922045383147审核自动生成	t	trigger	2026-07-19 14:05:40.221994
+1757	2026-07-19	expense	payable	采购单	120.00	阿润查干	621	PO2026071922045383147	公司支出账户		t	trigger	2026-07-19 14:05:40.250291
+1758	2026-06-22	income	receivable	销售合同	7656.00	混沌未来	418	HT20260622001		[NO:HT20260622001] [FI:JTVCJTdCJTIybmFtZSUyMiUzQSUyMiVFNiVBMCU4NyVFNyVBRCVCRSVFOCVCNCVCOSVFNyU5NCVBOCUyMiUyQyUyMmFtb3VudCUyMiUzQTE5NSUyQyUyMmJlYXJlciUyMiUzQSUyMmJ1eWVyJTIyJTJDJTIyc3VwcGxpZXJfbmFtZSUyMiUzQSUyMiUyMiU3RCUyQyU3QiUyMm5hbWUlMjIlM0ElMjIlRTUlQkYlQUIlRTklODAlOTIlMkYlRTclODklQTklRTYlQjUlODElMjIlMkMlMjJhbW91bnQlMjIlM0EzMTUlMkMlMjJiZWFyZXIlMjIlM0ElMjJidXllciUyMiUyQyUyMnN1cHBsaWVyX25hbWUlMjIlM0ElMjIlMjIlN0QlNUQ=]	t	trigger	2026-07-19 14:29:17.780238
+1759	2026-07-19	income	receivable	销售合同	1016.20	混沌未来	420	HT20260719001		[NO:HT20260719001]	t	trigger	2026-07-19 14:32:43.495726
+1760	2026-07-13	expense	cash	付款单	3000.00	纯净奶食品	843	FK202607194528	公司支出账户	采购单PO2026071922345620868审核自动生成	t	trigger	2026-07-19 14:36:51.74825
+1761	2026-07-13	expense	payable	采购单	4284.00	纯净奶食品	622	PO2026071922345620868	公司支出账户		t	trigger	2026-07-19 14:36:51.761698
+1762	2026-07-17	income	cash	零售单	55.00		1572	LS202607194979			t	trigger	2026-07-19 14:41:00.1194
+1763	2026-07-17	income	cash	零售单	479.00		1573	LS202607192993			t	trigger	2026-07-19 14:43:47.53158
+1764	2026-07-20	income	cash	零售单	65.00		1574	LS202607207636			t	trigger	2026-07-20 02:54:21.050667
+1765	2026-07-20	income	cash	零售单	26.00		1575	LS202607204299			t	trigger	2026-07-20 05:11:15.60772
+1766	2026-07-20	income	cash	零售单	26.00		1576	LS202607209615			t	trigger	2026-07-20 07:10:49.346066
+1767	2026-07-20	income	cash	零售单	42.00		1577	LS202607208729			t	trigger	2026-07-20 13:33:55.897511
+1768	2026-07-20	expense	cash	付款单	50.00	科尔沁奶食品	844	FK202607207543	公司支出账户	采购单PO2026072021342977610审核自动生成	t	trigger	2026-07-20 13:34:57.626164
+1769	2026-07-20	expense	payable	采购单	50.00	科尔沁奶食品	623	PO2026072021342977610	公司支出账户		t	trigger	2026-07-20 13:34:57.637464
+1770	2026-07-21	income	cash	零售单	25.00		1578	LS202607213835			t	trigger	2026-07-21 02:21:53.861164
+1771	2026-07-21	income	receivable	销售合同	603.40	赤峰文旅集团	421	HT20260721001		[NO:HT20260721001]	t	trigger	2026-07-21 02:55:44.405849
+1772	2026-07-21	expense	cash	付款单	170.00	科尔沁奶食品	845	FK202607216790	公司支出账户	采购单PO2026072112024670768审核自动生成	t	trigger	2026-07-21 04:03:14.585568
+1773	2026-07-21	expense	payable	采购单	170.00	科尔沁奶食品	624	PO2026072112024670768	公司支出账户		t	trigger	2026-07-21 04:03:14.65972
+1774	2026-07-01	income	cash	零售单	84.80		1579	LS202607213020			t	trigger	2026-07-21 04:41:05.713298
 \.
 
 
@@ -9584,6 +9934,30 @@ COPY public.mini_coupons (id, name, type, discount_value, min_order, validity_da
 539	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
 540	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
 541	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+542	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+543	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+544	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+545	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+546	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+547	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+560	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+561	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+562	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+563	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+564	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+565	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+572	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+573	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+574	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+575	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+576	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+577	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+584	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+585	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+586	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+587	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+588	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+589	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
 \.
 
 
@@ -9710,8 +10084,8 @@ COPY public.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_a
 -- Data for Name: mini_users; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.mini_users (id, openid, phone, name, created_at, deleted_at, points, total_spent, level, vip_expire_at, birth_month, birth_day) FROM stdin;
-1	dev_test_openid	\N	测试用户	2026-06-10 12:37:46.184704	\N	0	0.00	0	\N	\N	\N
+COPY public.mini_users (id, openid, phone, name, created_at, deleted_at, points, total_spent, level, vip_expire_at, birth_month, birth_day, distributor_code) FROM stdin;
+1	dev_test_openid	\N	测试用户	2026-06-10 12:37:46.184704	\N	0	0.00	0	\N	\N	\N	
 \.
 
 
@@ -9742,8 +10116,9 @@ COPY public.mini_video_likes (id, video_id, user_id, created_at) FROM stdin;
 --
 
 COPY public.mini_videos (id, title, description, video_url, cover_url, goods_id, like_count, comment_count, view_count, sort, status, created_at) FROM stdin;
-2	蒙超联赛现场亮相	牧区纯坊内蒙古特产精选品牌	https://nomaderp.pages.dev/media/videos/1780896510754_akr3bf.mp4		996	0	3	11	0	1	2026-06-08 05:34:18.500551
-1	数字游牧 | 游走在世界的奶酪	来自草原的味道，跟着我们一起游牧吧	https://nomaderp.pages.dev/videos/product_video_1.mp4		0	0	3	77	10	1	2026-06-04 03:02:11.107541
+1	数字游牧 | 游走在世界的奶酪	来自草原的味道，跟着我们一起游牧吧	https://nomaderp.pages.dev/videos/product_video_1.mp4		0	0	3	113	10	1	2026-06-04 03:02:11.107541
+3	蒙古青砖奶茶	制作美味时刻	https://nomaderp.pages.dev/media/videos/1784649171543_vu1b11.mp4		996	0	0	7	0	1	2026-07-21 15:52:54.796954
+2	蒙超联赛现场亮相	牧区纯坊内蒙古特产精选品牌	https://nomaderp.pages.dev/media/videos/1780896510754_akr3bf.mp4		996	0	3	36	0	1	2026-06-08 05:34:18.500551
 \.
 
 
@@ -10544,6 +10919,26 @@ COPY public.pay_receipt (id, receipt_no, order_sn, contact_type, contact_name, a
 823	FK202606163073	PO2026061621560672971	supplier	科尔沁奶食品	50.00	2026-06-16	7	公司支出账户	采购单PO2026061621560672971审核自动生成	1	2026-06-16 13:56:33.455049	\N	purchase	1
 824	FK202606195007		other	阿姨劳工费	500.00	2026-06-16	7	公司支出账户	劳务费	1	2026-06-19 06:50:56.952546	\N		1
 825	FK202606202438	PO202606201610588640	supplier	科尔沁奶食品	330.00	2026-06-20	7	公司支出账户	采购单PO202606201610588640审核自动生成	1	2026-06-20 08:11:55.109764	\N	purchase	1
+826	FK202606226939	PO2026062211360496627	supplier	科尔沁奶食品	640.00	2026-06-22	7	公司支出账户	采购单PO2026062211360496627审核自动生成	1	2026-06-22 03:38:38.443941	\N	purchase	1
+827	FK202606228627	PO2026062211385423444	supplier	科尔沁奶食品	656.00	2026-06-13	7	公司支出账户	采购单PO2026062211385423444审核自动生成	1	2026-06-22 03:42:24.727378	\N	purchase	1
+828	FK202606221666	PO2026062211424384186	supplier	科尔沁奶食品	200.00	2026-06-21	7	公司支出账户	采购单PO2026062211424384186审核自动生成	1	2026-06-22 03:43:26.350675	\N	purchase	1
+829	FK202606223308	PO2026062214182043723	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-06-22	7	公司支出账户	采购单PO2026062214182043723审核自动生成	1	2026-06-22 06:19:24.982317	\N	purchase	1
+830	FK202606229868	PO2026062215271297352	supplier	科尔沁奶食品	340.00	2026-06-22	7	公司支出账户	采购单PO2026062215271297352审核自动生成	1	2026-06-22 07:27:51.994528	\N	purchase	1
+831	FK202606225637	PO2026062215561861413	supplier	巴音珠萨朗	470.00	2026-06-22	7	公司支出账户	采购单PO2026062215561861413审核自动生成	1	2026-06-22 07:58:17.05122	\N	purchase	1
+832	FK202606238949	PO202606231742474342	supplier	科尔沁奶食品	205.00	2026-06-23	7	公司支出账户	采购单PO202606231742474342审核自动生成	1	2026-06-23 09:44:38.691626	\N	purchase	1
+833	FK202606305600	PO2026063010174698423	supplier	科尔沁奶食品	155.00	2026-06-30	7	公司支出账户	采购单PO2026063010174698423审核自动生成	1	2026-06-30 02:18:31.903611	\N	purchase	1
+834	FK202606307003	PO2026063010302146351	supplier	科尔沁奶食品	50.00	2026-06-30	7	公司支出账户	采购单PO2026063010302146351审核自动生成	1	2026-06-30 02:30:57.767806	\N	purchase	1
+835	FK202607026195	PO2026070216142419815	supplier	科尔沁奶食品	475.00	2026-07-02	7	公司支出账户	采购单PO2026070216142419815审核自动生成	1	2026-07-02 08:14:54.559381	\N	purchase	1
+836	FK202607047081	PO2026070416575364554	supplier	广州维记	1690.00	2026-07-04	7	公司支出账户	采购单PO2026070416575364554审核自动生成	1	2026-07-04 08:58:38.409787	\N	purchase	1
+837	FK202607075423	PO2026070711073264031	supplier	科尔沁奶食品	50.00	2026-07-07	7	公司支出账户	采购单PO2026070711073264031审核自动生成	1	2026-07-07 03:07:55.854025	\N	purchase	1
+838	FK202607082802	PO2026070816402254688	supplier	科尔沁奶食品	340.00	2026-07-08	7	公司支出账户	采购单PO2026070816402254688审核自动生成	1	2026-07-08 08:40:58.891513	\N	purchase	1
+839	FK202607126700	PO2026071214043411525	supplier	广州维记	1807.00	2026-07-10	7	公司支出账户	采购单PO2026071214043411525审核自动生成	1	2026-07-12 06:06:45.995088	\N	purchase	1
+840	FK202607124673	PO202607121407018203	supplier	额吉伊德	68.00	2026-07-09	7	公司支出账户	采购单PO202607121407018203审核自动生成	1	2026-07-12 06:09:21.250016	\N	purchase	1
+841	FK202607126953	PO202607121533349182	supplier	科尔沁奶食品	50.00	2026-07-12	7	公司支出账户	采购单PO202607121533349182审核自动生成	1	2026-07-12 07:34:05.36926	\N	purchase	1
+842	FK202607199080	PO2026071922045383147	supplier	阿润查干	120.00	2026-07-19	7	公司支出账户	采购单PO2026071922045383147审核自动生成	1	2026-07-19 14:05:40.221994	\N	purchase	1
+843	FK202607194528	PO2026071922345620868	supplier	纯净奶食品	3000.00	2026-07-13	7	公司支出账户	采购单PO2026071922345620868审核自动生成	1	2026-07-19 14:36:51.74825	\N	purchase	1
+844	FK202607207543	PO2026072021342977610	supplier	科尔沁奶食品	50.00	2026-07-20	7	公司支出账户	采购单PO2026072021342977610审核自动生成	1	2026-07-20 13:34:57.626164	\N	purchase	1
+845	FK202607216790	PO2026072112024670768	supplier	科尔沁奶食品	170.00	2026-07-21	7	公司支出账户	采购单PO2026072112024670768审核自动生成	1	2026-07-21 04:03:14.585568	\N	purchase	1
 \.
 
 
@@ -10980,6 +11375,8 @@ COPY public.procure_inhouse (id, order_no, purchase_order_id, supplier_id, suppl
 487	CGRK202606076608	581	117	巴音珠萨朗	管理员	2026-04-06	[{"num": 46, "spec": "", "price": 16.087, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.087, "supplier_name": "", "_base_price_no_tax": 16.087, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-07 11:28:06.804701	\N	1
 489	CGRK202606077787	583	117	巴音珠萨朗	管理员	2025-12-15	[{"num": 23, "spec": "", "price": 16.9565, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.9565, "supplier_name": "", "_base_price_no_tax": 16.9565, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-07 11:33:03.25945	\N	1
 491	CGRK202606071530	585	76	乌日汗奶食品店	管理员	2026-04-16	[{"num": 10, "spec": "", "price": 10, "remark": "", "goods_id": 808, "goods_sn": "SP0000228", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "盒", "goods_name": "彩色奶圈圈/透明桶装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	2026-06-07 14:06:33.672405	\N	1
+518	CGRK202606301523	613	98	科尔沁奶食品	管理员	2026-06-30	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-30 02:30:59.276804	\N	1
+520	CGRK202607042233	615	112	广州维记	管理员	2026-07-04	[{"num": 10, "spec": "", "price": 169, "_total": 1690, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 169, "supplier_name": "", "_base_price_no_tax": 0.4225, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	2026-07-04 08:58:40.048852	\N	1
 464	CGRK202605306543	558	98	科尔沁奶食品	管理员	2026-04-09	[{"num": 12, "spec": "", "price": 18, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18}, {"num": 10, "spec": "", "price": 18.5, "remark": "", "goods_id": 3094, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "科尔沁糖（酸奶/嚼口/乌日末", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18.5, "supplier_name": "", "_base_price_no_tax": 18.5}, {"num": 10, "spec": "", "price": 85, "remark": "", "goods_id": 908, "goods_sn": "SP0000127", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "哈斯乌拉牛肉干500g原味", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 85, "supplier_name": "", "_base_price_no_tax": 85}]		1	189	牧区纯坊门店	2026-05-30 10:34:18.475658	\N	1
 465	CGRK202605304145	559	98	科尔沁奶食品	管理员	2026-02-09	[{"num": 1, "spec": "", "price": 158, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 158, "supplier_name": "", "_base_price_no_tax": 5.266667}, {"num": 10, "spec": "", "price": 4.8, "remark": "", "goods_id": 923, "goods_sn": "SP0000112", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "海丰炒米/散装/硬口/", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.8, "supplier_name": "", "_base_price_no_tax": 4.8}]		1	189	牧区纯坊门店	2026-05-30 10:37:08.007268	\N	1
 466	CGRK202605301540	560	80	奥特尔奶食品店	管理员	2026-04-06	[{"num": 10, "spec": "", "price": 10, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10}]		1	189	牧区纯坊门店	2026-05-30 10:40:45.945194	\N	1
@@ -10989,6 +11386,8 @@ COPY public.procure_inhouse (id, order_no, purchase_order_id, supplier_id, suppl
 488	CGRK202606071210	582	117	巴音珠萨朗	管理员	2025-12-30	[{"num": 20.5, "spec": "", "price": 16.3415, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.3415, "supplier_name": "", "_base_price_no_tax": 16.3415, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-07 11:30:57.63933	\N	1
 490	CGRK202606071556	584	78	小米厂家阿旗	管理员	2026-04-06	[{"num": 10, "spec": "", "price": 19, "remark": "", "goods_id": 830, "goods_sn": "SP0000206", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "小米/10斤/小袋/红嘴/阿旗", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 19, "supplier_name": "", "_base_price_no_tax": 19, "_current_unit_name": "袋"}, {"num": 10, "spec": "", "price": 55, "remark": "", "goods_id": 809, "goods_sn": "SP0000227", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "10斤装/小米/绿色纸盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 55, "supplier_name": "", "_base_price_no_tax": 55, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	2026-06-07 13:47:13.888718	\N	1
 499	CGRK202606107362	593	98	科尔沁奶食品	管理员	2026-06-09	[{"num": 30, "spec": "", "price": 13, "_total": 390, "remark": "", "batch_no": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-10 04:53:29.337153	\N	1
+519	CGRK202607026895	614	98	科尔沁奶食品		2026-07-02	[{"num": 5, "spec": "", "price": 95, "_total": 475, "remark": "", "goods_id": 907, "goods_sn": "SP0000128", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "风干牛肉500g大片", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 95, "supplier_name": "", "_base_price_no_tax": 95, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-07-02 08:14:56.067101	\N	1
+521	CGRK202607078707	616	98	科尔沁奶食品	管理员	2026-07-07	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-07-07 03:07:57.382043	\N	1
 467	CGRK202605305729	561	98	科尔沁奶食品	管理员	2025-12-14	[{"num": 2, "spec": "", "price": 15, "remark": "", "goods_id": 889, "goods_sn": "SP0000146", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "奶皮卷/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15, "supplier_name": "", "_base_price_no_tax": 15}, {"num": 4, "spec": "", "price": 14, "remark": "", "goods_id": 888, "goods_sn": "SP0000147", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "河套奶粉", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 14, "supplier_name": "", "_base_price_no_tax": 14}, {"num": 4, "spec": "", "price": 25, "remark": "", "goods_id": 887, "goods_sn": "SP0000148", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "羊乳奶粉/奶茶专用", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 25, "supplier_name": "", "_base_price_no_tax": 25}, {"num": 2, "spec": "", "price": 7, "remark": "", "goods_id": 924, "goods_sn": "SP0000111", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "冻炒米/袋装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 7, "supplier_name": "", "_base_price_no_tax": 7}]		1	189	牧区纯坊门店	2026-05-30 10:44:18.194767	\N	1
 468	CGRK202605303271	562	92	奥都奶食品	管理员	2026-04-16	[{"num": 10, "spec": "", "price": 10, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10}]		1	189	牧区纯坊门店	2026-05-30 10:48:14.074883	\N	1
 469	CGRK202605307544	563	92	奥都奶食品	管理员	2026-03-26	[{"num": 10, "spec": "", "price": 16, "remark": "", "goods_id": 885, "goods_sn": "SP0000150", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "冻炒米/散装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16, "supplier_name": "", "_base_price_no_tax": 16}]		1	189	牧区纯坊门店	2026-05-30 10:51:00.318399	\N	1
@@ -11017,6 +11416,23 @@ COPY public.procure_inhouse (id, order_no, purchase_order_id, supplier_id, suppl
 506	CGRK202606137310	600	81	额吉伊德	管理员	2026-03-17	[{"num": 4, "spec": "", "price": 5, "_total": 20, "remark": "", "goods_id": 967, "goods_sn": "SP0000067", "tax_rate": 0, "cate_name": "散货", "unit_name": "桶", "goods_name": "查嘎/乳清", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "桶"}, {"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 915, "goods_sn": "SP0000120", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "黄油渣/盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "盒"}]		0	189	牧区纯坊门店	2026-06-13 06:46:23.218308	\N	1
 507	CGRK202606167816	601	98	科尔沁奶食品	管理员	2026-06-16	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-16 13:56:34.820469	\N	1
 508	CGRK202606208855	602	98	科尔沁奶食品	管理员	2026-06-20	[{"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 13, "_total": 130, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-20 08:11:56.452596	\N	1
+509	CGRK202606227643	603	98	科尔沁奶食品	管理员	2026-06-22	[{"num": 20, "spec": "", "price": 13, "_total": 260, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-22 03:38:39.88374	\N	1
+510	CGRK202606228805	604	98	科尔沁奶食品	管理员	2026-06-13	[{"num": 15, "spec": "", "price": 4.8, "_total": 72, "remark": "", "goods_id": 931, "goods_sn": "SP0000104", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "炒米粉/aag", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.8, "supplier_name": "", "_base_price_no_tax": 4.8, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 89, "_total": 534, "remark": "", "goods_id": 908, "goods_sn": "SP0000127", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "哈斯乌拉牛肉干500g原味", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 89, "supplier_name": "", "_base_price_no_tax": 89, "_current_unit_name": "袋"}, {"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 3094, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "科尔沁糖（酸奶/嚼口/乌日末", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-22 03:42:26.191638	\N	1
+511	CGRK202606222025	605	98	科尔沁奶食品	管理员	2026-06-21	[{"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-22 03:43:27.304062	\N	1
+512	CGRK202606225892	606	115	那牧尔乳制品厂/纯净之源	管理员	2026-06-22	[{"num": 100, "spec": "", "price": 5.5, "_total": 550, "remark": "", "goods_id": 1013, "goods_sn": "SP0000021", "tax_rate": 0, "cate_name": "半成品", "unit_name": "盒", "goods_name": "冻炒米/给组装半成品/那牧尔", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5.5, "supplier_name": "", "_base_price_no_tax": 5.5, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	2026-06-22 06:19:27.838444	\N	1
+513	CGRK202606221556	607	98	科尔沁奶食品	管理员	2026-06-22	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 3107, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "块", "goods_name": "科尔沁中奶豆腐", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "块"}]		1	189	牧区纯坊门店	2026-06-22 07:27:53.174584	\N	1
+514	CGRK202606223689	608	124	孟克河	管理员	2026-06-22	[{"num": 200, "spec": "", "price": 6.5, "_total": 1300, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6.5, "supplier_name": "", "_base_price_no_tax": 6.5, "_current_unit_name": "桶"}]		1	189	牧区纯坊门店	2026-06-22 07:32:29.282124	\N	1
+515	CGRK202606227337	609	117	巴音珠萨朗	管理员	2026-06-22	[{"num": 30, "spec": "", "price": 15.7, "_total": 471, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.7, "supplier_name": "", "_base_price_no_tax": 15.7, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-22 07:58:18.031202	\N	1
+516	CGRK202606235309	611	98	科尔沁奶食品	管理员	2026-06-23	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}, {"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-06-23 09:44:40.740702	\N	1
+517	CGRK202606309577	612	98	科尔沁奶食品	管理员	2026-06-30	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}]		1	189	牧区纯坊门店	2026-06-30 02:18:33.411067	\N	1
+522	CGRK202607084928	617	98	科尔沁奶食品	管理员	2026-07-08	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	1	默认仓库	2026-07-08 08:41:00.600686	\N	1
+523	CGRK202607123892	618	112	广州维记	管理员	2026-07-10	[{"num": 10, "spec": "", "price": 180.7, "_total": 1807, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 180.7, "supplier_name": "", "_base_price_no_tax": 0.45175, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	2026-07-12 06:06:49.176276	\N	1
+524	CGRK202607129221	619	81	额吉伊德	管理员	2026-07-09	[{"num": 15, "spec": "", "price": 4.533333, "_total": 68, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "瓶", "goods_name": "乳清饮料", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.533333, "supplier_name": "", "_base_price_no_tax": 4.533333, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	2026-07-12 06:09:23.602094	\N	1
+525	CGRK202607125824	620	98	科尔沁奶食品	管理员	2026-07-12	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-07-12 07:34:08.890767	\N	1
+526	CGRK202607195025	621	90	阿润查干	管理员	2026-07-19	[{"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 883, "goods_sn": "SP0000152", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 882, "goods_sn": "SP0000153", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 881, "goods_sn": "SP0000154", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶皮子馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 880, "goods_sn": "SP0000155", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-07-19 14:05:43.660287	\N	1
+527	CGRK202607196032	622	97	纯净奶食品	管理员	2026-07-13	[{"num": 1224, "spec": "", "price": 3.5, "_total": 4284, "remark": "", "goods_id": 3185, "goods_sn": "", "tax_rate": 0, "cate_name": "牧区纯坊X游牧奇遇", "unit_name": "瓶", "goods_name": "憨野 黄油/50克", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 3.5, "supplier_name": "", "_base_price_no_tax": 3.5, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	2026-07-19 14:36:55.164756	\N	1
+528	CGRK202607206939	623	98	科尔沁奶食品	管理员	2026-07-20	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-07-20 13:34:59.060549	\N	1
+529	CGRK202607219394	624	98	科尔沁奶食品	管理员	2026-07-21	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-07-21 04:03:17.029281	\N	1
 \.
 
 
@@ -11303,10 +11719,13 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 466	CG202603311175	CG202603317794	116	恩赫奶制品厂	牧区纯坊官方品牌	2025-10-20	284.40	284.40	0.00	[{"num": 15.8, "spec": "250克/一袋", "price": 18, "unit_id": 0, "goods_id": 1015, "goods_sn": "SP0000019", "unit_name": "斤", "goods_name": "散装/原味奶条", "total_price": 284.4}]	从saas.mzth.cn导入 原单号:CG0002417	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:22.192737	\N	none	0.00	284.40	0.00	buyer	f	\N	f	[]	[]	1
 563	PO2026053018490856356	PO2026053018490856356	92	奥都奶食品	管理员	2026-03-26	160.00	160.00	0.00	[{"num": 10, "spec": "", "price": 16, "remark": "", "goods_id": 885, "goods_sn": "SP0000150", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "冻炒米/散装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16, "supplier_name": "", "_base_price_no_tax": 16}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-30 10:50:57.069979	\N	none	0.00	160.00	0.00	buyer	f	\N	f	[]	[]	1
 600	PO2026061314445962835	PO2026061314445962835	81	额吉伊德	管理员	2026-03-17	70.00	70.00	0.00	[{"num": 4, "spec": "", "price": 5, "_total": 20, "remark": "", "goods_id": 967, "goods_sn": "SP0000067", "tax_rate": 0, "cate_name": "散货", "unit_name": "桶", "goods_name": "查嘎/乳清", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "桶"}, {"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 915, "goods_sn": "SP0000120", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "黄油渣/盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-13 06:46:20.04334	\N	none	0.00	70.00	0.00	buyer	f	\N	f	[]	[]	1
+603	PO2026062211360496627	PO2026062211360496627	98	科尔沁奶食品	管理员	2026-06-22	640.00	640.00	0.00	[{"num": 20, "spec": "", "price": 13, "_total": 260, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 03:38:38.179239	\N	none	0.00	640.00	0.00	buyer	f	\N	f	[]	[]	1
 75	CG202603305124	CG202603304106	85			2026-01-16	0.00	0.00	0.00	[{"num": 40, "price": 6, "unit_id": 0, "goods_id": 858, "goods_name": "糖葫芦", "total_price": 240}]	从saas.mzth.cn导入 原单号:CG0003839	0	0		0		2026-03-30 16:55:47.753555	2026-03-30 17:17:45.356153	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 74	CG202603307790	CG202603303921	113			2026-01-16	0.00	0.00	0.00	[{"num": 10, "price": 331, "unit_id": 0, "goods_id": 1011, "goods_name": "茶包", "total_price": 3310}]	从saas.mzth.cn导入 原单号:CG0003840	0	0		0		2026-03-30 16:55:47.046374	2026-03-30 17:17:46.789716	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 489	CG202603319788	CG202603311453	119	沈阳乾兴包装	牧区纯坊官方品牌	2025-09-30	254.80	254.80	0.00	[{"num": 30, "spec": "1", "price": 4.55, "unit_id": 0, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "goods_name": "礼盒/蓝界", "total_price": 136.5}, {"num": 26, "spec": "1", "price": 4.55, "unit_id": 0, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "goods_name": "礼盒/蓝界", "total_price": 118.3}]	从saas.mzth.cn导入 原单号:CG0002013	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:39:06.938415	\N	none	0.00	254.80	0.00	buyer	f	\N	f	[]	[]	1
 73	CG202603303779	CG202603307278	84			2026-01-17	0.00	0.00	0.00	[{"num": 10, "price": 19, "unit_id": 0, "goods_id": 857, "goods_name": "厚奶皮", "total_price": 190}]	从saas.mzth.cn导入 原单号:CG0003860	0	0		0		2026-03-30 16:55:46.409921	2026-03-30 17:17:51.087979	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+604	PO2026062211385423444	PO2026062211385423444	98	科尔沁奶食品	管理员	2026-06-13	656.00	656.00	0.00	[{"num": 15, "spec": "", "price": 4.8, "_total": 72, "remark": "", "goods_id": 931, "goods_sn": "SP0000104", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "炒米粉/aag", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.8, "supplier_name": "", "_base_price_no_tax": 4.8, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 89, "_total": 534, "remark": "", "goods_id": 908, "goods_sn": "SP0000127", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "哈斯乌拉牛肉干500g原味", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 89, "supplier_name": "", "_base_price_no_tax": 89, "_current_unit_name": "袋"}, {"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 3094, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "科尔沁糖（酸奶/嚼口/乌日末", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 03:42:24.484388	\N	none	0.00	656.00	0.00	buyer	f	\N	f	[]	[]	1
+605	PO2026062211424384186	PO2026062211424384186	98	科尔沁奶食品	管理员	2026-06-21	200.00	200.00	0.00	[{"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 03:43:26.108467	\N	none	0.00	200.00	0.00	buyer	f	\N	f	[]	[]	1
 72	CG202603304355	CG202603305127	98			2026-01-17	0.00	0.00	0.00	[{"num": 10, "price": 22, "unit_id": 0, "goods_id": 981, "goods_name": "烤奶皮", "total_price": 220}, {"num": 30, "price": 5.26667, "unit_id": 0, "goods_id": 901, "goods_name": "手工白花炒米/散装", "total_price": 158}]	从saas.mzth.cn导入 原单号:CG0003873	0	0		0		2026-03-30 16:55:45.781081	2026-03-30 17:17:52.023265	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 71	CG202603305628	CG202603302216	98			2026-01-19	0.00	0.00	0.00	[{"num": 3, "price": 33, "unit_id": 0, "goods_id": 856, "goods_name": "科尔沁/大奶豆腐", "total_price": 99}, {"num": 1, "price": 48, "unit_id": 0, "goods_id": 923, "goods_name": "炒米/散装/硬口", "total_price": 48}]	从saas.mzth.cn导入 原单号:CG0003897	0	0		0		2026-03-30 16:55:44.080416	2026-03-30 17:17:53.405751	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 70	CG202603309782	CG202603307332	115			2026-01-19	0.00	0.00	0.00	[{"num": 130, "price": 48.95385, "unit_id": 0, "goods_id": 872, "goods_name": "半成品/黄金纬度牛肉干/那牧尔", "total_price": 6364}]	从saas.mzth.cn导入 原单号:CG0003899	0	0		0		2026-03-30 16:55:43.45206	2026-03-30 17:17:54.7558	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -11319,28 +11738,43 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 92	CG202603304118	CG202603304284	111			2025-12-07	0.00	0.00	0.00	[{"num": 3000, "price": 1.46667, "unit_id": 0, "goods_id": 873, "goods_name": "专袋/牛肉干包装", "total_price": 4400.01}]	从saas.mzth.cn导入 原单号:CG0003407	0	0		0		2026-03-30 16:55:59.592898	2026-03-30 17:17:11.040083	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 91	CG202603303564	CG202603301668	98			2025-12-28	0.00	0.00	0.00	[{"num": 5, "price": 15, "unit_id": 0, "goods_id": 921, "goods_name": "嚼口脆炒米糖/散装", "total_price": 75}]	从saas.mzth.cn导入 原单号:CG0003418	0	0		0		2026-03-30 16:55:58.977708	2026-03-30 17:17:13.040312	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 218	CG202603302983	CG202603306596	98	科尔沁奶食品	牧区纯坊官方品牌	2026-01-27	140.00	0.00	0.00	[{"num": 10.0, "spec": "半斤", "price": 14.0, "unit_id": 0, "goods_id": 0, "goods_sn": "", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "total_price": 140.0}]	从saas.mzth.cn导入 原单号:CG0004088	0	0		0		2026-03-30 17:36:52.141113	2026-03-31 02:33:53.766277	none	0.00	140.00	0.00	buyer	f	\N	f	[]	[]	1
+606	PO2026062214182043723	PO2026062214182043723	115	那牧尔乳制品厂/纯净之源	管理员	2026-06-22	550.00	550.00	0.00	[{"num": 100, "spec": "", "price": 5.5, "_total": 550, "remark": "", "goods_id": 1013, "goods_sn": "SP0000021", "tax_rate": 0, "cate_name": "半成品", "unit_name": "盒", "goods_name": "冻炒米/给组装半成品/那牧尔", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5.5, "supplier_name": "", "_base_price_no_tax": 5.5, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 06:19:24.513281	\N	none	0.00	550.00	0.00	buyer	f	\N	f	[]	[]	1
+607	PO2026062215271297352	PO2026062215271297352	98	科尔沁奶食品	管理员	2026-06-22	340.00	340.00	0.00	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 3107, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "块", "goods_name": "科尔沁中奶豆腐", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "块"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 07:27:51.724169	\N	none	0.00	340.00	0.00	buyer	f	\N	f	[]	[]	1
+609	PO2026062215561861413	PO2026062215561861413	117	巴音珠萨朗	管理员	2026-06-22	471.00	470.00	0.00	[{"num": 30, "spec": "", "price": 15.7, "_total": 471, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.7, "supplier_name": "", "_base_price_no_tax": 15.7, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 07:58:16.76877	\N	amount	1.00	470.00	0.00	buyer	f	\N	f	[]	[]	1
+610	PO2026062317345562817	PO2026062317345562817	96	浙江金矿包装	管理员	2026-06-23	286.48	0.00	0.00	[{"num": 1, "spec": "", "price": 285.48, "_total": 285.48, "remark": "", "goods_id": 958, "goods_sn": "SP0000077", "tax_rate": 0, "cate_name": "亚克力", "unit_name": "件", "goods_name": "小/长方/亚克力/乳清奶条/奶锅巴通用", "unit_ratio": 183, "supplier_id": null, "price_no_tax": 285.48, "supplier_name": "", "_base_price_no_tax": 1.56, "_current_unit_name": "件"}, {"num": 1, "spec": "", "price": 1, "_total": 1, "remark": "", "goods_id": 963, "goods_sn": "SP0000071", "tax_rate": 0, "cate_name": "亚克力", "unit_name": "个", "goods_name": "小/方形/亚克力盒/", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 1, "supplier_name": "", "_base_price_no_tax": 1, "_current_unit_name": "个"}]		0	189	牧区纯坊门店	7	公司支出账户	2026-06-23 09:42:41.433132	\N	none	0.00	286.48	0.00	buyer	f	\N	f	[]	[]	1
 90	CG202603304476	CG202603306392	113			2025-12-29	0.00	0.00	0.00	[{"num": 1, "price": 273.05, "unit_id": 0, "goods_id": 870, "goods_name": "大青砖茶砖", "total_price": 273.05}, {"num": 1, "price": 227.54, "unit_id": 0, "goods_id": 871, "goods_name": "小青砖茶砖", "total_price": 227.54}, {"num": 1, "price": 204.79, "unit_id": 0, "goods_id": 869, "goods_name": "青砖碎茶", "total_price": 204.79}, {"num": 1, "price": 477.83, "unit_id": 0, "goods_id": 867, "goods_name": "5g/青砖袋泡茶", "total_price": 477.83}, {"num": 1, "price": 204.79, "unit_id": 0, "goods_id": 868, "goods_name": "16g青砖袋泡茶", "total_price": 204.79}]	从saas.mzth.cn导入 原单号:CG0003427	0	0		0		2026-03-30 16:55:58.353101	2026-03-30 17:17:13.885818	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 89	CG202603309957	CG202603304868	97			2026-01-01	0.00	0.00	0.00	[{"num": 10, "price": 10, "unit_id": 0, "goods_id": 920, "goods_name": "手工乌日末液体", "total_price": 100}, {"num": 36, "price": 10, "unit_id": 0, "goods_id": 970, "goods_name": "热奶豆腐碗", "total_price": 360}, {"num": 20, "price": 13, "unit_id": 0, "goods_id": 939, "goods_name": "半成品/透明/原味/鲜奶酪", "total_price": 260}, {"num": 52, "price": 13, "unit_id": 0, "goods_id": 940, "goods_name": "半成品/透明/甜味/鲜奶酪", "total_price": 676}]	从saas.mzth.cn导入 原单号:CG0003473	0	0		0		2026-03-30 16:55:57.063092	2026-03-30 17:17:17.904245	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 88	CG202603303366	CG202603309125	97			2026-01-03	0.00	0.00	0.00	[{"num": 10, "price": 6, "unit_id": 0, "goods_id": 866, "goods_name": "酸奶/纯净", "total_price": 60}]	从saas.mzth.cn导入 原单号:CG0003504	0	0		0		2026-03-30 16:55:56.440925	2026-03-30 17:17:18.466316	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 87	CG202603304558	CG202603301746	88			2026-01-03	0.00	0.00	0.00	[{"num": 20, "price": 49, "unit_id": 0, "goods_id": 865, "goods_name": "牛肉干/和希格图", "total_price": 980}]	从saas.mzth.cn导入 原单号:CG0003505	0	0		0		2026-03-30 16:55:55.803041	2026-03-30 17:17:19.541044	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 86	CG202603304678	CG202603309762	98			2026-01-06	0.00	0.00	0.00	[{"num": 10, "price": 22, "unit_id": 0, "goods_id": 981, "goods_name": "烤奶皮", "total_price": 220}]	从saas.mzth.cn导入 原单号:CG0003544	0	0		0		2026-03-30 16:55:55.096545	2026-03-30 17:17:21.494063	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 85	CG202603303318	CG202603306321	117			2026-01-06	0.00	0.00	0.00	[{"num": 53.4, "price": 15.99251, "unit_id": 0, "goods_id": 1014, "goods_name": "散装/甜味奶条", "total_price": 854}]	从saas.mzth.cn导入 原单号:CG0003546	0	0		0		2026-03-30 16:55:54.411365	2026-03-30 17:17:25.36143	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+608	PO2026062215312473851	PO2026062215312473851	124	孟克河	管理员	2026-06-22	1300.00	0.00	0.00	[{"num": 200, "spec": "", "price": 6.5, "_total": 1300, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6.5, "supplier_name": "", "_base_price_no_tax": 6.5, "_current_unit_name": "桶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 07:32:26.516364	\N	none	0.00	1300.00	0.00	buyer	f	\N	f	[]	[]	1
+611	PO202606231742474342	PO202606231742474342	98	科尔沁奶食品	管理员	2026-06-23	205.00	205.00	0.00	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}, {"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-23 09:44:38.247162	\N	none	0.00	205.00	0.00	buyer	f	\N	f	[]	[]	1
 84	CG202603307788	CG202603307886	98			2026-01-07	0.00	0.00	0.00	[{"num": 1, "price": 48, "unit_id": 0, "goods_id": 923, "goods_name": "炒米/散装/硬口", "total_price": 48}, {"num": 10, "price": 22, "unit_id": 0, "goods_id": 981, "goods_name": "烤奶皮", "total_price": 220}, {"num": 3, "price": 85, "unit_id": 0, "goods_id": 908, "goods_name": "哈斯乌拉牛肉干500g原味", "total_price": 255}, {"num": 2, "price": 95, "unit_id": 0, "goods_id": 907, "goods_name": "风干牛肉500g大片", "total_price": 190}]	从saas.mzth.cn导入 原单号:CG0003599	0	0		0		2026-03-30 16:55:53.757001	2026-03-30 17:17:26.161137	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 83	CG202603304139	CG202603309625	108			2026-01-09	0.00	0.00	0.00	[{"num": 10, "price": 68.7, "unit_id": 0, "goods_id": 997, "goods_name": "茶专用/盐包", "total_price": 687}]	从saas.mzth.cn导入 原单号:CG0003666	0	0		0		2026-03-30 16:55:53.020931	2026-03-30 17:17:27.617018	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 82	CG202603301334	CG202603309080	105			2026-01-09	0.00	0.00	0.00	[{"num": 119, "price": 30.69748, "unit_id": 0, "goods_id": 991, "goods_name": "奶果子/散装", "total_price": 3653}]	从saas.mzth.cn导入 原单号:CG0003667	0	0		0		2026-03-30 16:55:52.330284	2026-03-30 17:17:29.155542	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 81	CG202603306567	CG202603306230	97			2026-01-01	0.00	0.00	0.00	[{"num": 21, "price": 12, "unit_id": 0, "goods_id": 944, "goods_name": "半成品/透明/奶皮千层", "total_price": 252}, {"num": 10, "price": 15, "unit_id": 0, "goods_id": 885, "goods_name": "冻炒米/散装", "total_price": 150}, {"num": 100, "price": 0.224, "unit_id": 0, "goods_id": 863, "goods_name": "冻炒米/小包散/精品", "total_price": 22.4}]	从saas.mzth.cn导入 原单号:CG0003668	0	0		0		2026-03-30 16:55:51.696831	2026-03-30 17:17:30.672748	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+614	PO2026070216142419815	PO2026070216142419815	98	科尔沁奶食品		2026-07-02	475.00	475.00	0.00	[{"num": 5, "spec": "", "price": 95, "_total": 475, "remark": "", "goods_id": 907, "goods_sn": "SP0000128", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "风干牛肉500g大片", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 95, "supplier_name": "", "_base_price_no_tax": 95, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-02 08:14:54.024738	\N	none	0.00	475.00	0.00	buyer	f	\N	f	[]	[]	1
 364	CG202603319631	CG202603319361	78	小米厂家阿旗	牧区纯坊官方品牌	2026-02-08	573.00	0.00	0.00	[{"num": 2, "spec": "2.5kg", "price": 19, "unit_id": 0, "goods_id": 830, "goods_sn": "SP0000206", "unit_name": "袋", "goods_name": "小米/10斤/小袋", "total_price": 38}, {"num": 5, "spec": "2.5kg", "price": 19, "unit_id": 0, "goods_id": 830, "goods_sn": "SP0000206", "unit_name": "袋", "goods_name": "小米/10斤/小袋", "total_price": 95}, {"num": 8, "spec": "10斤装", "price": 55, "unit_id": 0, "goods_id": 809, "goods_sn": "SP0000227", "unit_name": "盒", "goods_name": "10斤装/小米/绿色纸盒", "total_price": 440}]	从saas.mzth.cn导入 原单号:CG0004363	1	0		5	道力干记录付款单	2026-03-31 02:34:44.500533	\N	none	0.00	573.00	0.00	buyer	f	\N	f	[]	[]	1
+612	PO2026063010174698423	PO2026063010174698423	98	科尔沁奶食品	管理员	2026-06-30	155.00	155.00	0.00	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-30 02:18:31.378355	\N	none	0.00	155.00	0.00	buyer	f	\N	f	[]	[]	1
 93	CG202603306251	CG202603306009	117			2025-12-28	0.00	0.00	0.00	[{"num": 18.8, "price": 16.5, "unit_id": 0, "goods_id": 1014, "goods_name": "散装/甜味奶条", "total_price": 310.2}]	从saas.mzth.cn导入 原单号:CG0003398	0	0		0		2026-03-30 16:56:00.197649	2026-03-30 17:20:49.431437	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 272	CG202603302325	CG202603304349	121	盛大印刷	牧区纯坊官方品牌	2025-12-10	963.00	0.00	0.00	[{"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 900, "goods_sn": "SP0000135", "unit_name": "张", "goods_name": "透专标签/脆香奶条/微甜", "total_price": 160.5}, {"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 950, "goods_sn": "SP0000085", "unit_name": "张", "goods_name": "透专标签/奶皮卷", "total_price": 160.5}, {"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 951, "goods_sn": "SP0000084", "unit_name": "张", "goods_name": "透专标签/冻炒米", "total_price": 160.5}, {"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 952, "goods_sn": "SP0000083", "unit_name": "张", "goods_name": "透专标签/奶酪/原味", "total_price": 160.5}, {"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 953, "goods_sn": "SP0000082", "unit_name": "张", "goods_name": "透专标签/奶酪/甜味", "total_price": 160.5}, {"num": 500, "spec": "1张", "price": 0.321, "unit_id": 0, "goods_id": 956, "goods_sn": "SP0000079", "unit_name": "张", "goods_name": "透专标签/鲜奶皮", "total_price": 160.5}]	从saas.mzth.cn导入 原单号:CG0002955	0	0		0		2026-03-30 17:38:05.267114	2026-04-04 07:15:22.883606	none	0.00	963.00	0.00	buyer	f	\N	f	[]	[]	1
 106	CG202603303774	CG202603305009	93			2025-12-17	0.00	0.00	0.00	[{"num": 12, "price": 12, "unit_id": 0, "goods_id": 890, "goods_name": "红枣", "total_price": 144}]	从saas.mzth.cn导入 原单号:CG0003074	0	0		0		2026-03-30 16:56:08.741967	2026-03-30 17:10:49.213519	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+613	PO2026063010302146351	PO2026063010302146351	98	科尔沁奶食品	管理员	2026-06-30	50.00	50.00	0.00	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-30 02:30:57.232256	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1
+615	PO2026070416575364554	PO2026070416575364554	112	广州维记	管理员	2026-07-04	1690.00	1690.00	0.00	[{"num": 10, "spec": "", "price": 169, "_total": 1690, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 169, "supplier_name": "", "_base_price_no_tax": 0.4225, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-04 08:58:37.901935	\N	none	0.00	1690.00	0.00	buyer	f	\N	f	[]	[]	1
+616	PO2026070711073264031	PO2026070711073264031	98	科尔沁奶食品	管理员	2026-07-07	50.00	50.00	0.00	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-07 03:07:55.375218	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1
+617	PO2026070816402254688	PO2026070816402254688	98	科尔沁奶食品	管理员	2026-07-08	340.00	340.00	0.00	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	1	默认仓库	7	公司支出账户	2026-07-08 08:40:58.386419	\N	none	0.00	340.00	0.00	buyer	f	\N	f	[]	[]	1
+619	PO202607121407018203	PO202607121407018203	81	额吉伊德	管理员	2026-07-09	68.00	68.00	0.00	[{"num": 15, "spec": "", "price": 4.533333, "_total": 68, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "瓶", "goods_name": "乳清饮料", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.533333, "supplier_name": "", "_base_price_no_tax": 4.533333, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-12 06:09:20.771662	\N	none	0.00	68.00	0.00	buyer	f	\N	f	[]	[]	1
 347	CG202603319515	CG202603314135	98	科尔沁奶食品	1号店员专用	2026-03-01	220.00	0.00	0.00	[{"num": 10, "spec": "斤/两盒", "price": 22, "unit_id": 0, "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "total_price": 220, "price_no_tax": 22, "_base_price_no_tax": 22}]	从saas.mzth.cn导入 原单号:CG0004473	0	0		0		2026-03-31 02:34:10.257147	2026-05-29 05:39:52.978612	none	0.00	220.00	0.00	buyer	f	\N	f	[]	[]	1
 191	CG202603306496	CG202603304125	74	德吉奶食品	1号店员专用	2026-02-26	270.00	0.00	0.00	[{"num": 10, "spec": "1L", "price": 15, "unit_id": 0, "goods_id": 804, "goods_sn": "SP0000232", "unit_name": "瓶", "goods_name": "德吉酸奶/2斤装", "total_price": 150}, {"num": 10, "spec": "500mL", "price": 8, "unit_id": 0, "goods_id": 805, "goods_sn": "SP0000231", "unit_name": "瓶", "goods_name": "德吉酸奶/一斤装", "total_price": 80}, {"num": 10, "spec": "250mL", "price": 4, "unit_id": 0, "goods_id": 806, "goods_sn": "SP0000230", "unit_name": "瓶", "goods_name": "德吉酸奶/半斤", "total_price": 40}]	从saas.mzth.cn导入 原单号:CG0004475	0	0		0		2026-03-30 17:36:10.107675	2026-04-04 07:15:22.883606	none	0.00	270.00	0.00	buyer	f	\N	f	[]	[]	1
 259	CG202603302336	CG202603303372	92	奥都奶食品	牧区纯坊官方品牌	2025-12-19	352.00	0.00	0.00	[{"num": 13.25, "spec": "1", "price": 16, "unit_id": 0, "goods_id": 885, "goods_sn": "SP0000150", "unit_name": "斤", "goods_name": "冻炒米/散装", "total_price": 212}, {"num": 5, "spec": "1", "price": 12, "unit_id": 0, "goods_id": 884, "goods_sn": "SP0000151", "unit_name": "个", "goods_name": "实惠/奶豆腐", "total_price": 60}, {"num": 10, "spec": "300克", "price": 8, "unit_id": 0, "goods_id": 924, "goods_sn": "SP0000111", "unit_name": "袋", "goods_name": "冻炒米/袋装", "total_price": 80}]	从saas.mzth.cn导入 原单号:CG0003106	0	0		0		2026-03-30 17:37:44.387637	2026-04-04 07:15:22.883606	none	0.00	352.00	0.00	buyer	f	\N	f	[]	[]	1
+618	PO2026071214043411525	PO2026071214043411525	112	广州维记	管理员	2026-07-10	1807.00	1807.00	0.00	[{"num": 10, "spec": "", "price": 180.7, "_total": 1807, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 180.7, "supplier_name": "", "_base_price_no_tax": 0.45175, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-12 06:06:45.486763	\N	none	0.00	1807.00	0.00	buyer	f	\N	f	[]	[]	1
 105	CG202603301479	CG202603309645	97			2025-12-17	0.00	0.00	0.00	[{"num": 17, "price": 14.5, "unit_id": 0, "goods_id": 973, "goods_name": "精品/奶豆腐块儿/甜味/", "total_price": 246.5}, {"num": 50, "price": 14.5, "unit_id": 0, "goods_id": 986, "goods_name": "精品/奶豆腐块儿/原味", "total_price": 725}]	从saas.mzth.cn导入 原单号:CG0003075	0	0		0		2026-03-30 16:56:08.120144	2026-03-30 17:10:49.777461	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 104	CG202603304110	CG202603305768	98			2025-12-17	0.00	0.00	0.00	[{"num": 20, "price": 14, "unit_id": 0, "goods_id": 916, "goods_name": "脆奶条/散装/科尔沁", "total_price": 280}, {"num": 7, "price": 15, "unit_id": 0, "goods_id": 889, "goods_name": "奶皮卷/科尔沁", "total_price": 105}, {"num": 2, "price": 7, "unit_id": 0, "goods_id": 886, "goods_name": "冻炒米/科尔沁", "total_price": 14}, {"num": 4, "price": 25, "unit_id": 0, "goods_id": 887, "goods_name": "羊乳奶粉/奶茶专用", "total_price": 100}, {"num": 4, "price": 14, "unit_id": 0, "goods_id": 888, "goods_name": "河套奶粉", "total_price": 56}]	从saas.mzth.cn导入 原单号:CG0003078	0	0		0		2026-03-30 16:56:07.257546	2026-03-30 17:10:54.215875	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 103	CG202603308380	CG202603302056	92			2025-12-19	0.00	0.00	0.00	[{"num": 13.25, "price": 16, "unit_id": 0, "goods_id": 885, "goods_name": "冻炒米/散装", "total_price": 212}, {"num": 5, "price": 12, "unit_id": 0, "goods_id": 884, "goods_name": "实惠/奶豆腐", "total_price": 60}, {"num": 10, "price": 8, "unit_id": 0, "goods_id": 924, "goods_name": "冻炒米/袋装", "total_price": 80}]	从saas.mzth.cn导入 原单号:CG0003106	0	0		0		2026-03-30 16:56:06.603788	2026-03-30 17:10:54.688379	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 102	CG202603306842	CG202603304036	97			2025-12-21	0.00	0.00	0.00	[{"num": 25, "price": 13, "unit_id": 0, "goods_id": 945, "goods_name": "半成品/透明/奶皮卷", "total_price": 325}]	从saas.mzth.cn导入 原单号:CG0003139	0	0		0		2026-03-30 16:56:05.967429	2026-03-30 17:10:55.941916	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 400	CG202603318600	CG202603317285	97	纯净奶食品	牧区纯坊官方品牌	2026-01-01	1396.00	1396.00	0.00	[{"num": 10, "spec": "斤", "price": 10, "unit_id": 0, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体", "total_price": 100}, {"num": 36, "spec": "200克", "price": 10, "unit_id": 0, "goods_id": 970, "goods_sn": "SP0000064", "unit_name": "盒", "goods_name": "热奶豆腐碗", "total_price": 360}, {"num": 20, "spec": "200克", "price": 13, "unit_id": 0, "goods_id": 939, "goods_sn": "SP0000096", "unit_name": "盒", "goods_name": "半成品/透明/原味/鲜奶酪", "total_price": 260}, {"num": 52, "spec": "200克", "price": 13, "unit_id": 0, "goods_id": 940, "goods_sn": "SP0000095", "unit_name": "盒", "goods_name": "半成品/透明/甜味/鲜奶酪", "total_price": 676}]	从saas.mzth.cn导入 原单号:CG0003473	1	0		7	公司支出账户	2026-03-31 02:35:46.521933	\N	none	0.00	1396.00	0.00	buyer	f	\N	f	[]	[]	1
+620	PO202607121533349182	PO202607121533349182	98	科尔沁奶食品	管理员	2026-07-12	50.00	50.00	0.00	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-12 07:34:04.838815	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1
 101	CG202603304156	CG202603307665	98			2025-12-24	0.00	0.00	0.00	[{"num": 10, "price": 15, "unit_id": 0, "goods_id": 889, "goods_name": "奶皮卷/科尔沁", "total_price": 150}]	从saas.mzth.cn导入 原单号:CG0003217	0	0		0		2026-03-30 16:56:05.342467	2026-03-30 17:16:54.16985	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 100	CG202603302512	CG202603301046	98			2025-12-25	0.00	0.00	0.00	[{"num": 9, "price": 10, "unit_id": 0, "goods_id": 884, "goods_name": "实惠/奶豆腐", "total_price": 90}, {"num": 10, "price": 5, "unit_id": 0, "goods_id": 920, "goods_name": "手工乌日末液体", "total_price": 50}]	从saas.mzth.cn导入 原单号:CG0003253	0	0		0		2026-03-30 16:56:04.710645	2026-03-30 17:16:56.87597	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 98	CG202603304010	CG202603301662	97			2025-12-25	0.00	0.00	0.00	[{"num": 40, "price": 14, "unit_id": 0, "goods_id": 946, "goods_name": "半成品/透明/鲜奶皮", "total_price": 560}, {"num": 50, "price": 13, "unit_id": 0, "goods_id": 945, "goods_name": "半成品/透明/奶皮卷", "total_price": 650}, {"num": 20, "price": 12, "unit_id": 0, "goods_id": 944, "goods_name": "半成品/透明/奶皮千层", "total_price": 240}, {"num": 35, "price": 6, "unit_id": 0, "goods_id": 974, "goods_name": "纯净黄油/瓶装好的", "total_price": 210}, {"num": 10, "price": 22, "unit_id": 0, "goods_id": 899, "goods_name": "纯净/黄油/斤", "total_price": 220}, {"num": 4, "price": 10, "unit_id": 0, "goods_id": 920, "goods_name": "手工乌日末液体", "total_price": 40}, {"num": 30, "price": 13, "unit_id": 0, "goods_id": 968, "goods_name": "大/奶皮", "total_price": 390}]	从saas.mzth.cn导入 原单号:CG0003286	0	0		0		2026-03-30 16:56:03.391096	2026-03-30 17:17:01.768302	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -11357,6 +11791,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 110	CG202603304160	CG202603308040	98			2025-12-14	0.00	0.00	0.00	[{"num": 5, "price": 22, "unit_id": 0, "goods_id": 902, "goods_name": "乌日莫糖/散装", "total_price": 110}, {"num": 5, "price": 15, "unit_id": 0, "goods_id": 921, "goods_name": "嚼口脆炒米糖/散装", "total_price": 75}, {"num": 5, "price": 10, "unit_id": 0, "goods_id": 922, "goods_name": "酸奶炒米糖/散装", "total_price": 50}]	从saas.mzth.cn导入 原单号:CG0003015	0	0		0		2026-03-30 16:56:11.266755	2026-03-30 17:10:45.926378	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 130	CG202603306631	CG202603308970	121			2025-12-04	0.00	0.00	0.00	[{"num": 20000, "price": 0.0265, "unit_id": 0, "goods_id": 979, "goods_name": "新茶包/纸", "total_price": 530}, {"num": 500, "price": 0.0682, "unit_id": 0, "goods_id": 1020, "goods_name": "标签/不干胶/奶果子", "total_price": 34.1}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 950, "goods_name": "透专标签/奶皮卷", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 951, "goods_name": "透专标签/冻炒米", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 952, "goods_name": "透专标签/奶酪/原味", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 953, "goods_name": "透专标签/奶酪/甜味", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 954, "goods_name": "透专标签/乳清奶条/甜味", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 955, "goods_name": "透专标签/乳清奶条/原味", "total_price": 25.69}, {"num": 500, "price": 0.05137, "unit_id": 0, "goods_id": 956, "goods_name": "透专标签/鲜奶皮", "total_price": 25.69}]	从saas.mzth.cn导入 原单号:CG0002855	0	0		0		2026-03-30 16:56:24.776855	2026-03-30 17:10:33.336485	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 270	CG202603303089	CG202603304980	97	纯净奶食品	牧区纯坊官方品牌	2025-12-12	272.00	0.00	0.00	[{"num": 6, "spec": "1斤装", "price": 22, "unit_id": 0, "goods_id": 899, "goods_sn": "SP0000136", "unit_name": "瓶", "goods_name": "纯净/黄油/斤", "total_price": 132}, {"num": 10, "spec": "180克", "price": 14, "unit_id": 0, "goods_id": 945, "goods_sn": "SP0000090", "unit_name": "盒", "goods_name": "半成品/透明/奶皮卷", "total_price": 140}]	从saas.mzth.cn导入 原单号:CG0002992	0	0		0		2026-03-30 17:38:00.811226	2026-04-04 07:15:22.883606	none	0.00	272.00	0.00	buyer	f	\N	f	[]	[]	1
+621	PO2026071922045383147	PO2026071922045383147	90	阿润查干	管理员	2026-07-19	120.00	120.00	0.00	[{"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 883, "goods_sn": "SP0000152", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 882, "goods_sn": "SP0000153", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 881, "goods_sn": "SP0000154", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶皮子馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 880, "goods_sn": "SP0000155", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-19 14:05:39.665216	\N	none	0.00	120.00	0.00	buyer	f	\N	f	[]	[]	1
 127	CG202603301390	CG202603306779	98			2025-12-05	0.00	0.00	0.00	[{"num": 5, "price": 12, "unit_id": 0, "goods_id": 930, "goods_name": "加沙奶豆腐", "total_price": 60}, {"num": 10, "price": 4.8, "unit_id": 0, "goods_id": 931, "goods_name": "炒米粉/aag", "total_price": 48}, {"num": 10, "price": 5.8, "unit_id": 0, "goods_id": 932, "goods_name": "炒米海丰", "total_price": 58}]	从saas.mzth.cn导入 原单号:CG0002863	0	0		0		2026-03-30 16:56:22.93233	2026-03-30 17:10:34.719254	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 480	CG202603311612	CG202603312351	107	拼多多/木勺	牧区纯坊官方品牌	2025-10-01	63.96	63.96	0.00	[{"num": 2, "spec": "袋100个/平均价0.1599", "price": 15.99, "unit_id": 0, "goods_id": 1000, "goods_sn": "SP0000034", "unit_name": "捆", "goods_name": "木勺", "total_price": 31.98}, {"num": 200, "spec": "袋100个/平均价0.1599", "price": 0.1599, "unit_id": 0, "goods_id": 1000, "goods_sn": "SP0000034", "unit_name": "个", "goods_name": "木勺", "total_price": 31.98}]	从saas.mzth.cn导入 原单号:CG0002153	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:41.521069	\N	none	0.00	63.96	0.00	buyer	f	\N	f	[]	[]	1
 126	CG202603301463	CG202603302962	93			2025-12-05	0.00	0.00	0.00	[{"num": 2, "price": 3.5, "unit_id": 0, "goods_id": 929, "goods_name": "白砂糖", "total_price": 7}, {"num": 1, "price": 90, "unit_id": 0, "goods_id": 1002, "goods_name": "封口机/真空", "total_price": 90}, {"num": 300, "price": 0.03333, "unit_id": 0, "goods_id": 928, "goods_name": "塑料购物袋", "total_price": 10}]	从saas.mzth.cn导入 原单号:CG0002864	0	0		0		2026-03-30 16:56:22.332405	2026-03-30 17:10:35.187103	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -11366,6 +11801,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 341	CG202603309505	CG202603305604	120	淘宝紫辰包装	牧区纯坊官方品牌	2025-09-30	10.20	0.00	0.00	[{"num": 60.0, "spec": "1", "price": 0.17, "unit_id": 0, "goods_id": 0, "goods_sn": "", "unit_name": "张", "goods_name": "真空袋", "total_price": 10.2}]	从saas.mzth.cn导入 原单号:CG0002005	0	0		0		2026-03-30 17:39:55.137023	2026-03-31 02:33:11.384914	none	0.00	10.20	0.00	buyer	f	\N	f	[]	[]	1
 281	CG202603309410	CG202603308502	97	纯净奶食品	牧区纯坊官方品牌	2025-12-05	2805.00	0.00	0.00	[{"num": 19, "spec": "1斤2两", "price": 25, "unit_id": 0, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤", "total_price": 475}, {"num": 20, "spec": "1斤", "price": 20, "unit_id": 0, "goods_id": 927, "goods_sn": "SP0000108", "unit_name": "个", "goods_name": "小奶豆腐砖/1斤", "total_price": 400}, {"num": 20, "spec": "1斤", "price": 20, "unit_id": 0, "goods_id": 925, "goods_sn": "SP0000110", "unit_name": "个", "goods_name": "小/无印花/奶豆腐砖/1斤", "total_price": 400}, {"num": 29, "spec": "180克", "price": 14, "unit_id": 0, "goods_id": 946, "goods_sn": "SP0000089", "unit_name": "盒", "goods_name": "半成品/透明/鲜奶皮", "total_price": 406}, {"num": 6, "spec": "180克", "price": 14, "unit_id": 0, "goods_id": 945, "goods_sn": "SP0000090", "unit_name": "盒", "goods_name": "半成品/透明/奶皮卷", "total_price": 84}, {"num": 40, "spec": "200克", "price": 13, "unit_id": 0, "goods_id": 939, "goods_sn": "SP0000096", "unit_name": "盒", "goods_name": "半成品/透明/原味/鲜奶酪", "total_price": 520}, {"num": 40, "spec": "200克", "price": 13, "unit_id": 0, "goods_id": 940, "goods_sn": "SP0000095", "unit_name": "盒", "goods_name": "半成品/透明/甜味/鲜奶酪", "total_price": 520}]	从saas.mzth.cn导入 原单号:CG0002866	0	0		0		2026-03-30 17:38:27.659646	2026-04-04 07:15:22.883606	none	0.00	2805.00	0.00	buyer	f	\N	f	[]	[]	1
 146	CG202603309355	CG202603305759	112			2025-11-07	0.00	0.00	0.00	[{"num": 10, "price": 181.7, "unit_id": 0, "goods_id": 1010, "goods_name": "奶油球", "total_price": 1817}]	从saas.mzth.cn导入 原单号:CG0002603	0	0		0		2026-03-30 16:56:35.462294	2026-03-30 17:10:25.350679	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+622	PO2026071922345620868	PO2026071922345620868	97	纯净奶食品	管理员	2026-07-13	4284.00	3000.00	0.00	[{"num": 1224, "spec": "", "price": 3.5, "_total": 4284, "remark": "", "goods_id": 3185, "goods_sn": "", "tax_rate": 0, "cate_name": "牧区纯坊X游牧奇遇", "unit_name": "瓶", "goods_name": "憨野 黄油/50克", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 3.5, "supplier_name": "", "_base_price_no_tax": 3.5, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-19 14:36:51.229859	\N	none	0.00	4284.00	0.00	buyer	f	\N	f	[]	[]	1
 145	CG202603304910	CG202603303751	117			2025-11-16	0.00	0.00	0.00	[{"num": 21, "price": 17, "unit_id": 0, "goods_id": 1014, "goods_name": "散装/甜味奶条", "total_price": 357}]	从saas.mzth.cn导入 原单号:CG0002604	0	0		0		2026-03-30 16:56:34.829831	2026-03-30 17:10:25.798103	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 144	CG202603302078	CG202603307321	107			2025-11-16	0.00	0.00	0.00	[{"num": 10, "price": 15.99, "unit_id": 0, "goods_id": 1000, "goods_name": "木勺", "total_price": 159.9}]	从saas.mzth.cn导入 原单号:CG0002605	0	0		0		2026-03-30 16:56:34.219107	2026-03-30 17:10:26.262315	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 143	CG202603308689	CG202603306832	106			2025-11-16	0.00	0.00	0.00	[{"num": 2600, "price": 0.09442, "unit_id": 0, "goods_id": 995, "goods_name": "茶专用/热缩膜", "total_price": 245.49}]	从saas.mzth.cn导入 原单号:CG0002606	0	0		0		2026-03-30 16:56:33.488077	2026-03-30 17:10:26.743576	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -11376,6 +11812,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 138	CG202603304376	CG202603304561	99			2025-12-01	0.00	0.00	0.00	[{"num": 5000, "price": 0.185, "unit_id": 0, "goods_id": 982, "goods_name": "塑料手提袋", "total_price": 925}]	从saas.mzth.cn导入 原单号:CG0002794	0	0		0		2026-03-30 16:56:29.875745	2026-03-30 17:10:29.349803	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 137	CG202603304282	CG202603308045	118			2025-12-01	0.00	0.00	0.00	[{"num": 240, "price": 1.8, "unit_id": 0, "goods_id": 1016, "goods_name": "专瓶/黄油", "total_price": 432}, {"num": 120, "price": 1.8, "unit_id": 0, "goods_id": 862, "goods_name": "专瓶/黄油渣", "total_price": 216}]	从saas.mzth.cn导入 原单号:CG0002797	0	0		0		2026-03-30 16:56:29.247194	2026-03-30 17:10:29.809102	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 136	CG202603304975	CG202603303073	105			2025-11-30	0.00	0.00	0.00	[{"num": 85.84, "price": 25, "unit_id": 0, "goods_id": 991, "goods_name": "奶果子/散装", "total_price": 2146}]	从saas.mzth.cn导入 原单号:CG0002800	0	0		0		2026-03-30 16:56:28.625294	2026-03-30 17:10:30.430008	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+623	PO2026072021342977610	PO2026072021342977610	98	科尔沁奶食品	管理员	2026-07-20	50.00	50.00	0.00	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-20 13:34:57.136478	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1
 280	CG202603306172	CG202603304952	92	奥都奶食品	牧区纯坊官方品牌	2025-12-07	240.00	0.00	0.00	[{"num": 5, "spec": "300克", "price": 8, "unit_id": 0, "goods_id": 924, "goods_sn": "SP0000111", "unit_name": "袋", "goods_name": "冻炒米/袋装", "total_price": 40}, {"num": 2, "spec": "斤", "price": 9, "unit_id": 0, "goods_id": 917, "goods_sn": "SP0000118", "unit_name": "斤", "goods_name": "机器乌日末液体", "total_price": 18}, {"num": 10, "spec": "斤", "price": 8, "unit_id": 0, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体", "total_price": 80}, {"num": 2, "spec": "半斤装", "price": 11, "unit_id": 0, "goods_id": 918, "goods_sn": "SP0000117", "unit_name": "瓶", "goods_name": "黄油/半斤", "total_price": 22}, {"num": 4, "spec": "400克", "price": 20, "unit_id": 0, "goods_id": 919, "goods_sn": "SP0000116", "unit_name": "瓶", "goods_name": "黄油/斤", "total_price": 80}]	从saas.mzth.cn导入 原单号:CG0002900	0	0		0		2026-03-30 17:38:23.742951	2026-04-04 07:15:22.883606	none	0.00	240.00	0.00	buyer	f	\N	f	[]	[]	1
 135	CG202603307278	CG202603309195	120			2025-12-01	0.00	0.00	0.00	[{"num": 500, "price": 0.1408, "unit_id": 0, "goods_id": 1027, "goods_name": "真空袋", "total_price": 70.4}]	从saas.mzth.cn导入 原单号:CG0002801	0	0		0		2026-03-30 16:56:28.005331	2026-03-30 17:10:30.882107	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 134	CG202603305716	CG202603306882	98			2025-12-04	0.00	0.00	0.00	[{"num": 7, "price": 22, "unit_id": 0, "goods_id": 981, "goods_name": "烤奶皮", "total_price": 154}]	从saas.mzth.cn导入 原单号:CG0002847	0	0		0		2026-03-30 16:56:27.337258	2026-03-30 17:10:31.464171	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -11401,6 +11838,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 303	CG202603308462	CG202603303889	108	山东锦食食品	牧区纯坊官方品牌	2025-11-01	242.08	0.00	0.00	[{"num": 3560.0, "spec": "2g", "price": 0.068, "unit_id": 0, "goods_id": 0, "goods_sn": "", "unit_name": "小包", "goods_name": "茶专用/盐包", "total_price": 242.08}]	从saas.mzth.cn导入 原单号:CG0002475	0	0		0		2026-03-30 17:39:03.352861	2026-03-31 02:33:32.818788	none	0.00	242.08	0.00	buyer	f	\N	f	[]	[]	1
 177	CG202603304369	CG202603305140	119			2025-09-30	0.00	0.00	0.00	[{"num": 30, "price": 4.55, "unit_id": 0, "goods_id": 1018, "goods_name": "礼盒/蓝界", "total_price": 136.5}, {"num": 26, "price": 4.55, "unit_id": 0, "goods_id": 1018, "goods_name": "礼盒/蓝界", "total_price": 118.3}]	从saas.mzth.cn导入 原单号:CG0002013	0	0		0		2026-03-30 16:56:59.373168	2026-03-30 17:10:08.636703	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 175	CG202603308386	CG202603307195	123			2025-09-30	0.00	0.00	0.00	[{"num": 17, "price": 35.5, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 603.5}, {"num": 16, "price": 0.71, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 11.36}, {"num": 47, "price": 0.71, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 33.37}, {"num": 7, "price": 35.5, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 248.5}, {"num": 79, "price": 18.5, "unit_id": 0, "goods_id": 1031, "goods_name": "专底盒/奶条", "total_price": 1461.5}, {"num": 33, "price": 0.37, "unit_id": 0, "goods_id": 1031, "goods_name": "专底盒/奶条", "total_price": 12.21}, {"num": 6, "price": 0.65, "unit_id": 0, "goods_id": 1030, "goods_name": "专外盒/奶果子", "total_price": 3.9}, {"num": 34, "price": 32.5, "unit_id": 0, "goods_id": 1030, "goods_name": "专外盒/奶果子", "total_price": 1105}, {"num": 24, "price": 0.65, "unit_id": 0, "goods_id": 1029, "goods_name": "专内盒/奶果子", "total_price": 15.6}, {"num": 37, "price": 26, "unit_id": 0, "goods_id": 1029, "goods_name": "专内盒/奶果子", "total_price": 962}, {"num": 25, "price": 0.08, "unit_id": 0, "goods_id": 1026, "goods_name": "专内袋/奶果子", "total_price": 2}, {"num": 82, "price": 15.76, "unit_id": 0, "goods_id": 1026, "goods_name": "专内袋/奶果子", "total_price": 1292.32}]	从saas.mzth.cn导入 原单号:CG0002015	0	0		0		2026-03-30 16:56:57.608729	2026-03-30 17:10:09.676554	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
+624	PO2026072112024670768	PO2026072112024670768	98	科尔沁奶食品	管理员	2026-07-21	170.00	170.00	0.00	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-21 04:03:14.026908	\N	none	0.00	170.00	0.00	buyer	f	\N	f	[]	[]	1
 450	CG202603316610	CG202603311625	100	民族印刷厂	牧区纯坊官方品牌	2025-11-16	36.00	120.00	0.00	[{"num": 25, "spec": "1", "price": 0.72, "unit_id": 0, "goods_id": 983, "goods_sn": "SP0000051", "unit_name": "张", "goods_name": "甜味/标签/不干胶/传统奶豆腐", "total_price": 18}, {"num": 25, "spec": "1", "price": 0.72, "unit_id": 0, "goods_id": 1021, "goods_sn": "SP0000013", "unit_name": "张", "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 18}]	从saas.mzth.cn导入 原单号:CG0002610	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:37:56.434289	\N	none	0.00	36.00	0.00	buyer	f	\N	f	[]	[]	1
 174	CG202603301000	CG202603303407	121			2025-09-30	0.00	0.00	0.00	[{"num": 748, "price": 0.06, "unit_id": 0, "goods_id": 1021, "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 44.88}, {"num": 9, "price": 0.06, "unit_id": 0, "goods_id": 1021, "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 0.54}, {"num": 260, "price": 0.06, "unit_id": 0, "goods_id": 1021, "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 15.6}, {"num": 76, "price": 0.06, "unit_id": 0, "goods_id": 1021, "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 4.56}, {"num": 18, "price": 0.06, "unit_id": 0, "goods_id": 1021, "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 1.08}]	从saas.mzth.cn导入 原单号:CG0002016	0	0		0		2026-03-30 16:56:56.58486	2026-03-30 17:10:10.181978	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
 173	CG202603309811	CG202603308914	120			2025-09-30	0.00	0.00	0.00	[{"num": 79, "price": 0.55, "unit_id": 0, "goods_id": 1022, "goods_name": "专袋/传统奶豆腐", "total_price": 43.45}, {"num": 23, "price": 0.55, "unit_id": 0, "goods_id": 1022, "goods_name": "专袋/传统奶豆腐", "total_price": 12.65}]	从saas.mzth.cn导入 原单号:CG0002017	0	0		0		2026-03-30 16:56:55.899114	2026-03-30 17:10:10.632171	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1
@@ -12266,6 +12704,84 @@ COPY public.retail_orders (id, order_sn, member_id, member_name, goods_info, tot
 1498	LS202606197609	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}, {"num": 2, "price": 27, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 54, "discount_share": 0, "original_price": 27}]	79.00	79.00	wechat	2026-06-19		1	2026-06-19 09:28:29.49332	0.00	1	牧区纯坊门店	1	[]
 1499	LS202606201726	0		[{"num": 1, "price": 125.49, "goods_id": 907, "goods_sn": "SP0000128", "unit_name": "袋", "cost_price": 95, "goods_name": "风干牛肉500g大片", "line_amount": 125.49, "discount_share": 2.51, "original_price": 128}, {"num": 1, "price": 24.51, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 24.51, "discount_share": 0.49, "original_price": 25}]	153.00	150.00	wechat	2026-06-20		1	2026-06-20 04:22:37.495561	3.00	1	牧区纯坊门店	1	[]
 1500	LS202606202584	0		[{"num": 0.94, "price": 10.106383, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 470.0g", "line_amount": 9.5, "discount_share": -0.1, "original_price": 10, "bulk_grams_per_base": 500}]	9.40	9.50	wechat	2026-06-20		1	2026-06-20 09:05:22.497953	-0.10	1	牧区纯坊门店	1	[]
+1501	LS202606224429	0		[{"num": 1, "price": 22, "goods_id": 3095, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油小瓶", "line_amount": 22, "discount_share": 0, "original_price": 22}, {"num": 1, "price": 12, "goods_id": 867, "goods_sn": "SP0000168", "unit_name": "盒", "cost_price": 7.96, "goods_name": "5g/青砖袋泡茶", "line_amount": 12, "discount_share": 0, "original_price": 12}, {"num": 0.5, "price": 8, "goods_id": 860, "goods_sn": "SP0000175", "unit_name": "散", "cost_price": 10, "goods_name": "普通瓜子", "line_amount": 4, "discount_share": 0, "original_price": 8}]	38.00	38.00	cash	2026-06-22		1	2026-06-22 03:33:11.480559	0.00	1	牧区纯坊门店	1	[]
+1502	LS202606223263	0		[{"num": 1, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 500.0g", "line_amount": 7, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	7.00	7.00	cash	2026-06-22		1	2026-06-22 06:38:02.44867	0.00	1	牧区纯坊门店	1	[]
+1503	LS202606227684	0		[{"num": 0.5, "price": 30, "is_bulk": true, "goods_id": 3118, "goods_sn": "", "unit_name": "斤", "cost_price": 20, "goods_name": "烤奶花 250.0g", "line_amount": 15, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	15.00	15.00	wechat	2026-06-22		1	2026-06-22 06:39:57.870405	0.00	1	牧区纯坊门店	1	[]
+1504	LS202606226191	0		[{"num": 1, "price": 22, "goods_id": 830, "goods_sn": "SP0000206", "unit_name": "袋", "cost_price": 19, "goods_name": "小米/10斤/小袋/红嘴/阿旗", "line_amount": 22, "discount_share": 0, "original_price": 22}]	22.00	22.00	wechat	2026-06-22		1	2026-06-22 10:17:35.111575	0.00	1	牧区纯坊门店	1	[]
+1505	LS202606223999	0		[{"num": 1, "price": 18, "goods_id": 825, "goods_sn": "SP0000211", "unit_name": "盒", "cost_price": 12, "goods_name": "故乡宝酸马奶", "line_amount": 18, "discount_share": 0, "original_price": 18}, {"num": 3, "price": 18, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 54, "discount_share": 0, "original_price": 18}, {"num": 5, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 175, "discount_share": 0, "original_price": 35}]	247.00	247.00	wechat	2026-06-22		1	2026-06-22 10:42:21.969821	0.00	1	牧区纯坊门店	1	[]
+1506	LS202606222455	0		[{"num": 40, "price": 10, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "line_amount": 400, "discount_share": 0, "original_price": 10}]	400.00	400.00	wechat	2026-06-22		1	2026-06-22 11:58:00.41912	0.00	1	牧区纯坊门店	1	[]
+1507	LS202606228144	0		[{"num": 2, "price": 65, "goods_id": 809, "goods_sn": "SP0000227", "unit_name": "盒", "cost_price": 55, "goods_name": "10斤装/小米/绿色纸盒", "line_amount": 130, "discount_share": 0, "original_price": 65}]	130.00	130.00	wechat	2026-06-22		1	2026-06-22 11:59:13.738802	0.00	1	牧区纯坊门店	1	[]
+1508	LS202606223795	0		[{"num": 1, "price": 26, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "line_amount": 26, "discount_share": 0.6, "original_price": 26.6}]	26.60	26.00	cash	2026-06-22		1	2026-06-22 12:26:29.04122	0.60	1	牧区纯坊门店	1	[]
+1509	LS202606228943	0		[{"num": 1, "price": 12, "goods_id": 915, "goods_sn": "SP0000120", "unit_name": "盒", "cost_price": 10, "goods_name": "黄油渣/盒", "line_amount": 12, "discount_share": 0, "original_price": 12}, {"num": 0.95, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 475.0g", "line_amount": 9.5, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1, "price": 12, "goods_id": 924, "goods_sn": "SP0000111", "unit_name": "袋", "cost_price": 7, "goods_name": "冻炒米/袋装", "line_amount": 12, "discount_share": 0, "original_price": 12}]	33.50	33.50	wechat	2026-06-22		1	2026-06-22 12:27:11.425278	0.00	1	牧区纯坊门店	1	[]
+1510	LS202606227378	0		[{"num": 1, "price": 58, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 58, "discount_share": 0, "original_price": 58}, {"num": 1, "price": 15, "goods_id": 849, "goods_sn": "SP0000186", "unit_name": "袋", "cost_price": 8.49, "goods_name": "15元组合糖", "line_amount": 15, "discount_share": 0, "original_price": 15}, {"num": 0.32, "price": 25, "is_bulk": true, "goods_id": 3094, "goods_sn": "", "unit_name": "斤", "cost_price": 10, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 160.0g", "line_amount": 8, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	81.00	81.00	wechat	2026-06-22		1	2026-06-22 12:55:03.113441	0.00	1	牧区纯坊门店	1	[]
+1511	LS202606229051	0		[{"num": 0.95, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 475.0g", "line_amount": 9.5, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	9.50	9.50	wechat	2026-06-22		1	2026-06-22 13:04:30.371446	0.00	1	牧区纯坊门店	1	[]
+1512	LS202606223800	0		[{"num": 1, "price": 20, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 1.4, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 700.0g", "line_amount": 14, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	34.00	34.00	wechat	2026-06-22		1	2026-06-22 13:30:52.28798	0.00	1	牧区纯坊门店	1	[]
+1513	LS202606228455	0		[{"num": 1, "price": 6.5, "goods_id": 931, "goods_sn": "SP0000104", "unit_name": "袋", "cost_price": 4.8, "goods_name": "炒米粉/aag", "line_amount": 6.5, "discount_share": 0, "original_price": 6.5}, {"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 25, "is_bulk": true, "goods_id": 916, "goods_sn": "", "unit_name": "斤", "cost_price": 13, "goods_name": "脆奶条/散装/科尔沁 500.0g", "line_amount": 25, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	81.50	81.50	wechat	2026-06-22		1	2026-06-22 14:00:32.452641	0.00	1	牧区纯坊门店	1	[]
+1514	LS202606237910	0		[{"num": 2, "price": 26, "goods_id": 906, "goods_sn": "SP0000129", "unit_name": "袋", "cost_price": 19, "goods_name": "真空奶豆腐砖/原味", "line_amount": 52, "discount_share": 0, "original_price": 26}]	52.00	52.00	alipay	2026-06-23		1	2026-06-23 14:28:45.784574	0.00	1	牧区纯坊门店	1	[]
+1515	LS202606244564	0		[{"num": 1, "price": 25, "is_bulk": true, "goods_id": 885, "goods_sn": "", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装 500.0g", "line_amount": 25, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 1, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 500.0g", "line_amount": 7, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 20, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 0.1953, "price": 128.008193, "is_bulk": true, "goods_id": 3091, "goods_sn": "", "unit_name": "斤", "cost_price": 98, "goods_name": "牛肉干/散称 97.7g", "line_amount": 25, "discount_share": 0, "original_price": 128, "bulk_grams_per_base": 500}]	77.00	77.00	wechat	2026-06-24		1	2026-06-24 11:42:29.660012	0.00	1	牧区纯坊门店	1	[]
+1517	LS202606264858	0		[{"num": 1, "price": 32, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 32, "discount_share": -2, "original_price": 30}]	30.00	32.00	wechat	2026-06-26		1	2026-06-26 08:41:12.129641	-2.00	1	牧区纯坊门店	1	[]
+1518	LS202606262056	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-06-26		1	2026-06-26 12:44:16.488635	0.00	1	牧区纯坊门店	1	[]
+1519	LS202606268956	0		[{"num": 1, "price": 12, "goods_id": 915, "goods_sn": "SP0000120", "unit_name": "盒", "cost_price": 10, "goods_name": "黄油渣/盒", "line_amount": 12, "discount_share": 0, "original_price": 12}]	12.00	12.00	wechat	2026-06-26		1	2026-06-26 12:44:31.543514	0.00	1	牧区纯坊门店	1	[]
+1520	LS202606287451	0		[{"num": 2, "price": 20, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 40, "discount_share": 0, "original_price": 20}]	40.00	40.00	wechat	2026-06-28		1	2026-06-28 02:46:13.579572	0.00	1	牧区纯坊门店	1	[]
+1521	LS202606286161	0		[{"num": 30, "price": 5.333333, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 15000.0g", "line_amount": 160, "discount_share": 50, "original_price": 7, "bulk_grams_per_base": 500}]	210.00	160.00	wechat	2026-06-28		1	2026-06-28 06:12:39.746891	50.00	1	牧区纯坊门店	1	[]
+1522	LS202606292596	0		[{"num": 2, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 70, "discount_share": 0, "original_price": 35}, {"num": 2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1000.0g", "line_amount": 20, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	90.00	90.00	wechat	2026-06-29		1	2026-06-29 01:33:01.134672	0.00	1	牧区纯坊门店	1	[]
+1523	LS202606291397	0		[{"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}]	50.00	50.00	wechat	2026-06-29		1	2026-06-29 01:36:45.8855	0.00	1	牧区纯坊门店	1	[]
+1524	LS202606294293	0		[{"num": 2, "price": 10.305, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1000.0g", "line_amount": 20.61, "discount_share": -0.61, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1, "price": 47.39, "goods_id": 3096, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油大瓶", "line_amount": 47.39, "discount_share": -1.39, "original_price": 46}]	66.00	68.00	wechat	2026-06-29		1	2026-06-29 11:01:40.488557	-2.00	1	牧区纯坊门店	1	[]
+1525	LS202606309574	0		[{"num": 2, "price": 18, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 36, "discount_share": 0, "original_price": 18}, {"num": 0.0469, "price": 127.93177, "is_bulk": true, "goods_id": 3091, "goods_sn": "", "unit_name": "斤", "cost_price": 98, "goods_name": "牛肉干/散称 23.4g", "line_amount": 6, "discount_share": 0, "original_price": 128, "bulk_grams_per_base": 500}]	42.00	42.00	wechat	2026-06-30		1	2026-06-30 04:30:12.355409	0.00	1	牧区纯坊门店	1	[]
+1526	LS202606306649	0		[{"num": 4, "price": 2.3875, "goods_id": 3181, "goods_sn": "", "unit_name": "袋", "cost_price": 0, "goods_name": "牛奶浓", "line_amount": 9.55, "discount_share": 0.45, "original_price": 2.5}, {"num": 1, "price": 23.86, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 23.86, "discount_share": 1.14, "original_price": 25}, {"num": 2, "price": 14.32, "goods_id": 879, "goods_sn": "SP0000156", "unit_name": "盒", "cost_price": 6, "goods_name": "干肉奶茶", "line_amount": 28.64, "discount_share": 1.36, "original_price": 15}, {"num": 1, "price": 84.95, "goods_id": 865, "goods_sn": "SP0000170", "unit_name": "袋", "cost_price": 49, "goods_name": "牛肉干/和希格图", "line_amount": 84.95, "discount_share": 4.05, "original_price": 89}]	154.00	147.00	wechat	2026-06-30		1	2026-06-30 15:52:33.609318	7.00	1	牧区纯坊门店	1	[]
+1527	LS202607019836	0		[{"num": 1, "price": 20, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 1, "price": 5, "goods_id": 966, "goods_sn": "SP0000068", "unit_name": "小包", "cost_price": 3, "goods_name": "查嘎粉/小包装袋", "line_amount": 5, "discount_share": 0, "original_price": 5}]	25.00	25.00	wechat	2026-07-01		1	2026-07-01 04:11:43.130411	0.00	1	牧区纯坊门店	1	[]
+1528	LS202607015390	0		[{"num": 0.2094, "price": 127.984718, "is_bulk": true, "goods_id": 3091, "goods_sn": "", "unit_name": "斤", "cost_price": 98, "goods_name": "牛肉干/散称 104.7g", "line_amount": 26.8, "discount_share": 0, "original_price": 128, "bulk_grams_per_base": 500}]	26.80	26.80	wechat	2026-07-01		1	2026-07-01 06:21:05.95009	0.00	1	牧区纯坊门店	1	[]
+1529	LS202607013539	0		[{"num": 2, "price": 18, "goods_id": 888, "goods_sn": "SP0000147", "unit_name": "盒", "cost_price": 14, "goods_name": "河套奶粉", "line_amount": 36, "discount_share": 0, "original_price": 18}]	36.00	36.00	wechat	2026-07-01		1	2026-07-01 08:07:54.014576	0.00	1	牧区纯坊门店	1	[]
+1530	LS202607029919	0		[{"num": 1, "price": 128, "goods_id": 907, "goods_sn": "SP0000128", "unit_name": "袋", "cost_price": 95, "goods_name": "风干牛肉500g大片", "line_amount": 128, "discount_share": 0, "original_price": 128}, {"num": 1, "price": 25, "goods_id": 3120, "goods_sn": "", "unit_name": "袋", "cost_price": 12.5, "goods_name": "科尔沁袋装/——奶豆腐条/片/", "line_amount": 25, "discount_share": 0, "original_price": 25}]	153.00	153.00	wechat	2026-07-02		1	2026-07-02 08:14:08.322553	0.00	1	牧区纯坊门店	1	[]
+1531	LS202607037361	0		[{"num": 1, "price": 20, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 1, "price": 25, "is_bulk": true, "goods_id": 885, "goods_sn": "", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装 500.0g", "line_amount": 25, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 1, "price": 18, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 18, "discount_share": 0, "original_price": 18}]	63.00	63.00	wechat	2026-07-03		1	2026-07-03 02:16:58.117296	0.00	1	牧区纯坊门店	1	[]
+1532	LS202607036601	0		[{"num": 1, "price": 25, "is_bulk": true, "goods_id": 916, "goods_sn": "", "unit_name": "斤", "cost_price": 13, "goods_name": "脆奶条/散装/科尔沁 500.0g", "line_amount": 25, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	25.00	25.00	wechat	2026-07-03		1	2026-07-03 02:51:43.619226	0.00	1	牧区纯坊门店	1	[]
+1533	LS202607048145	0		[{"num": 1, "price": 25, "goods_id": 829, "goods_sn": "SP0000207", "unit_name": "张", "cost_price": 19, "goods_name": "奶豆腐/原味/中/科尔沁", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-07-04		1	2026-07-04 08:50:19.861365	0.00	1	牧区纯坊门店	1	[]
+1534	LS202607049176	0		[{"num": 2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1000.0g", "line_amount": 20, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	20.00	20.00	wechat	2026-07-04		1	2026-07-04 12:51:52.82825	0.00	1	牧区纯坊门店	1	[]
+1541	LS202607094726	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	cash	2026-07-09		1	2026-07-09 10:36:14.92672	0.00	1	牧区纯坊门店	1	[]
+1542	LS202607108272	0		[{"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	10.00	10.00	cash	2026-07-10		1	2026-07-10 02:33:10.80528	0.00	1	牧区纯坊门店	1	[]
+1535	LS202607057228	0		[{"num": 1, "price": 5, "goods_id": 896, "goods_sn": "SP0000139", "unit_name": "小包", "cost_price": 5, "goods_name": "奶皮月饼", "line_amount": 5, "discount_share": 0, "original_price": 5}, {"num": 1, "price": 5, "goods_id": 895, "goods_sn": "SP0000140", "unit_name": "小包", "cost_price": 5, "goods_name": "黄油渣月饼", "line_amount": 5, "discount_share": 0, "original_price": 5}]	10.00	10.00	wechat	2026-07-05		1	2026-07-05 02:11:39.89131	0.00	1	牧区纯坊门店	1	[]
+1536	LS202607069573	0		[{"num": 1.0714, "price": 7.000187, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 535.7g", "line_amount": 7.5, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 6.5, "goods_id": 931, "goods_sn": "SP0000104", "unit_name": "袋", "cost_price": 4.8, "goods_name": "炒米粉/aag", "line_amount": 6.5, "discount_share": 0, "original_price": 6.5}]	14.00	14.00	wechat	2026-07-06		1	2026-07-06 13:49:56.174679	0.00	1	牧区纯坊门店	1	[]
+1537	LS202607086067	0		[{"num": 10, "price": 24.194, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 241.94, "discount_share": 8.06, "original_price": 25}, {"num": 2, "price": 29.03, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 1000.0g", "line_amount": 58.06, "discount_share": 1.94, "original_price": 30, "bulk_grams_per_base": 500}]	310.00	300.00	wechat	2026-07-08		1	2026-07-08 03:53:56.680625	10.00	1	牧区纯坊门店	1	[]
+1538	LS202607084670	0		[{"num": 1, "price": 29, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 29, "discount_share": 29, "original_price": 58}]	58.00	29.00	wechat	2026-07-08		1	2026-07-08 03:55:10.831107	29.00	1	牧区纯坊门店	1	[]
+1539	LS202607086403	0		[{"num": 2, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1000.0g", "line_amount": 14, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 26, "goods_id": 906, "goods_sn": "SP0000129", "unit_name": "袋", "cost_price": 19, "goods_name": "真空奶豆腐砖/原味", "line_amount": 26, "discount_share": 0, "original_price": 26}, {"num": 1, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 35, "discount_share": 0, "original_price": 35}]	75.00	75.00	wechat	2026-07-08		1	2026-07-08 08:39:30.707344	0.00	1	牧区纯坊门店	1	[]
+1540	LS202607083141	0		[{"num": 3, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1500.0g", "line_amount": 30, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 0.672, "price": 25, "is_bulk": true, "goods_id": 885, "goods_sn": "", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装 336.0g", "line_amount": 16.8, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	46.80	46.80	wechat	2026-07-08		1	2026-07-08 10:08:15.180239	0.00	1	牧区纯坊门店	1	[]
+1543	LS202607105750	0		[{"num": 4, "price": 7.5, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 2000.0g", "line_amount": 30, "discount_share": 0, "original_price": 7.5, "bulk_grams_per_base": 500}]	30.00	30.00	cash	2026-07-10		1	2026-07-10 03:19:38.624791	0.00	1	牧区纯坊门店	1	[]
+1558	LS202607159364	0		[{"num": 0.5, "price": 10, "goods_id": 967, "goods_sn": "SP0000067", "unit_name": "桶", "cost_price": 5, "goods_name": "查嘎/乳清", "line_amount": 5, "discount_share": 0, "original_price": 10}]	5.00	5.00	wechat	2026-07-15		1	2026-07-15 02:08:43.636082	0.00	1	牧区纯坊门店	1	[]
+1559	LS202607155798	0		[{"num": 3, "price": 17.666667, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 53, "discount_share": 1, "original_price": 18}]	54.00	53.00	cash	2026-07-15		1	2026-07-15 03:48:46.979164	1.00	1	牧区纯坊门店	1	[]
+1544	LS202607105346	0		[{"num": 1, "price": 28.13, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 500.0g", "line_amount": 28.13, "discount_share": 1.87, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 1, "price": 7.5, "goods_id": 894, "goods_sn": "SP0000141", "unit_name": "小包", "cost_price": 5, "goods_name": "酸奶月饼", "line_amount": 7.5, "discount_share": 0.5, "original_price": 8}, {"num": 1, "price": 9.37, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 9.37, "discount_share": 0.63, "original_price": 10, "bulk_grams_per_base": 500}]	48.00	45.00	wechat	2026-07-10		1	2026-07-10 10:54:01.325763	3.00	1	牧区纯坊门店	1	[]
+1545	LS202607105663	0		[{"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "cost_price": 10, "goods_name": "小/奶皮", "line_amount": 15, "discount_share": 0, "original_price": 15}]	65.00	65.00	wechat	2026-07-10		1	2026-07-10 12:23:19.582148	0.00	1	牧区纯坊门店	1	[]
+1546	LS202607107356	0		[{"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}]	50.00	50.00	wechat	2026-07-10		1	2026-07-10 12:23:38.51129	0.00	1	牧区纯坊门店	1	[]
+1547	LS202607129222	0		[{"num": 2, "price": 7.5, "is_bulk": true, "goods_id": 923, "goods_sn": "", "unit_name": "斤", "cost_price": 4.8, "goods_name": "海丰炒米/散装/硬口/ 1000.0g", "line_amount": 15, "discount_share": 0, "original_price": 7.5, "bulk_grams_per_base": 500}]	15.00	15.00	wechat	2026-07-12		1	2026-07-12 04:24:39.540646	0.00	1	牧区纯坊门店	1	[]
+1548	LS202607127997	0		[{"num": 3, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1500.0g", "line_amount": 21, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	21.00	21.00	wechat	2026-07-12		1	2026-07-12 04:25:14.173978	0.00	1	牧区纯坊门店	1	[]
+1549	LS202607123035	0		[{"num": 0.9, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 450.0g", "line_amount": 9, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	9.00	9.00	wechat	2026-07-12		1	2026-07-12 04:25:41.594132	0.00	1	牧区纯坊门店	1	[]
+1550	LS202607126167	0		[{"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 500.0g", "line_amount": 7, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	17.00	17.00	wechat	2026-07-12		1	2026-07-12 04:26:31.322935	0.00	1	牧区纯坊门店	1	[]
+1551	LS202607122628	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-07-12		1	2026-07-12 04:48:32.977001	0.00	1	牧区纯坊门店	1	[]
+1552	LS202607124146	0		[{"num": 0.6, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 300.0g", "line_amount": 6, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	6.00	6.00	wechat	2026-07-12		1	2026-07-12 05:46:54.242064	0.00	1	牧区纯坊门店	1	[]
+1553	LS202607127315	0		[{"num": 2, "price": 5, "goods_id": 894, "goods_sn": "SP0000141", "unit_name": "小包", "cost_price": 5, "goods_name": "酸奶月饼", "line_amount": 10, "discount_share": 0, "original_price": 5}, {"num": 1, "price": 30, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30, "discount_share": 0, "original_price": 30}, {"num": 0.5, "price": 25, "is_bulk": true, "goods_id": 3094, "goods_sn": "", "unit_name": "斤", "cost_price": 10, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 250.0g", "line_amount": 12.5, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	52.50	52.50	wechat	2026-07-12		1	2026-07-12 12:01:41.918594	0.00	1	牧区纯坊门店	1	[]
+1554	LS202607137687	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	cash	2026-07-13		1	2026-07-13 03:08:17.73027	0.00	1	牧区纯坊门店	1	[]
+1555	LS202607138929	0		[{"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	10.00	10.00	cash	2026-07-13		1	2026-07-13 09:09:38.092032	0.00	1	牧区纯坊门店	1	[]
+1556	LS202607146696	0		[{"num": 1.4286, "price": 6.99986, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 714.3g", "line_amount": 10, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	10.00	10.00	wechat	2026-07-14		1	2026-07-14 02:11:41.962065	0.00	1	牧区纯坊门店	1	[]
+1557	LS202607158006	0		[{"num": 1, "price": 40, "goods_id": 3096, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油大瓶", "line_amount": 40, "discount_share": 6, "original_price": 46}]	46.00	40.00	cash	2026-07-15		1	2026-07-15 02:06:51.665192	6.00	1	牧区纯坊门店	1	[]
+1560	LS202607151273	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 15, "goods_id": 970, "goods_sn": "SP0000064", "unit_name": "盒", "cost_price": 10, "goods_name": "热奶豆腐碗", "line_amount": 15, "discount_share": 0, "original_price": 15}]	40.00	40.00	wechat	2026-07-15		1	2026-07-15 15:41:43.778087	0.00	1	牧区纯坊门店	1	[]
+1561	LS202607163095	0		[{"num": 0.2, "price": 24.1, "is_bulk": true, "goods_id": 3088, "goods_sn": "", "unit_name": "斤", "cost_price": 19.35, "goods_name": "黑芝麻丸5㎏ 100.0g", "line_amount": 4.82, "discount_share": 0.18, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 2, "price": 24.09, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 48.18, "discount_share": 1.82, "original_price": 25}]	55.00	53.00	wechat	2026-07-16		1	2026-07-16 11:18:49.776533	2.00	1	牧区纯坊门店	1	[]
+1562	LS202607163641	0		[{"num": 1, "price": 10, "goods_id": 967, "goods_sn": "SP0000067", "unit_name": "桶", "cost_price": 5, "goods_name": "查嘎/乳清", "line_amount": 10, "discount_share": 0, "original_price": 10}]	10.00	10.00	wechat	2026-07-16		1	2026-07-16 11:19:25.002305	0.00	1	牧区纯坊门店	1	[]
+1563	LS202607167705	0		[{"num": 4, "price": 23.81, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 95.24, "discount_share": 4.76, "original_price": 25}, {"num": 0.2, "price": 23.8, "is_bulk": true, "goods_id": 3088, "goods_sn": "", "unit_name": "斤", "cost_price": 19.35, "goods_name": "黑芝麻丸5㎏ 100.0g", "line_amount": 4.76, "discount_share": 0.24, "original_price": 25, "bulk_grams_per_base": 500}]	105.00	100.00	wechat	2026-07-16		1	2026-07-16 12:05:18.296189	5.00	1	牧区纯坊门店	1	[]
+1564	LS202607175391	0		[{"num": 10, "price": 13, "goods_id": 970, "goods_sn": "SP0000064", "unit_name": "盒", "cost_price": 10, "goods_name": "热奶豆腐碗", "line_amount": 130, "discount_share": 0, "original_price": 13}]	130.00	130.00	wechat	2026-07-17		1	2026-07-17 11:00:55.253519	0.00	1	牧区纯坊门店	1	[]
+1565	LS202607181944	0		[{"num": 10.001, "price": 8.0002, "goods_id": 895, "goods_sn": "SP0000140", "unit_name": "小包", "cost_price": 5, "goods_name": "黄油渣月饼", "line_amount": 80.01, "discount_share": 0, "original_price": 8}, {"num": 4, "price": 12, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "line_amount": 48, "discount_share": 0, "original_price": 12}, {"num": 2, "price": 12, "goods_id": 3178, "goods_sn": "", "unit_name": "", "cost_price": 0, "goods_name": "佳赫蛋糕", "line_amount": 24, "discount_share": 0, "original_price": 12}, {"num": 1.5333, "price": 10.428488, "is_bulk": true, "goods_id": 981, "goods_sn": "", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮 766.7g", "line_amount": 15.99, "discount_share": 30.01, "original_price": 30, "bulk_grams_per_base": 500}]	198.01	168.00	wechat	2026-07-18		1	2026-07-18 02:44:28.713983	30.01	1	牧区纯坊门店	1	[]
+1566	LS202607181969	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-07-18		1	2026-07-18 06:39:58.088691	0.00	1	牧区纯坊门店	1	[]
+1567	LS202607199458	0		[{"num": 1, "price": 25, "goods_id": 3120, "goods_sn": "", "unit_name": "袋", "cost_price": 12.5, "goods_name": "科尔沁袋装/——奶豆腐条/片/", "line_amount": 25, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 15, "goods_id": 970, "goods_sn": "SP0000064", "unit_name": "盒", "cost_price": 10, "goods_name": "热奶豆腐碗", "line_amount": 15, "discount_share": 0, "original_price": 15}]	40.00	40.00	wechat	2026-07-19		1	2026-07-19 04:13:33.815451	0.00	1	牧区纯坊门店	1	[]
+1568	LS202607196811	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-07-19		1	2026-07-19 13:59:37.96183	0.00	1	牧区纯坊门店	1	[]
+1569	LS202607195585	0		[{"num": 1, "price": 14.71, "goods_id": 880, "goods_sn": "SP0000155", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/五仁馅", "line_amount": 14.71, "discount_share": 0.29, "original_price": 15}, {"num": 2.9, "price": 29.410345, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 1450.0g", "line_amount": 85.29, "discount_share": 1.71, "original_price": 30, "bulk_grams_per_base": 500}]	102.00	100.00	wechat	2026-07-19		1	2026-07-19 14:00:51.29293	2.00	1	牧区纯坊门店	1	[]
+1570	LS202607199620	0		[{"num": 2, "price": 15, "goods_id": 880, "goods_sn": "SP0000155", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/五仁馅", "line_amount": 30, "discount_share": 0, "original_price": 15}]	30.00	30.00	cash	2026-07-19		1	2026-07-19 14:01:23.727938	0.00	1	牧区纯坊门店	1	[]
+1571	LS202607198133	0		[{"num": 2, "price": 15, "goods_id": 882, "goods_sn": "SP0000153", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/黄油渣馅", "line_amount": 30, "discount_share": 0, "original_price": 15}, {"num": 2, "price": 15, "goods_id": 881, "goods_sn": "SP0000154", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/奶皮子馅", "line_amount": 30, "discount_share": 0, "original_price": 15}, {"num": 2, "price": 15, "goods_id": 883, "goods_sn": "SP0000152", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/奶豆腐馅", "line_amount": 30, "discount_share": 0, "original_price": 15}, {"num": 2, "price": 12, "goods_id": 3178, "goods_sn": "", "unit_name": "", "cost_price": 0, "goods_name": "佳赫蛋糕", "line_amount": 24, "discount_share": 0, "original_price": 12}, {"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}, {"num": 0.3, "price": 25, "is_bulk": true, "goods_id": 3088, "goods_sn": "", "unit_name": "斤", "cost_price": 19.35, "goods_name": "黑芝麻丸5㎏ 150.0g", "line_amount": 7.5, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 0.96, "price": 25, "is_bulk": true, "goods_id": 3088, "goods_sn": "", "unit_name": "斤", "cost_price": 19.35, "goods_name": "黑芝麻丸5㎏ 480.0g", "line_amount": 24, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}]	195.50	195.50	wechat	2026-07-19		1	2026-07-19 14:03:17.666797	0.00	1	牧区纯坊门店	1	[]
+1572	LS202607194979	0		[{"num": 1, "price": 55, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 55, "discount_share": 3, "original_price": 58}]	58.00	55.00	wechat	2026-07-17		1	2026-07-19 14:41:00.1194	3.00	1	牧区纯坊门店	1	[{"name": "other", "amount": 19.29, "bearer": "buyer"}]
+1573	LS202607192993	0		[{"num": 3, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 174, "discount_share": 0, "original_price": 58}, {"num": 1, "price": 26, "goods_id": 3126, "goods_sn": "", "unit_name": "盒", "cost_price": 4.08, "goods_name": "120克透明/奶条", "line_amount": 26, "discount_share": 0, "original_price": 26}, {"num": 4, "price": 36, "goods_id": 994, "goods_sn": "SP0000040", "unit_name": "盒", "cost_price": 7.657, "goods_name": "冻炒米成品盒", "line_amount": 144, "discount_share": 0, "original_price": 36}, {"num": 5, "price": 27, "goods_id": 877, "goods_sn": "SP0000158", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "line_amount": 135, "discount_share": 0, "original_price": 27}, {"num": 2, "price": 0, "goods_id": 3183, "goods_sn": "", "unit_name": "张", "cost_price": 1.9, "goods_name": "阿旗礼袋蒙文", "line_amount": 0, "discount_share": 0, "original_price": 0}]	479.00	479.00	wechat	2026-07-17		1	2026-07-19 14:43:47.53158	0.00	1	牧区纯坊门店	1	[]
+1574	LS202607207636	0		[{"num": 2, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "cost_price": 13, "goods_name": "大/奶皮", "line_amount": 40, "discount_share": 0, "original_price": 20}, {"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	65.00	65.00	wechat	2026-07-20		1	2026-07-20 02:54:21.050667	0.00	1	牧区纯坊门店	1	[]
+1575	LS202607204299	0		[{"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1.3333, "price": 7.500188, "is_bulk": true, "goods_id": 923, "goods_sn": "", "unit_name": "斤", "cost_price": 4.8, "goods_name": "海丰炒米/散装/硬口/ 666.7g", "line_amount": 10, "discount_share": 0, "original_price": 7.5, "bulk_grams_per_base": 500}, {"num": 1, "price": 6, "goods_id": 929, "goods_sn": "SP0000106", "unit_name": "袋", "cost_price": 3.5, "goods_name": "白砂糖", "line_amount": 6, "discount_share": 0, "original_price": 6}]	26.00	26.00	cash	2026-07-20		1	2026-07-20 05:11:15.60772	0.00	1	牧区纯坊门店	1	[]
+1576	LS202607209615	0		[{"num": 1, "price": 26, "goods_id": 905, "goods_sn": "SP0000130", "unit_name": "袋", "cost_price": 17, "goods_name": "真空奶豆腐砖/甜味", "line_amount": 26, "discount_share": 0, "original_price": 26}]	26.00	26.00	wechat	2026-07-20		1	2026-07-20 07:10:49.346066	0.00	1	牧区纯坊门店	1	[]
+1577	LS202607208729	0		[{"num": 1, "price": 9.88, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 9.88, "discount_share": 0.12, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1, "price": 24.71, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 24.71, "discount_share": 0.29, "original_price": 25}, {"num": 1, "price": 7.41, "goods_id": 932, "goods_sn": "SP0000103", "unit_name": "袋", "cost_price": 5.5, "goods_name": "炒米海丰袋装", "line_amount": 7.41, "discount_share": 0.09, "original_price": 7.5}]	42.50	42.00	wechat	2026-07-20		1	2026-07-20 13:33:55.897511	0.50	1	牧区纯坊门店	1	[]
+1578	LS202607213835	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-07-21		1	2026-07-21 02:21:53.861164	0.00	1	牧区纯坊门店	1	[]
+1579	LS202607213020	0		[{"num": 1, "price": 46, "goods_id": 3184, "goods_sn": "", "unit_name": "个", "cost_price": 16.5, "goods_name": "阿旗冰箱贴", "line_amount": 46, "discount_share": 0, "original_price": 46}, {"num": 1, "price": 8.8, "goods_id": 3117, "goods_sn": "SP2605252385", "unit_name": "张", "cost_price": 0.85, "goods_name": "车载香片", "line_amount": 8.8, "discount_share": 0, "original_price": 8.8}, {"num": 1, "price": 30, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30, "discount_share": 0, "original_price": 30}]	84.80	84.80	wechat	2026-07-01		1	2026-07-21 04:41:05.713298	0.00	1	牧区纯坊门店	1	[]
 \.
 
 
@@ -12294,6 +12810,7 @@ COPY public.roles (id, name, permissions, status, created_at, shop_id) FROM stdi
 12	财务		1	2026-04-17 04:58:43.016291	1
 13	监督人		1	2026-04-18 03:25:29.710766	1
 11	店长		1	2026-04-17 04:58:31.200257	1
+14	店员	__perm__:{"menus":["sale-out","retail-order"]}	1	2026-07-12 07:20:14.840247	1
 \.
 
 
@@ -12616,9 +13133,13 @@ COPY public.sale_contracts (id, order_no, order_sn, customer_id, customer_name, 
 408	XS202606145014	HT20260614003	21	阿斯娜	管理员	2026-06-08	1816.00	0.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20}, {"num": 43, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "cate_name": "定制类产品", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 5, "spec": "120g", "price": 6.4, "remark": "", "goods_id": 876, "goods_sn": "SP0000159", "tax_rate": 0, "cate_name": "定制类产品", "unit_name": "盒", "cost_price": 4.08, "goods_name": "憨野/奶条", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 6.4}, {"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "cate_name": "成品", "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 11.5}]	[NO:HT20260614003]	1	2026-06-14 08:16:59.594837	\N	none	0.00	1816.00	0.00	buyer	0.00	0.00	公司支出账户	0.00	0.00	0	2026-06-08	\N	0	0.00	[]	\N	\N	1	0.00	[]
 416	XS202606175596	XS202606175755	63	美团平台		2026-06-17	24.36	0.00	[{"num": 1, "price": 24.36, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐", "total_price": 24.36}]		1	2026-06-17 11:46:51.014242	\N	none	0.00	24.36	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-06-17	\N	0	0.00	[]	\N	\N	1	0.00	[]
 417	XS202606196409	HT20260619001	21	阿斯娜	管理员	2026-06-19	69.00	0.00	[{"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 11.5, "exchange_group_key": ""}]	[NO:HT20260619001]	1	2026-06-19 08:31:00.14302	\N	none	0.00	69.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-06-19	\N	0	0.00	[]	\N	\N	1	0.00	[]
+420	XS202607193119	HT20260719001	64	混沌未来	管理员	2026-07-19	1016.20	0.00	[{"num": 26, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 37.7, "exchange_group_key": ""}, {"num": 4, "spec": "", "price": 9, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "line_type": "normal", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9, "exchange_group_key": ""}, {"num": 3, "spec": "110克", "price": 0, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "gift", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 0, "exchange_group_key": ""}, {"num": 2, "spec": "250克", "price": 0, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "cate_name": "广告物料", "line_type": "gift", "unit_name": "瓶", "cost_price": 4.53, "goods_name": "乳清饮料", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 0, "exchange_group_key": ""}, {"num": 1, "spec": "16次泡", "price": 0, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "gift", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 0, "exchange_group_key": ""}]	[NO:HT20260719001]	1	2026-07-19 14:32:42.98867	\N	none	0.00	1016.20	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-07-19	\N	0	0.00	[]	\N	\N	1	0.00	[]
 412	XS202606141833	HT20260614007	21	阿斯娜	管理员	2026-06-10	750.00	0.00	[{"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 4, "spec": "1", "price": 8, "remark": "", "goods_id": 1018, "goods_sn": "SP0000016", "tax_rate": 0, "cate_name": "塑料袋", "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "goods_type": 4, "unit_ratio": 1, "price_no_tax": 8}, {"num": 30, "spec": "1", "price": 1, "remark": "", "goods_id": 864, "goods_sn": "SP0000171", "tax_rate": 0, "cate_name": "塑料袋", "unit_name": "张", "cost_price": 0.37, "goods_name": "礼盒/腰封", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 1}]	[NO:HT20260614007]	1	2026-06-14 08:36:27.427016	\N	none	0.00	750.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-06-10	\N	0	0.00	[]	\N	\N	1	0.00	[]
 413	XS202606142227	HT20260614008	21	阿斯娜	管理员	2026-06-13	600.00	0.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20}]	[NO:HT20260614008]	1	2026-06-14 08:37:25.330067	\N	none	0.00	600.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-06-13	\N	0	0.00	[]	\N	\N	1	0.00	[]
 415	XS202606178256	HT20260617001	3	阿润诺尔		2026-06-17	722.00	0.00	[{"num": 30, "spec": "180克", "price": 19, "remark": "", "goods_id": 935, "goods_sn": "SP0000100", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 19, "exchange_group_key": ""}, {"num": 5, "spec": "140克", "price": 19, "remark": "", "goods_id": 938, "goods_sn": "SP0000097", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/甜味/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 19, "exchange_group_key": ""}, {"num": 3, "spec": "140克", "price": 19, "remark": "", "goods_id": 941, "goods_sn": "SP0000094", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/原味/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 19, "exchange_group_key": ""}]	[NO:HT20260617001]	1	2026-06-17 08:05:49.951303	\N	none	0.00	722.00	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-06-17	\N	0	0.00	[]	\N	\N	1	0.00	[]
+419	XS202607126767	HT20260712001	21	阿斯娜	管理员	2026-07-12	225.00	0.00	[{"num": 5, "spec": "", "price": 8, "remark": "", "goods_id": 3104, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "line_type": "normal", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8, "exchange_group_key": ""}, {"num": 10, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "cate_name": "定制类产品", "line_type": "normal", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5, "exchange_group_key": ""}, {"num": 10, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 10, "exchange_group_key": ""}]	[NO:HT20260712001]	1	2026-07-12 06:01:16.323008	\N	none	0.00	225.00	0.00	buyer	0.00	0.00	公司支出账户	0.00	0.00	0	2026-07-12	\N	0	0.00	[]	\N	\N	1	0.00	[]
+418	XS202606226439	HT20260622001	64	混沌未来	管理员	2026-06-22	7656.00	0.00	[{"num": 30, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "price_no_tax": 37.7, "exchange_group_key": ""}, {"num": 30, "spec": "240克", "price": 37.7, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "price_no_tax": 37.7, "exchange_group_key": ""}, {"num": 30, "spec": "110克", "price": 23.4, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "price_no_tax": 23.4, "exchange_group_key": ""}, {"num": 30, "spec": "100克", "price": 27.3, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "goods_type": 1, "price_no_tax": 27.3, "exchange_group_key": ""}, {"num": 50, "spec": "150", "price": 22, "remark": "原甜", "goods_id": 988, "goods_sn": "SP0000046", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "袋", "cost_price": 12.78, "goods_name": "品牌传统奶豆腐/袋装成品", "goods_type": 1, "price_no_tax": 22, "exchange_group_key": ""}, {"num": 20, "spec": "120克", "price": 12, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "goods_type": 1, "price_no_tax": 12, "exchange_group_key": ""}, {"num": 30, "spec": "200克", "price": 16, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "goods_type": 1, "price_no_tax": 16, "exchange_group_key": ""}, {"num": 115, "spec": "", "price": 9, "remark": "四个口味", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "line_type": "normal", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "goods_type": 1, "price_no_tax": 9, "exchange_group_key": ""}, {"num": 2, "spec": "", "price": 2, "remark": "", "goods_id": 3180, "goods_sn": "", "tax_rate": 0, "cate_name": "牧区纯坊X游牧奇遇", "line_type": "normal", "unit_name": "个", "cost_price": 0, "goods_name": "透明奶茶杯", "goods_type": 1, "price_no_tax": 2, "exchange_group_key": ""}, {"num": 30, "spec": "250克", "price": 33.8, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "goods_type": 1, "price_no_tax": 33.8, "exchange_group_key": ""}, {"num": 0.64, "spec": "散装", "price": 0, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "cate_name": "半成品", "line_type": "gift", "unit_name": "斤", "cost_price": 25, "goods_name": "奶果子/散装", "goods_type": 5, "price_no_tax": 0, "exchange_group_key": ""}]	[NO:HT20260622001] [FI:JTVCJTdCJTIybmFtZSUyMiUzQSUyMiVFNiVBMCU4NyVFNyVBRCVCRSVFOCVCNCVCOSVFNyU5NCVBOCUyMiUyQyUyMmFtb3VudCUyMiUzQTE5NSUyQyUyMmJlYXJlciUyMiUzQSUyMmJ1eWVyJTIyJTJDJTIyc3VwcGxpZXJfbmFtZSUyMiUzQSUyMiUyMiU3RCUyQyU3QiUyMm5hbWUlMjIlM0ElMjIlRTUlQkYlQUIlRTklODAlOTIlMkYlRTclODklQTklRTYlQjUlODElMjIlMkMlMjJhbW91bnQlMjIlM0EzMTUlMkMlMjJiZWFyZXIlMjIlM0ElMjJidXllciUyMiUyQyUyMnN1cHBsaWVyX25hbWUlMjIlM0ElMjIlMjIlN0QlNUQ=]	1	2026-06-22 07:27:02.181132	\N	none	0.00	7656.00	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-06-22	\N	0	0.00	[]	\N	\N	1	0.00	[]
+421	XS202607217316	HT20260721001	57	赤峰文旅集团	管理员	2026-07-21	603.40	0.00	[{"num": 5, "spec": "16次泡", "price": 40.6, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 40.6, "exchange_group_key": ""}, {"num": 2, "spec": "110克", "price": 25.2, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 25.2, "exchange_group_key": ""}, {"num": 5, "spec": "100克", "price": 29.4, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 29.4, "exchange_group_key": ""}, {"num": 5, "spec": "240克", "price": 40.6, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 40.6, "exchange_group_key": ""}]	[NO:HT20260721001]	1	2026-07-21 02:55:42.745973	\N	none	0.00	603.40	0.00	buyer	0.00	0.00	公司支出账户	0.00	0.00	0	2026-07-21	\N	0	0.00	[]	\N	\N	1	0.00	[]
 \.
 
 
@@ -12657,6 +13178,7 @@ COPY public.sale_customers (id, name, nickname, code, mobile, tel, email, addres
 63	美团平台	美团闪购							普通客户		0	0	0		0.00	0	美团闪购线上平台客户	1	2026-06-12 06:58:12.374167	2026-06-12 06:58:12.374167	\N	1
 16	样品专用客户	样品专用客户							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:14.339846	2026-03-29 08:15:14.339846	2026-06-13 07:31:15.239437	1
 3	阿润诺尔	阿润诺尔							普通客户		0	0	0		380.00	0		1	2026-03-29 08:15:08.158673	2026-06-19 06:08:31.749265	\N	1
+64	混沌未来								普通客户		0	0	0		0.00	0		1	2026-06-22 06:53:02.996446	2026-06-22 06:53:02.996446	\N	1
 \.
 
 
@@ -12830,6 +13352,8 @@ COPY public.sale_out_order (id, order_no, order_sn, customer_id, customer_name, 
 243	XC202606142202	XC202606144421	21	阿斯娜	管理员	2026-06-14	1816.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 43, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 5, "spec": "120g", "price": 6.4, "remark": "", "goods_id": 876, "goods_sn": "SP0000159", "tax_rate": 0, "unit_name": "盒", "cost_price": 4.08, "goods_name": "憨野/奶条", "unit_ratio": 1, "price_no_tax": 6.4}, {"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 11.5}]	来自销售订单 HT20260614003	0	1	默认仓库	2026-06-14 08:17:04.474643	2026-06-14 08:29:29.822794	1
 245	XC202606145406	XC202606145150	21	阿斯娜	管理员	2026-06-09	752.00	[{"num": 10, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 11, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 19, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}, {"num": 10, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}]	来自销售订单 HT20260614005	1	1	默认仓库	2026-06-14 08:24:40.064478	\N	1
 246	XC202606149443	XC202606143467	21	阿斯娜	管理员	2026-06-09	575.00	[{"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 9, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 15, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}]	来自销售订单 HT20260614006	1	1	默认仓库	2026-06-14 08:26:46.416002	\N	1
+255	XC202607199100	XC202607192751	64	混沌未来	管理员	2026-06-22	7656.00	[{"num": 30, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 30, "spec": "240克", "price": 37.7, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 30, "spec": "110克", "price": 23.4, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 23.4}, {"num": 30, "spec": "100克", "price": 27.3, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 27.3}, {"num": 50, "spec": "150", "price": 22, "remark": "原甜", "goods_id": 988, "goods_sn": "SP0000046", "tax_rate": 0, "unit_name": "袋", "cost_price": 12.78, "goods_name": "品牌传统奶豆腐/袋装成品", "unit_ratio": 1, "price_no_tax": 22}, {"num": 20, "spec": "120克", "price": 12, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "unit_ratio": 1, "price_no_tax": 12}, {"num": 30, "spec": "200克", "price": 16, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "unit_ratio": 1, "price_no_tax": 16}, {"num": 115, "spec": "", "price": 9, "remark": "四个口味", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "unit_ratio": 1, "price_no_tax": 9}, {"num": 2, "spec": "", "price": 2, "remark": "", "goods_id": 3180, "goods_sn": "", "tax_rate": 0, "unit_name": "个", "cost_price": 0, "goods_name": "透明奶茶杯", "unit_ratio": 1, "price_no_tax": 2}, {"num": 30, "spec": "250克", "price": 33.8, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 33.8}, {"num": 0.64, "spec": "散装", "price": 0, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "unit_name": "斤", "cost_price": 25, "goods_name": "奶果子/散装", "unit_ratio": 1, "price_no_tax": 0}]	来自销售订单 HT20260622001	1	1	默认仓库	2026-07-19 14:29:26.533727	\N	1
+256	XC202607194469	XC202607194241	64	混沌未来	管理员	2026-07-19	1016.20	[{"num": 26, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 4, "spec": "", "price": 9, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "unit_ratio": 1, "price_no_tax": 9}, {"num": 3, "spec": "110克", "price": 0, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 0}, {"num": 2, "spec": "250克", "price": 0, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "unit_name": "瓶", "cost_price": 4.53, "goods_name": "乳清饮料", "unit_ratio": 1, "price_no_tax": 0}, {"num": 1, "spec": "16次泡", "price": 0, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 0}]	来自销售订单 HT20260719001	1	1	默认仓库	2026-07-19 14:32:49.841015	\N	1
 247	XC202606148111	XC202606141831	21	阿斯娜	管理员	2026-06-08	1816.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 43, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 5, "spec": "120g", "price": 6.4, "remark": "", "goods_id": 876, "goods_sn": "SP0000159", "tax_rate": 0, "unit_name": "盒", "cost_price": 4.08, "goods_name": "憨野/奶条", "unit_ratio": 1, "price_no_tax": 6.4}, {"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 11.5}]	来自销售订单 HT20260614003	1	1	默认仓库	2026-06-14 08:29:32.594459	\N	1
 249	XC202606149619	XC202606148587	21	阿斯娜	管理员	2026-06-13	600.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260614008	1	1	默认仓库	2026-06-14 08:37:28.103318	\N	1
 248	XC202606146661	XC202606149576	21	阿斯娜	管理员	2026-06-10	759.00	[{"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 7, "spec": "1", "price": 8, "remark": "", "goods_id": 1018, "goods_sn": "SP0000016", "tax_rate": 0, "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "unit_ratio": 1, "price_no_tax": 8}, {"num": 30, "spec": "1", "price": 0.5, "remark": "", "goods_id": 864, "goods_sn": "SP0000171", "tax_rate": 0, "unit_name": "张", "cost_price": 0.37, "goods_name": "礼盒/腰封", "unit_ratio": 1, "price_no_tax": 0.5}]	来自销售订单 HT20260614007	0	1	默认仓库	2026-06-14 08:36:31.945924	2026-06-14 08:49:31.699866	1
@@ -12837,6 +13361,8 @@ COPY public.sale_out_order (id, order_no, order_sn, customer_id, customer_name, 
 252	XC202606171929	XC202606177512	3	阿润诺尔		2026-06-17	722.00	[{"num": 30, "spec": "180克", "price": 19, "remark": "", "goods_id": 935, "goods_sn": "SP0000100", "tax_rate": 0, "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "unit_ratio": 1, "price_no_tax": 19}, {"num": 5, "spec": "140克", "price": 19, "remark": "", "goods_id": 938, "goods_sn": "SP0000097", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/甜味/线下", "unit_ratio": 1, "price_no_tax": 19}, {"num": 3, "spec": "140克", "price": 19, "remark": "", "goods_id": 941, "goods_sn": "SP0000094", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/原味/线下", "unit_ratio": 1, "price_no_tax": 19}]	来自销售订单 HT20260617001	1	1	默认仓库	2026-06-17 08:05:53.77031	\N	1
 251	XC202606143637	XC202606146260	18	鄂尔多斯游牧大市集	管理员	2026-04-25	1264.00	[{"num": 58, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "1", "price": 5.2, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "unit_ratio": 1, "price_no_tax": 5.2}]	来自销售订单 XS202604256720	0	1	默认仓库	2026-06-14 10:33:01.650181	\N	1
 253	XC202606195957	XC202606197868	21	阿斯娜	管理员	2026-06-19	69.00	[{"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 11.5}]	来自销售订单 HT20260619001	1	1	默认仓库	2026-06-19 08:31:01.888062	\N	1
+254	XC202607123639	XC202607127227	21	阿斯娜	管理员	2026-07-12	225.00	[{"num": 5, "spec": "", "price": 8, "remark": "", "goods_id": 3104, "goods_sn": "", "tax_rate": 0, "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "unit_ratio": 1, "price_no_tax": 8}, {"num": 10, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 10, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}]	来自销售订单 HT20260712001	1	1	默认仓库	2026-07-12 06:01:21.322417	\N	1
+257	XC202607218375	XC202607216842	57	赤峰文旅集团	管理员	2026-07-21	603.40	[{"num": 5, "spec": "16次泡", "price": 40.6, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 40.6}, {"num": 2, "spec": "110克", "price": 25.2, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 25.2}, {"num": 5, "spec": "100克", "price": 29.4, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 29.4}, {"num": 5, "spec": "240克", "price": 40.6, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 40.6}]	来自销售订单 HT20260721001	1	1	默认仓库	2026-07-21 02:55:51.652262	\N	1
 \.
 
 
@@ -16367,6 +16893,131 @@ COPY public.stock_flow (id, goods_id, goods_name, warehouse_id, warehouse_name, 
 3938	989	蒙古黄油/瓶装成品	1	默认仓库	sale_out	-6	51	45	XC202606195957	销售出库审核	2026-06-19 08:31:02.143758	1
 3939	981	烤奶皮	189	牧区纯坊门店	procure_in	10	174	184	CGRK202606208855	采购入库审核	2026-06-20 08:11:56.711275	1
 3940	916	脆奶条/散装/科尔沁	189	牧区纯坊门店	procure_in	10	146	156	CGRK202606208855	采购入库审核	2026-06-20 08:11:56.736424	1
+3941	3095	牧区黄油小瓶	1		other_out	-1	961	960	CK202606225716	其他出库审核	2026-06-22 03:33:13.641373	1
+3942	867	5g/青砖袋泡茶	1		other_out	-1	987	986	CK202606225716	其他出库审核	2026-06-22 03:33:13.660599	1
+3943	916	脆奶条/散装/科尔沁	189	牧区纯坊门店	procure_in	20	156	176	CGRK202606227643	采购入库审核	2026-06-22 03:38:40.146359	1
+3944	3118	烤奶花	189	牧区纯坊门店	procure_in	10	12	22	CGRK202606227643	采购入库审核	2026-06-22 03:38:40.15535	1
+3945	981	烤奶皮	189	牧区纯坊门店	procure_in	10	184	194	CGRK202606227643	采购入库审核	2026-06-22 03:38:40.164214	1
+3946	931	炒米粉/aag	189	牧区纯坊门店	procure_in	15	20	35	CGRK202606228805	采购入库审核	2026-06-22 03:42:26.445893	1
+3947	908	哈斯乌拉牛肉干500g原味	189	牧区纯坊门店	procure_in	6	24	30	CGRK202606228805	采购入库审核	2026-06-22 03:42:26.45314	1
+3948	3094	科尔沁糖（酸奶/嚼口/乌日末	189	牧区纯坊门店	procure_in	5	20	25	CGRK202606228805	采购入库审核	2026-06-22 03:42:26.459481	1
+3949	3118	烤奶花	189	牧区纯坊门店	procure_in	10	22	32	CGRK202606222025	采购入库审核	2026-06-22 03:43:27.547706	1
+3950	1013	冻炒米/给组装半成品/那牧尔	189	牧区纯坊门店	procure_in	100	583	683	CGRK202606225892	采购入库审核	2026-06-22 06:19:28.110495	1
+3951	3107	科尔沁中奶豆腐	189	牧区纯坊门店	procure_in	20	10	30	CGRK202606221556	采购入库审核	2026-06-22 07:27:53.448584	1
+3952	3085	小米锅巴110g	189	牧区纯坊门店	procure_in	200	0	200	CGRK202606223689	采购入库审核	2026-06-22 07:32:29.537911	1
+3953	1014	散装/甜味奶条	189	牧区纯坊门店	procure_in	30	247	277	CGRK202606227337	采购入库审核	2026-06-22 07:58:18.279379	1
+3954	830	小米/10斤/小袋/红嘴/阿旗	1		other_out	-1	970	969	CK202606224537	其他出库审核	2026-06-22 10:17:37.925725	1
+3955	825	故乡宝酸马奶	1		other_out	-1	953	952	CK202606223849	其他出库审核	2026-06-22 10:42:24.50627	1
+3956	926	大奶豆腐砖/1.2斤	1		other_out	-5	981	976	CK202606223849	其他出库审核	2026-06-22 10:42:24.520603	1
+3957	3085	小米锅巴110g	1		other_out	-40	970	930	CK202606222757	其他出库审核	2026-06-22 11:58:03.542396	1
+3958	809	10斤装/小米/绿色纸盒	1		other_out	-2	972	970	CK202606225679	其他出库审核	2026-06-22 11:59:17.13886	1
+3959	935	透明成品/奶皮卷/线下	1		other_out	-1	65	64	CK202606223235	其他出库审核	2026-06-22 12:26:32.094975	1
+3960	915	黄油渣/盒	1		other_out	-1	969	968	CK202606228691	其他出库审核	2026-06-22 12:27:14.127286	1
+3961	924	冻炒米/袋装	1		other_out	-1	958	957	CK202606228691	其他出库审核	2026-06-22 12:27:14.13955	1
+3962	992	牧区奶豆腐/盒装/成品	1		other_out	-1	1805	1804	CK202606227736	其他出库审核	2026-06-22 12:55:06.832084	1
+3963	849	15元组合糖	1		other_out	-1	975	974	CK202606227736	其他出库审核	2026-06-22 12:55:06.852183	1
+3964	3104	牧区酸奶/大	1		other_out	-1	957	956	CK202606229061	其他出库审核	2026-06-22 13:30:55.469647	1
+3965	931	炒米粉/aag	1		other_out	-1	959	958	CK202606225352	其他出库审核	2026-06-22 14:00:35.706905	1
+3966	3107	科尔沁中奶豆腐	1		other_out	-2	993	991	CK202606225352	其他出库审核	2026-06-22 14:00:35.72287	1
+3967	901	手工白花炒米/散装	189	牧区纯坊门店	procure_in	1	36	37	CGRK202606235309	采购入库审核	2026-06-23 09:44:41.188768	1
+3968	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	207	217	CGRK202606235309	采购入库审核	2026-06-23 09:44:41.208774	1
+3969	906	真空奶豆腐砖/原味	1		other_out	-2	993	991	CK202606233590	其他出库审核	2026-06-23 14:28:50.20591	1
+3970	885	冻炒米/散装 500.0g	1		other_out	-1	981	980	CK202606241921	其他出库审核	2026-06-24 11:42:32.667554	1
+3971	3104	牧区酸奶/大	1		other_out	-1	956	955	CK202606241921	其他出库审核	2026-06-24 11:42:32.683863	1
+3973	3107	科尔沁中奶豆腐	1		other_out	-1	991	990	CK202606265645	其他出库审核	2026-06-26 12:44:19.086762	1
+3974	915	黄油渣/盒	1		other_out	-1	968	967	CK202606265859	其他出库审核	2026-06-26 12:44:34.029309	1
+3975	3104	牧区酸奶/大	1		other_out	-2	955	953	CK202606285148	其他出库审核	2026-06-28 02:46:16.609747	1
+3976	926	大奶豆腐砖/1.2斤	1		other_out	-2	976	974	CK202606292935	其他出库审核	2026-06-29 01:33:03.971208	1
+3977	3107	科尔沁中奶豆腐	1		other_out	-2	990	988	CK202606291221	其他出库审核	2026-06-29 01:36:49.323419	1
+3978	3096	牧区黄油大瓶	1		other_out	-1	994	993	CK202606297204	其他出库审核	2026-06-29 11:01:43.98514	1
+3979	901	手工白花炒米/散装	189	牧区纯坊门店	procure_in	1	37	38	CGRK202606309577	采购入库审核	2026-06-30 02:18:33.894689	1
+3980	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	217	227	CGRK202606301523	采购入库审核	2026-06-30 02:30:59.759888	1
+3981	3107	科尔沁中奶豆腐	1		other_out	-1	988	987	CK202606306354	其他出库审核	2026-06-30 15:52:39.40561	1
+3982	879	干肉奶茶	1		other_out	-2	977	975	CK202606306354	其他出库审核	2026-06-30 15:52:39.420229	1
+3983	865	牛肉干/和希格图	1		other_out	-1	985	984	CK202606306354	其他出库审核	2026-06-30 15:52:39.42977	1
+3984	3104	牧区酸奶/大	1		other_out	-1	953	952	CK202607018115	其他出库审核	2026-07-01 04:11:46.130902	1
+3985	966	查嘎粉/小包装袋	1		other_out	-1	971	970	CK202607018115	其他出库审核	2026-07-01 04:11:46.145966	1
+3986	888	河套奶粉	1		other_out	-2	966	964	CK202607015490	其他出库审核	2026-07-01 08:07:56.63355	1
+3987	907	风干牛肉500g大片	1		other_out	-1	990	989	CK202607025442	其他出库审核	2026-07-02 08:14:10.841565	1
+3988	3120	科尔沁袋装/——奶豆腐条/片/	1		other_out	-1	977	976	CK202607025442	其他出库审核	2026-07-02 08:14:10.858836	1
+3989	907	风干牛肉500g大片	189	牧区纯坊门店	procure_in	5	7	12	CGRK202607026895	采购入库审核	2026-07-02 08:14:56.58527	1
+3990	3104	牧区酸奶/大	1		other_out	-1	952	951	CK202607037500	其他出库审核	2026-07-03 02:17:01.096829	1
+3991	885	冻炒米/散装 500.0g	1		other_out	-1	980	979	CK202607037500	其他出库审核	2026-07-03 02:17:01.113876	1
+3992	829	奶豆腐/原味/中/科尔沁	1		other_out	-1	962	961	CK202607041220	其他出库审核	2026-07-04 08:50:22.895532	1
+3993	1010	奶油球	189	牧区纯坊门店	procure_in	10	855	865	CGRK202607042233	采购入库审核	2026-07-04 08:58:40.551529	1
+3996	896	奶皮月饼	1		other_out	-1	955	954	CK202607051869	其他出库审核	2026-07-05 02:39:46.00073	1
+3997	895	黄油渣月饼	1		other_out	-1	982	981	CK202607051869	其他出库审核	2026-07-05 02:39:46.01924	1
+3998	931	炒米粉/aag	1		other_out	-1	958	957	CK202607068792	其他出库审核	2026-07-06 13:49:59.001363	1
+3999	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	227	237	CGRK202607078707	采购入库审核	2026-07-07 03:07:57.871268	1
+4000	3107	科尔沁中奶豆腐	1		other_out	-10	987	977	CK202607086362	其他出库审核	2026-07-08 03:53:59.380667	1
+4001	992	牧区奶豆腐/盒装/成品	1		other_out	-1	1804	1803	CK202607084086	其他出库审核	2026-07-08 03:55:13.785317	1
+4002	906	真空奶豆腐砖/原味	1		other_out	-1	991	990	CK202607084659	其他出库审核	2026-07-08 08:39:33.391326	1
+4003	926	大奶豆腐砖/1.2斤	1		other_out	-1	974	973	CK202607084659	其他出库审核	2026-07-08 08:39:33.404716	1
+4004	829	奶豆腐/原味/中/科尔沁	1	默认仓库	procure_in	20	961	981	CGRK202607084928	采购入库审核	2026-07-08 08:41:01.134479	1
+4005	3107	科尔沁中奶豆腐	1		other_out	-1	977	976	CK202607098404	其他出库审核	2026-07-09 10:36:16.390971	1
+4006	894	酸奶月饼	1		other_out	-1	992	991	CK202607105348	其他出库审核	2026-07-10 10:54:08.338797	1
+4007	3107	科尔沁中奶豆腐	1		other_out	-2	976	974	CK202607101088	其他出库审核	2026-07-10 12:23:24.361163	1
+4008	969	小/奶皮	1		other_out	-1	953	952	CK202607101088	其他出库审核	2026-07-10 12:23:24.374389	1
+4009	3107	科尔沁中奶豆腐	1		other_out	-2	974	972	CK202607102716	其他出库审核	2026-07-10 12:23:42.734904	1
+4010	3107	科尔沁中奶豆腐	1		other_out	-1	972	971	CK202607127771	其他出库审核	2026-07-12 04:48:35.860355	1
+4011	3104	牧区酸奶/大	1	默认仓库	sale_out	-5	951	946	XC202607123639	销售出库审核	2026-07-12 06:01:21.813274	1
+4012	877	憨野/奶锅巴/	1	默认仓库	sale_out	-10	959	949	XC202607123639	销售出库审核	2026-07-12 06:01:21.883401	1
+4013	994	冻炒米成品盒	1	默认仓库	sale_out	-10	1059	1049	XC202607123639	销售出库审核	2026-07-12 06:01:21.891414	1
+4014	1010	奶油球	189	牧区纯坊门店	procure_in	10	865	875	CGRK202607123892	采购入库审核	2026-07-12 06:06:49.973652	1
+4015	845	乳清饮料	189	牧区纯坊门店	procure_in	15	60	75	CGRK202607129221	采购入库审核	2026-07-12 06:09:24.073224	1
+4016	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	237	247	CGRK202607125824	采购入库审核	2026-07-12 07:34:10.002972	1
+4017	894	酸奶月饼	1		other_out	-2	991	989	CK202607121429	其他出库审核	2026-07-12 12:01:44.860935	1
+4018	3107	科尔沁中奶豆腐	1		other_out	-1	971	970	CK202607139603	其他出库审核	2026-07-13 03:08:19.436849	1
+4019	3096	牧区黄油大瓶	1		other_out	-1	993	992	CK202607157705	其他出库审核	2026-07-15 02:06:55.013435	1
+4020	3107	科尔沁中奶豆腐	1		other_out	-1	970	969	CK202607157003	其他出库审核	2026-07-15 15:41:45.404756	1
+4021	967	查嘎/乳清	1		other_out	-1	984	983	CK202607162072	其他出库审核	2026-07-16 11:19:27.314675	1
+4022	3107	科尔沁中奶豆腐	1		other_out	-4	969	965	CK202607164511	其他出库审核	2026-07-16 12:05:21.010096	1
+4023	3107	科尔沁中奶豆腐	1		other_out	-1	965	964	CK202607189986	其他出库审核	2026-07-18 06:40:01.013497	1
+4024	3120	科尔沁袋装/——奶豆腐条/片/	1		other_out	-1	976	975	CK202607195547	其他出库审核	2026-07-19 04:13:36.930843	1
+4025	3107	科尔沁中奶豆腐	1		other_out	-1	964	963	CK202607191766	其他出库审核	2026-07-19 13:59:41.141684	1
+4026	880	阿润月饼/五仁馅	1		other_out	-1	975	974	CK202607197109	其他出库审核	2026-07-19 14:00:55.753835	1
+4027	880	阿润月饼/五仁馅	1		other_out	-2	974	972	CK202607195593	其他出库审核	2026-07-19 14:01:28.191637	1
+4028	882	阿润月饼/黄油渣馅	1		other_out	-2	974	972	CK202607195593	其他出库审核	2026-07-19 14:01:28.199773	1
+4029	882	阿润月饼/黄油渣馅	1		other_out	-2	972	970	CK202607198853	其他出库审核	2026-07-19 14:03:21.551208	1
+4030	881	阿润月饼/奶皮子馅	1		other_out	-2	970	968	CK202607198853	其他出库审核	2026-07-19 14:03:21.560111	1
+4031	883	阿润月饼/奶豆腐馅	1		other_out	-2	959	957	CK202607198853	其他出库审核	2026-07-19 14:03:21.568561	1
+4032	3178	佳赫蛋糕	1		other_out	-2	981	979	CK202607198853	其他出库审核	2026-07-19 14:03:21.576708	1
+4033	3107	科尔沁中奶豆腐	1		other_out	-2	963	961	CK202607198853	其他出库审核	2026-07-19 14:03:21.584618	1
+4034	883	阿润月饼/奶豆腐馅	189	牧区纯坊门店	procure_in	3	4	7	CGRK202607195025	采购入库审核	2026-07-19 14:05:44.199036	1
+4035	882	阿润月饼/黄油渣馅	189	牧区纯坊门店	procure_in	3	9	12	CGRK202607195025	采购入库审核	2026-07-19 14:05:44.206565	1
+4036	881	阿润月饼/奶皮子馅	189	牧区纯坊门店	procure_in	3	4	7	CGRK202607195025	采购入库审核	2026-07-19 14:05:44.213782	1
+4037	880	阿润月饼/五仁馅	189	牧区纯坊门店	procure_in	3	14	17	CGRK202607195025	采购入库审核	2026-07-19 14:05:44.22118	1
+4038	980	新/青砖奶茶	1	默认仓库	sale_out	-30	992	962	XC202607199100	销售出库审核	2026-07-19 14:29:27.422313	1
+4039	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-30	1803	1773	XC202607199100	销售出库审核	2026-07-19 14:29:27.441387	1
+4040	994	冻炒米成品盒	1	默认仓库	sale_out	-30	1049	1019	XC202607199100	销售出库审核	2026-07-19 14:29:27.450588	1
+4041	989	蒙古黄油/瓶装成品	1	默认仓库	sale_out	-30	45	15	XC202607199100	销售出库审核	2026-07-19 14:29:27.460571	1
+4042	988	品牌传统奶豆腐/袋装成品	1	默认仓库	sale_out	-50	52	2	XC202607199100	销售出库审核	2026-07-19 14:29:27.470184	1
+4043	827	透明成品/奶锅巴/线下	1	默认仓库	sale_out	-30	973	943	XC202607199100	销售出库审核	2026-07-19 14:29:27.482316	1
+4044	3085	小米锅巴110g	1	默认仓库	sale_out	-115	930	815	XC202607199100	销售出库审核	2026-07-19 14:29:27.492278	1
+4045	1008	甜味奶条成品	1	默认仓库	sale_out	-30	969	939	XC202607199100	销售出库审核	2026-07-19 14:29:27.503708	1
+4046	980	新/青砖奶茶	1	默认仓库	sale_out	-26	962	936	XC202607194469	销售出库审核	2026-07-19 14:32:50.306209	1
+4047	3085	小米锅巴110g	1	默认仓库	sale_out	-4	815	811	XC202607194469	销售出库审核	2026-07-19 14:32:50.312471	1
+4048	994	冻炒米成品盒	1	默认仓库	sale_out	-3	1019	1016	XC202607194469	销售出库审核	2026-07-19 14:32:50.32063	1
+4049	980	新/青砖奶茶	1	默认仓库	sale_out	-1	936	935	XC202607194469	销售出库审核	2026-07-19 14:32:50.328651	1
+4050	3185	憨野 黄油/50克	189	牧区纯坊门店	procure_in	1224	0	1224	CGRK202607196032	采购入库审核	2026-07-19 14:36:56.622212	1
+4051	980	新/青砖奶茶	1		other_out	-1	935	934	CK202607196155	其他出库审核	2026-07-19 14:41:03.304008	1
+4052	980	新/青砖奶茶	1		other_out	-3	934	931	CK202607193087	其他出库审核	2026-07-19 14:43:51.224336	1
+4053	3126	120克透明/奶条	1		other_out	-1	991	990	CK202607193087	其他出库审核	2026-07-19 14:43:51.232243	1
+4054	994	冻炒米成品盒	1		other_out	-4	1016	1012	CK202607193087	其他出库审核	2026-07-19 14:43:51.239647	1
+4055	877	憨野/奶锅巴/	1		other_out	-5	949	944	CK202607193087	其他出库审核	2026-07-19 14:43:51.247187	1
+4056	3107	科尔沁中奶豆腐	1		other_out	-1	961	960	CK202607204046	其他出库审核	2026-07-20 02:54:25.166209	1
+4057	929	白砂糖	1		other_out	-1	955	954	CK202607201653	其他出库审核	2026-07-20 05:11:18.854905	1
+4058	905	真空奶豆腐砖/甜味	1		other_out	-1	990	989	CK202607206529	其他出库审核	2026-07-20 07:10:52.293948	1
+4059	3107	科尔沁中奶豆腐	1		other_out	-1	960	959	CK202607202826	其他出库审核	2026-07-20 13:34:01.485341	1
+4060	932	炒米海丰袋装	1		other_out	-1	997	996	CK202607202826	其他出库审核	2026-07-20 13:34:01.500866	1
+4061	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	247	257	CGRK202607206939	采购入库审核	2026-07-20 13:35:00.030144	1
+4062	3107	科尔沁中奶豆腐	1		other_out	-1	959	958	CK202607216710	其他出库审核	2026-07-21 02:21:56.825441	1
+4063	980	新/青砖奶茶	1	默认仓库	sale_out	-5	931	926	XC202607218375	销售出库审核	2026-07-21 02:55:52.222347	1
+4064	994	冻炒米成品盒	1	默认仓库	sale_out	-2	1012	1010	XC202607218375	销售出库审核	2026-07-21 02:55:52.238226	1
+4065	989	蒙古黄油/瓶装成品	1	默认仓库	sale_out	-5	15	10	XC202607218375	销售出库审核	2026-07-21 02:55:52.244082	1
+4066	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-5	1773	1768	XC202607218375	销售出库审核	2026-07-21 02:55:52.249574	1
+4067	829	奶豆腐/原味/中/科尔沁	189	牧区纯坊门店	procure_in	10	30	40	CGRK202607219394	采购入库审核	2026-07-21 04:03:17.594058	1
+4068	3117	车载香片	1		other_out	-1	966	965	CK202607217202	其他出库审核	2026-07-21 04:41:08.789095	1
 \.
 
 
@@ -16413,7 +17064,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 83	831	果条/阿润	SP0000205	袋	0		0	0.00	2026-04-03 07:15:24.63229	1
 129	881	阿润月饼/奶皮子馅	SP0000154	袋	0		0	0.00	2026-04-03 07:16:26.915656	1
 71	823	黄油/中瓶	SP0000213	瓶	0		0	0.00	2026-04-03 07:15:09.192995	1
-252	1010	奶油球	SP0000024	个	189	牧区纯坊门店	855	0.00	2026-06-07 10:43:59.043131	1
+252	1010	奶油球	SP0000024	箱	189	牧区纯坊门店	875	0.00	2026-07-12 06:06:49.969257	1
 53	1032	专盒/冻炒米	SP0000002	捆	0		0	0.00	2026-04-04 14:39:49.844227	1
 107	1011	茶包	SP0000023	件	0		0	0.00	2026-04-03 07:19:01.223423	1
 62	811	蒙古果子/格日勒	SP0000225	袋	0		0	0.00	2026-04-03 07:15:03.513302	1
@@ -16554,10 +17205,11 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 289	958	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077	盒	189	牧区纯坊门店	915	0.00	2026-06-07 10:24:11.269391	1
 102	993	冻炒米专用/塑膜袋	SP0000041	张	0		500	0.00	2026-04-12 03:24:08.487868	1
 214	988	品牌传统奶豆腐/袋装成品	SP0000046	袋	0		7	0.00	2026-06-13 05:42:33.210545	1
-309	920	手工乌日末液体	SP0000115	斤	189	牧区纯坊门店	207	0.00	2026-06-16 13:56:35.097252	1
-250	1013	冻炒米/给组装半成品/那牧尔	SP0000021	盒	189	牧区纯坊门店	583	0.00	2026-06-09 06:47:34.81529	1
+302	901	手工白花炒米/散装	SP0000134	麻袋	189	牧区纯坊门店	38	0.00	2026-06-30 02:18:33.890816	1
+265	3085	小米锅巴110g		桶	1	默认仓库	811	0.00	2026-07-19 14:32:50.309327	1
 210	975	黄油脖签	SP0000059	张	0		0	0.00	2026-04-18 06:38:51.446291	1
 261	995	茶专用/热缩膜	SP0000039	袋	189	牧区纯坊门店	2600	0.00	2026-04-18 11:36:21.980405	1
+250	1013	冻炒米/给组装半成品/那牧尔	SP0000021	盒	189	牧区纯坊门店	683	0.00	2026-06-22 06:19:28.105042	1
 314	945	半成品/透明/奶皮卷	SP0000090	盒	189	牧区纯坊门店	85	0.00	2026-04-25 15:00:27.429607	1
 272	975	黄油脖签	SP0000059	张	189	牧区纯坊门店	500	0.00	2026-04-25 03:07:47.388811	1
 273	978	新茶专用标签纸	SP0000056	张	189	牧区纯坊门店	3000	0.00	2026-04-25 03:07:47.39845	1
@@ -16582,22 +17234,22 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 343	869	青砖碎茶	SP0000166	件	189	牧区纯坊门店	1	0.00	2026-04-26 15:29:45.353465	1
 344	867	5g/青砖袋泡茶	SP0000168	件	189	牧区纯坊门店	1	0.00	2026-04-26 15:29:45.364118	1
 347	866	酸奶/纯净	SP0000169	瓶	189	牧区纯坊门店	10	0.00	2026-04-26 15:30:55.362444	1
-265	3085	小米锅巴110g			1	默认仓库	970	0.00	2026-06-20 06:09:27.475223	1
+297	829	奶豆腐/原味/中/科尔沁	SP0000207	张	189	牧区纯坊门店	40	0.00	2026-07-21 04:03:17.589146	1
+309	920	手工乌日末液体	SP0000115	斤	189	牧区纯坊门店	257	0.00	2026-07-20 13:35:00.026163	1
 326	884	实惠/奶豆腐	SP0000151	个	189	牧区纯坊门店	10	0.00	2026-05-30 10:16:22.835102	1
 307	924	冻炒米/袋装	SP0000111	袋	189	牧区纯坊门店	19	0.00	2026-05-30 10:44:18.681994	1
-297	829	奶豆腐/原味/中/科尔沁	SP0000207	张	189	牧区纯坊门店	30	0.00	2026-05-30 10:19:36.796278	1
 325	885	冻炒米/散装	SP0000150	斤	189	牧区纯坊门店	43	0.00	2026-05-30 10:51:00.78651	1
 213	989	蒙古黄油/瓶装成品	SP0000045	瓶	0		10	0.00	2026-06-13 05:41:16.748732	1
 247	1020	标签/不干胶/奶果子	SP0000014	张	189	牧区纯坊门店	611	0.00	2026-06-08 06:49:09.357565	1
 259	991	奶果子/散装	SP0000043	斤	189	牧区纯坊门店	456	0.00	2026-06-07 06:51:28.816735	1
 256	1000	木勺	SP0000034	捆	189	牧区纯坊门店	217	0.00	2026-06-07 10:20:01.7046	1
-302	901	手工白花炒米/散装	SP0000134	麻袋	189	牧区纯坊门店	36	0.00	2026-06-09 02:17:59.406642	1
 338	970	热奶豆腐碗	SP0000064	盒	189	牧区纯坊门店	36	0.00	2026-04-26 15:27:45.453561	1
 219	990	奶果子/专用塑膜袋	SP0000044	袋	0		1000	0.00	2026-04-12 03:24:09.853193	1
 260	987	采购样品专用/乳制品	SP0000047	斤	189	牧区纯坊门店	14	0.00	2026-04-12 04:37:51.501058	1
 306	873	专袋/牛肉干包装	SP0000162	袋	189	牧区纯坊门店	3000	0.00	2026-04-25 11:00:07.125404	1
 300	921	嚼口脆炒米糖/散装	SP0000114	斤	189	牧区纯坊门店	45	0.00	2026-05-02 09:11:23.470249	1
-291	981	烤奶皮	SP0000053	斤	189	牧区纯坊门店	184	0.00	2026-06-20 08:11:56.706425	1
+291	981	烤奶皮	SP0000053	斤	189	牧区纯坊门店	194	0.00	2026-06-22 03:38:40.15974	1
+248	1014	散装/甜味奶条	SP0000020	斤	189	牧区纯坊门店	277	0.00	2026-06-22 07:58:18.27397	1
 275	950	透专标签/奶皮卷	SP0000085	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.000861	1
 276	951	透专标签/冻炒米	SP0000084	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.023074	1
 277	952	透专标签/奶酪/原味	SP0000083	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.031349	1
@@ -16641,21 +17293,20 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 320	897	早餐包/那牧尔	SP0000138	袋	189	牧区纯坊门店	10	0.00	2026-04-25 11:28:09.78781	1
 321	894	酸奶月饼	SP0000141	小包	189	牧区纯坊门店	10	0.00	2026-04-25 11:28:09.795489	1
 249	1015	散装/原味奶条	SP0000019	斤	189	牧区纯坊门店	83	0.00	2026-04-25 14:40:57.312661	1
-248	1014	散装/甜味奶条	SP0000020	斤	189	牧区纯坊门店	247	0.00	2026-06-07 11:33:03.718717	1
-334	881	阿润月饼/奶皮子馅	SP0000154	袋	189	牧区纯坊门店	4	0.00	2026-04-25 15:01:11.420964	1
+336	883	阿润月饼/奶豆腐馅	SP0000152	袋	189	牧区纯坊门店	7	0.00	2026-07-19 14:05:44.195388	1
 327	898	透专标签/奶皮千层	SP0000137	张	189	牧区纯坊门店	500	0.00	2026-04-25 14:59:17.273933	1
-336	883	阿润月饼/奶豆腐馅	SP0000152	袋	189	牧区纯坊门店	4	0.00	2026-04-25 15:01:11.44107	1
-296	932	炒米海丰袋装	SP0000103		1	默认仓库	997	0.00	2026-06-20 06:09:27.475223	1
 339	939	半成品/透明/原味/鲜奶酪	SP0000096	盒	189	牧区纯坊门店	20	0.00	2026-04-26 15:27:45.463534	1
 340	940	半成品/透明/甜味/鲜奶酪	SP0000095	盒	189	牧区纯坊门店	52	0.00	2026-04-26 15:27:45.473372	1
 346	865	牛肉干/和希格图	SP0000170	袋	189	牧区纯坊门店	20	0.00	2026-04-26 15:30:15.411901	1
 333	879	干肉奶茶	SP0000156	盒	189	牧区纯坊门店	14	0.00	2026-04-26 16:03:47.553873	1
-335	882	阿润月饼/黄油渣馅	SP0000153	袋	189	牧区纯坊门店	9	0.00	2026-04-26 16:19:15.492215	1
+334	881	阿润月饼/奶皮子馅	SP0000154	袋	189	牧区纯坊门店	7	0.00	2026-07-19 14:05:44.210326	1
 301	856	科尔沁/大奶豆腐	SP0000179	张	189	牧区纯坊门店	13	0.00	2026-05-28 15:40:52.233318	1
 317	892	那牧尔酸奶	SP0000143	瓶	189	牧区纯坊门店	25	0.00	2026-05-28 15:20:06.03601	1
+335	882	阿润月饼/黄油渣馅	SP0000153	袋	189	牧区纯坊门店	12	0.00	2026-07-19 14:05:44.20291	1
 257	998	茶专用/硫酸纸	SP0000036	张	189	牧区纯坊门店	3000	0.00	2026-04-28 05:19:20.566179	1
 299	922	酸奶炒米糖/散装	SP0000113	斤	189	牧区纯坊门店	20	0.00	2026-05-02 01:41:09.787406	1
 312	923	海丰炒米/散装/硬口/	SP0000112	斤	189	牧区纯坊门店	84	0.00	2026-06-09 02:17:59.437667	1
+296	932	炒米海丰袋装	SP0000103		1	默认仓库	996	0.00	2026-07-20 13:34:01.4987	1
 303	1010	奶油球	SP0000024	个	1	默认仓库	0	0.00	2026-06-07 11:11:20.454314	1
 274	900	透专标签/脆香奶条/微甜	SP0000135	张	189	牧区纯坊门店	1000	0.00	2026-06-07 07:32:57.996672	1
 324	890	红枣	SP0000145	斤	189	牧区纯坊门店	12	0.00	2026-05-30 11:58:31.791833	1
@@ -16682,7 +17333,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 367	844	希日嘎拉奶茶专用茶	SP0000191	盒	189	牧区纯坊门店	4	0.00	2026-04-26 16:16:27.630049	1
 370	846	酸奶/额吉伊德	SP0000189	瓶	189	牧区纯坊门店	6	0.00	2026-04-26 16:17:01.631437	1
 371	847	乌日莫/袋装	SP0000188	袋	189	牧区纯坊门店	5	0.00	2026-04-26 16:17:01.638808	1
-332	880	阿润月饼/五仁馅	SP0000155	袋	189	牧区纯坊门店	14	0.00	2026-04-26 16:19:15.481939	1
 373	831	果条/阿润	SP0000205	袋	189	牧区纯坊门店	5	0.00	2026-04-26 16:19:15.502468	1
 348	860	普通瓜子	SP0000175	散	189	牧区纯坊门店	15	0.00	2026-04-26 16:20:31.231267	1
 386	811	蒙古果子/格日勒	SP0000225	袋	189	牧区纯坊门店	17	0.00	2026-05-10 03:10:21.539033	1
@@ -16703,7 +17353,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 396	3109	奶派/坚果/芒果		斤	189	牧区纯坊门店	5	0.00	2026-05-18 11:34:31.835645	1
 400	3115	帆布包			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.347802	1
 401	3113	明信片/带种子			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.354877	1
-391	3107	科尔沁中奶豆腐		块	189	牧区纯坊门店	10	0.00	2026-05-14 09:03:25.080711	1
 402	3112	阿旗book			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.363805	1
 360	836	礼盒/2026	SP0000199	个	189	牧区纯坊门店	560	0.00	2026-06-13 07:59:08.4104	1
 403	3117	车载香片	SP2605252385	张	189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.371015	1
@@ -16711,27 +17360,28 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 382	830	小米/10斤/小袋/红嘴/阿旗	SP0000206	袋	189	牧区纯坊门店	17	0.00	2026-06-07 13:47:14.385181	1
 374	903	盛宇燃奶豆腐/甜味	SP0000132	袋	189	牧区纯坊门店	13	0.00	2026-05-29 11:29:11.389967	1
 381	822	黄油/大瓶/科尔沁	SP0000214	瓶	189	牧区纯坊门店	7	0.00	2026-05-29 11:29:11.408296	1
-372	916	脆奶条/散装/科尔沁	SP0000119	斤	189	牧区纯坊门店	156	0.00	2026-06-20 08:11:56.731556	1
+379	931	炒米粉/aag	SP0000104	袋	189	牧区纯坊门店	35	0.00	2026-06-22 03:42:26.442136	1
 397	3116	酸马奶/蒙医院		瓶	189	牧区纯坊门店	50	0.00	2026-05-25 11:45:24.273562	1
-379	931	炒米粉/aag	SP0000104	袋	189	牧区纯坊门店	20	0.00	2026-05-28 16:13:52.421056	1
+376	908	哈斯乌拉牛肉干500g原味	SP0000127	袋	189	牧区纯坊门店	30	0.00	2026-06-22 03:42:26.449642	1
 405	930	加沙奶豆腐	SP0000105	袋	189	牧区纯坊门店	10	0.00	2026-05-28 16:13:52.430684	1
 407	979	新茶包/纸	SP0000055	张	189	牧区纯坊门店	20000	0.00	2026-05-28 17:22:11.414966	1
 398	3111	蒙古元素永生花			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.330141	1
 399	3114	宋锦耳坠		对	189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.339814	1
+372	916	脆奶条/散装/科尔沁	SP0000119	斤	189	牧区纯坊门店	176	0.00	2026-06-22 03:38:40.14159	1
 409	905	真空奶豆腐砖/甜味	SP0000130	袋	189	牧区纯坊门店	4	0.00	2026-05-29 05:25:35.170198	1
 375	904	盛宇燃奶豆腐/原味	SP0000131	袋	189	牧区纯坊门店	14	0.00	2026-05-29 11:29:11.396209	1
 413	3100	楚楚给			189	牧区纯坊门店	0	0.00	2026-05-29 07:34:51.707381	1
 412	927	小奶豆腐砖/1斤	SP0000108		189	牧区纯坊门店	2	0.00	2026-05-29 07:35:23.186269	1
-369	845	乳清饮料	SP0000190	瓶	189	牧区纯坊门店	60	0.00	2026-05-30 10:29:42.899534	1
+332	880	阿润月饼/五仁馅	SP0000155	袋	189	牧区纯坊门店	17	0.00	2026-07-19 14:05:44.21761	1
 414	3123	 蒙古国糖果		瓶	189	牧区纯坊门店	10	0.00	2026-05-29 10:57:18.819581	1
 411	935	透明成品/奶皮卷/线下	SP0000100		189	牧区纯坊门店	12	0.00	2026-05-29 07:35:23.178515	1
 415	3122	jebu 蒙古国饮料		瓶	189	牧区纯坊门店	48	0.00	2026-05-29 10:57:18.859973	1
 384	825	故乡宝酸马奶	SP0000211	盒	189	牧区纯坊门店	23	0.00	2026-05-30 11:33:09.725092	1
-408	3094	科尔沁糖（酸奶/嚼口/乌日末		斤	189	牧区纯坊门店	20	0.00	2026-05-30 10:34:19.55621	1
-376	908	哈斯乌拉牛肉干500g原味	SP0000127	袋	189	牧区纯坊门店	24	0.00	2026-05-30 10:34:19.562421	1
+391	3107	科尔沁中奶豆腐		块	189	牧区纯坊门店	30	0.00	2026-06-22 07:27:53.44322	1
+408	3094	科尔沁糖（酸奶/嚼口/乌日末		斤	189	牧区纯坊门店	25	0.00	2026-06-22 03:42:26.456322	1
 392	3106	甜味奶豆腐		张	189	牧区纯坊门店	7	0.00	2026-06-07 14:28:51.432904	1
-377	907	风干牛肉500g大片	SP0000128	袋	189	牧区纯坊门店	7	0.00	2026-05-29 11:29:11.377669	1
-416	3118	烤奶花		斤	189	牧区纯坊门店	12	0.00	2026-05-30 10:34:19.467806	1
+369	845	乳清饮料	SP0000190	瓶	189	牧区纯坊门店	75	0.00	2026-07-12 06:09:24.068593	1
+295	931	炒米粉/aag	SP0000104		1	默认仓库	957	0.00	2026-07-06 13:49:58.996354	1
 417	888	河套奶粉	SP0000147	盒	189	牧区纯坊门店	4	0.00	2026-05-30 10:44:18.668848	1
 418	887	羊乳奶粉/奶茶专用	SP0000148	盒	189	牧区纯坊门店	4	0.00	2026-05-30 10:44:18.675567	1
 419	3092	干噎酸奶		斤	189	牧区纯坊门店	3	0.00	2026-05-30 11:19:58.899802	1
@@ -16741,16 +17391,15 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 424	3125	细奶条/原味/乌日汗		袋	189	牧区纯坊门店	5	0.00	2026-05-30 11:33:09.733362	1
 425	3129	专标签/亚克力/奶锅巴		张	189	牧区纯坊门店	500	0.00	2026-06-07 07:32:57.973333	1
 431	933	透明成品/奶条/原味/线下		盒	1		77	0.00	2026-06-13 08:34:16.036572	1
-427	849	15元组合糖			1		975	0.00	2026-06-20 06:09:27.475223	1
+438	989	蒙古黄油/瓶装成品		瓶	1		10	0.00	2026-07-21 02:55:52.241132	1
 422	808	彩色奶圈圈/透明桶装	SP0000228	盒	189	牧区纯坊门店	15	0.00	2026-06-07 14:06:34.929081	1
 443	828	中等/奶豆腐/	SP0000208	张	189	牧区纯坊门店	5	0.00	2026-06-07 14:28:51.449462	1
-439	1008	甜味奶条成品			1		969	0.00	2026-06-20 06:09:27.475223	1
+464	877	憨野/奶锅巴/			1	默认仓库	944	0.00	2026-07-19 14:43:51.244334	1
 441	996	青砖奶茶成品	SP0000038	盒	1		2388	0.00	2026-06-09 14:59:10.395154	1
 269	3089	有机黄小米2㎏		箱	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
-295	931	炒米粉/aag	SP0000104		1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
 429	934	透明成品/奶皮千层/线下		盒	1		973	0.00	2026-06-20 06:09:27.475223	1
 444	3128	专袋/冻炒米/真空袋		张	189	牧区纯坊门店	48000	0.00	2026-06-08 04:30:03.124345	1
-437	988	原味传统奶豆腐/成品袋装		袋	1		52	0.00	2026-06-09 14:59:10.423055	1
+439	1008	甜味奶条成品		袋	1		939	0.00	2026-07-19 14:29:27.498928	1
 294	930	加沙奶豆腐	SP0000105		1	默认仓库	951	0.00	2026-06-20 06:09:27.475223	1
 266	3086	布袋小米2.5㎏		袋	1	默认仓库	963	0.00	2026-06-20 06:09:27.475223	1
 442	976	暂用/茶 新旧更替	SP0000058	盒	1		952	0.00	2026-06-20 06:09:27.475223	1
@@ -16760,6 +17409,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 267	3087	郁金川2.5㎏		袋	1	默认仓库	997	0.00	2026-06-20 06:09:27.475223	1
 268	3088	黑芝麻丸5㎏		斤	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 433	937	透明成品/鲜奶皮/线下		盒	1		84	0.00	2026-06-13 09:31:05.994011	1
+458	867	5g/青砖袋泡茶			1	默认仓库	986	0.00	2026-06-22 03:33:13.657084	1
 449	846	酸奶/额吉伊德		瓶	1	默认仓库	977	0.00	2026-06-20 06:09:27.475223	1
 450	3148	牧区纯坊 香蕉味蛋糕458克/盒		盒	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 451	828	中等/奶豆腐/		张	1	默认仓库	952	0.00	2026-06-20 06:09:27.475223	1
@@ -16771,11 +17421,10 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 447	983	甜味/标签/不干胶/传统奶豆腐		张	1		525	0.00	2026-06-09 08:25:39.298489	1
 446	1021	标签/不干胶/品牌传统奶豆腐		张	1		487	0.00	2026-06-09 08:25:41.220553	1
 456	3177	蒙古国饮料		瓶	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
-390	992	牧区奶豆腐/盒装/成品			1		1805	0.00	2026-06-14 10:03:31.822517	1
+427	849	15元组合糖			1		974	0.00	2026-06-22 12:55:06.848805	1
 457	887	羊乳奶粉/奶茶专用		盒	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
-458	867	5g/青砖袋泡茶		盒	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
 459	837	甜味奶豆腐块儿/大		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
-445	994	冻炒米成品盒	SP0000040		1		1059	0.00	2026-06-14 10:03:31.838052	1
+471	967	查嘎/乳清			1	默认仓库	983	0.00	2026-07-16 11:19:27.312464	1
 432	936	透明成品/奶条/甜味/线下			1		58	0.00	2026-06-14 10:03:31.85478	1
 460	858	糖葫芦		盒	1	默认仓库	984	0.00	2026-06-20 06:09:27.475223	1
 461	819	红日桶装酒		桶	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
@@ -16783,7 +17432,9 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 462	817	乌日汗小瓶酸奶		瓶	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 440	1007	原味奶条成品		袋	1		86	0.00	2026-06-14 13:17:14.999106	1
 463	826	乌日汗酸奶		盒	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
-464	877	憨野/奶锅巴/		盒	1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
+430	935	透明成品/奶皮卷/线下			1		64	0.00	2026-06-22 12:26:32.089748	1
+416	3118	烤奶花		斤	189	牧区纯坊门店	32	0.00	2026-06-22 03:43:27.54436	1
+474	929	白砂糖			1	默认仓库	954	0.00	2026-07-20 05:11:18.848113	1
 434	938	透明成品/鲜奶酪/甜味/线下		盒	1		102	0.00	2026-06-17 08:05:54.267327	1
 435	941	透明成品/鲜奶酪/原味/线下		盒	1		69	0.00	2026-06-17 08:05:54.278325	1
 465	911	蓝旗绿乳糖果仁酥		袋	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
@@ -16791,19 +17442,17 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 466	855	奶锅巴/扎旗吉十奶制品		散	1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
 467	3167	牧区纯坊 大片风干牛肉500g/袋		袋	1	默认仓库	971	0.00	2026-06-20 06:09:27.475223	1
 468	3135	牧区纯坊 速溶青砖茶400克/袋		袋	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
-430	935	透明成品/奶皮卷/线下			1		65	0.00	2026-06-19 06:08:30.718442	1
-438	989	蒙古黄油/瓶装成品		瓶	1		45	0.00	2026-06-19 08:31:02.139757	1
+377	907	风干牛肉500g大片	SP0000128	袋	189	牧区纯坊门店	12	0.00	2026-07-02 08:14:56.580265	1
+437	988	品牌传统奶豆腐/袋装成品		袋	1		2	0.00	2026-07-19 14:29:27.465329	1
 469	1003	热收缩膜机		台	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
 470	971	甜味/散称/奶豆腐块儿		斤	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
-471	967	查嘎/乳清		桶	1	默认仓库	984	0.00	2026-06-20 06:09:27.475223	1
 472	870	大青砖茶砖		个	1	默认仓库	952	0.00	2026-06-20 06:09:27.475223	1
 473	3160	牧区纯坊 无糖饼干500克/盒		盒	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
-474	929	白砂糖		袋	1	默认仓库	955	0.00	2026-06-20 06:09:27.475223	1
+390	992	牧区奶豆腐/盒装/成品		盒	1		1768	0.00	2026-07-21 02:55:52.24691	1
+445	994	冻炒米成品盒	SP0000040	盒	1		1010	0.00	2026-07-21 02:55:52.235165	1
 475	910	蓝旗绿乳糖奶香酥		袋	1	默认仓库	970	0.00	2026-06-20 06:09:27.475223	1
 476	919	黄油/斤		瓶	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
 477	3170	赛汗塔拉手工制作奶豆腐原味约400g/块		块	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
-478	888	河套奶粉		盒	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
-479	879	干肉奶茶		盒	1	默认仓库	977	0.00	2026-06-20 06:09:27.475223	1
 480	838	奶粉蒙古国		袋	1	默认仓库	994	0.00	2026-06-20 06:09:27.475223	1
 481	3143	牧区纯坊 奶皮子有点卷蓝莓味180克/盒		盒	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 482	3134	牧区纯坊 风干牛肉干500克/袋		袋	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
@@ -16841,10 +17490,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 514	807	蒙古果/格日勒/大		袋	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 515	3131	牧区纯坊 精品黄油420克/瓶		瓶	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 516	3154	牧区纯坊 蒙牛 0添加有机原味软牛奶200克10盒/箱		盒	1	默认仓库	963	0.00	2026-06-20 06:09:27.475223	1
-517	3126	120克透明/奶条		盒	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
 518	844	希日嘎拉奶茶专用茶		盒	1	默认仓库	952	0.00	2026-06-20 06:09:27.475223	1
-519	980	新/青砖奶茶		盒	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
-520	829	奶豆腐/原味/中/科尔沁		张	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
 521	804	德吉酸奶/2斤装		瓶	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 522	3136	牧区纯坊 纯手工奶豆腐原味350克/块		块	1	默认仓库	976	0.00	2026-06-20 06:09:27.475223	1
 523	3110	樱桃味/干噎酸奶/散		斤	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
@@ -16860,21 +17506,23 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 533	3098	大奶豆腐/科尔沁		块	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
 534	3163	牧区纯坊 牧区奶糖 酸奶味 250克		袋	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
 535	3164	牧区纯坊 纯手工月饼 黄油渣馅350g/一袋		袋	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
-536	906	真空奶豆腐砖/原味		袋	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 537	909	蓝旗绿乳糖惠虹糖		袋	1	默认仓库	975	0.00	2026-06-20 06:09:27.475223	1
 538	902	乌日莫糖/散装		斤	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
-539	924	冻炒米/袋装		袋	1	默认仓库	958	0.00	2026-06-20 06:09:27.475223	1
 540	3090	手工棒棒糖		斤	1	默认仓库	989	0.00	2026-06-20 06:09:27.475223	1
 541	808	彩色奶圈圈/透明桶装		盒	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 542	892	那牧尔酸奶		瓶	1	默认仓库	978	0.00	2026-06-20 06:09:27.475223	1
 543	856	科尔沁/大奶豆腐		张	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 616	834	新年福字袋/小		袋	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
+520	829	奶豆腐/原味/中/科尔沁		张	1	默认仓库	981	0.00	2026-07-08 08:41:01.130831	1
+479	879	干肉奶茶			1	默认仓库	975	0.00	2026-06-30 15:52:39.418103	1
+478	888	河套奶粉			1	默认仓库	964	0.00	2026-07-01 08:07:56.626461	1
+536	906	真空奶豆腐砖/原味			1	默认仓库	990	0.00	2026-07-08 08:39:33.385647	1
+517	3126	120克透明/奶条			1	默认仓库	990	0.00	2026-07-19 14:43:51.229419	1
+519	980	新/青砖奶茶		盒	1	默认仓库	926	0.00	2026-07-21 02:55:52.219149	1
 544	3171	牧区纯坊 奶皮子有点卷青果味180克/一盒		盒	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
-545	896	奶皮月饼		小包	1	默认仓库	955	0.00	2026-06-20 06:09:27.475223	1
 546	1011	茶包		小包	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 547	1006	顺丰快递费		盒	1	默认仓库	950	0.00	2026-06-20 06:09:27.475223	1
 548	1005	泰成物流费		盒	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
-549	827	透明成品/奶锅巴/线下		盒	1	默认仓库	973	0.00	2026-06-20 06:09:27.475223	1
 550	3156	牧区纯坊 蒙古鲜奶制品奶条250克/袋		袋	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 551	3161	牧区纯坊 奶皮子有点卷220克 果味夹层/盒		盒	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
 552	1012	北方人工费		个	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
@@ -16882,22 +17530,18 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 554	987	采购样品专用/乳制品		斤	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 555	3152	牧区纯坊品牌 蒙古 黄油 100克/瓶		瓶	1	默认仓库	978	0.00	2026-06-20 06:09:27.475223	1
 556	852	牛肉干/散/孜然		斤	1	默认仓库	960	0.00	2026-06-20 06:09:27.475223	1
-557	3104	牧区酸奶/大		瓶	1	默认仓库	957	0.00	2026-06-20 06:09:27.475223	1
 558	3176	奶皮子粉麦西来普		袋	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
 559	890	红枣		斤	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 560	886	冻炒米/科尔沁		盒	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
-561	865	牛肉干/和希格图		袋	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 562	3102	小米原浆		瓶	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 563	985	甜味传统奶豆腐/袋装成品		袋	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
 564	810	乌日莫/奥特尔		散	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 565	977	新茶包人工费		盒	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
 566	3125	细奶条/原味/乌日汗		袋	1	默认仓库	971	0.00	2026-06-20 06:09:27.475223	1
 567	811	蒙古果子/格日勒		袋	1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
-568	809	10斤装/小米/绿色纸盒		盒	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
 569	814	奥都/真空奶豆腐		袋	1	默认仓库	969	0.00	2026-06-20 06:09:27.475223	1
 570	908	哈斯乌拉牛肉干500g原味		袋	1	默认仓库	996	0.00	2026-06-20 06:09:27.475223	1
 571	1002	封口机/真空		台	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
-572	926	大奶豆腐砖/1.2斤		个	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 573	3138	牧区纯坊 香酥奶皮子锅巴120克/一盒		盒	1	默认仓库	979	0.00	2026-06-20 06:09:27.475223	1
 574	861	五香瓜子		散	1	默认仓库	969	0.00	2026-06-20 06:09:27.475223	1
 575	853	牛肉干/散/香辣		斤	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
@@ -16911,7 +17555,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 583	3142	牧区纯坊 手工奶糖奶油炒米味500克/一袋		袋	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 584	818	四季红福		件	1	默认仓库	975	0.00	2026-06-20 06:09:27.475223	1
 585	3100	楚楚给		瓶	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
-586	830	小米/10斤/小袋/红嘴/阿旗		袋	1	默认仓库	970	0.00	2026-06-20 06:09:27.475223	1
 587	3151	牧区纯坊 乌日莫拌炒米180克/盒		盒	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
 588	821	天山原浆/大		瓶	1	默认仓库	999	0.00	2026-06-20 06:09:27.475223	1
 589	816	乌日汗大瓶酸奶		瓶	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
@@ -16921,42 +17564,44 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 593	860	普通瓜子		散	1	默认仓库	971	0.00	2026-06-20 06:09:27.475223	1
 594	847	乌日莫/袋装		袋	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
 595	903	盛宇燃奶豆腐/甜味		袋	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
-596	905	真空奶豆腐砖/甜味		袋	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 597	897	早餐包/那牧尔		袋	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 598	3118	烤奶花		斤	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
 599	973	精品/奶豆腐块儿/甜味/		袋	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 600	3113	明信片/带种子			1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 601	812	花形奶锅巴		散	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
-602	3107	科尔沁中奶豆腐		块	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 603	3121	科尔沁奶豆腐/条/片/原/甜		斤	1	默认仓库	976	0.00	2026-06-20 06:09:27.475223	1
 604	965	半成品/透明/冻炒米		盒	1	默认仓库	956	0.00	2026-06-20 06:09:27.475223	1
 605	3158	牧区纯坊 天山原浆40%vol/350ml/一瓶		瓶	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
 606	840	奶茶粉战粮		盒	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
 607	3101	老式软放饼		袋	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
-608	3117	车载香片		张	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
 609	3115	帆布包			1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
 610	927	小奶豆腐砖/1斤		个	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
 611	832	8元烤奶皮/成品		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
-612	907	风干牛肉500g大片		袋	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 613	1001	冷冻柜/冰箱		台	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
 614	917	机器乌日末液体		斤	1	默认仓库	960	0.00	2026-06-20 06:09:27.475223	1
 615	806	德吉酸奶/半斤		瓶	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
+561	865	牛肉干/和希格图			1	默认仓库	984	0.00	2026-06-30 15:52:39.42783	1
+568	809	10斤装/小米/绿色纸盒			1	默认仓库	970	0.00	2026-06-22 11:59:17.136005	1
+572	926	大奶豆腐砖/1.2斤			1	默认仓库	973	0.00	2026-07-08 08:39:33.402574	1
+612	907	风干牛肉500g大片			1	默认仓库	989	0.00	2026-07-02 08:14:10.835162	1
+557	3104	牧区酸奶/大		瓶	1	默认仓库	946	0.00	2026-07-12 06:01:21.809048	1
+545	896	奶皮月饼			1	默认仓库	954	0.00	2026-07-05 02:39:45.997583	1
+549	827	透明成品/奶锅巴/线下		盒	1	默认仓库	943	0.00	2026-07-19 14:29:27.477223	1
+596	905	真空奶豆腐砖/甜味			1	默认仓库	989	0.00	2026-07-20 07:10:52.288104	1
+602	3107	科尔沁中奶豆腐			1	默认仓库	958	0.00	2026-07-21 02:21:56.819876	1
+608	3117	车载香片			1	默认仓库	965	0.00	2026-07-21 04:41:08.783525	1
 617	831	果条/阿润		袋	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
-618	3178	佳赫蛋糕			1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 619	813	奶豆腐/超大/乌日汗		张	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
 620	3080	_TEST_IMPORT_DELETE_ME			1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 621	3166	红糖枸杞红枣奶茶450克/杯		个	1	默认仓库	958	0.00	2026-06-20 06:09:27.475223	1
 622	820	天山原浆/小		瓶	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
-623	894	酸奶月饼		小包	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
 624	868	16g青砖袋泡茶		袋	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 625	3099	饺子		斤	1	默认仓库	955	0.00	2026-06-20 06:09:27.475223	1
 626	947	展示用卡牌		张	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
 627	3155	牧区纯坊 纯手工奶豆腐微甜350克/块		块	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
 628	972	原味/散称/奶豆腐块儿		斤	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
-629	895	黄油渣月饼		小包	1	默认仓库	982	0.00	2026-06-20 06:09:27.475223	1
 630	904	盛宇燃奶豆腐/原味		袋	1	默认仓库	973	0.00	2026-06-20 06:09:27.475223	1
 631	3111	蒙古元素永生花			1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
-632	882	阿润月饼/黄油渣馅		袋	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
 633	3168	牧区纯坊 传统酸奶汤(查嘎)原味五斤大桶装		桶	1	默认仓库	982	0.00	2026-06-20 06:09:27.475223	1
 634	891	芝士奶豆腐月饼		小包	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 635	3105	奶豆腐/盒装		盒	1	默认仓库	963	0.00	2026-06-20 06:09:27.475223	1
@@ -16967,33 +17612,41 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 640	3157	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒		个	1	默认仓库	963	0.00	2026-06-20 06:09:27.475223	1
 641	848	10元组合糖		袋	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 642	3169	牧区纯坊 散装原味香瓜子500克/袋		袋	1	默认仓库	958	0.00	2026-06-20 06:09:27.475223	1
-643	915	黄油渣/盒		盒	1	默认仓库	969	0.00	2026-06-20 06:09:27.475223	1
 644	851	晴王糖葫芦		盒	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
-645	3095	牧区黄油小瓶		瓶	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 646	893	奶豆腐月饼		小包	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 647	871	小青砖茶砖		个	1	默认仓库	997	0.00	2026-06-20 06:09:27.475223	1
-648	3096	牧区黄油大瓶		瓶	1	默认仓库	994	0.00	2026-06-20 06:09:27.475223	1
-649	881	阿润月饼/奶皮子馅		袋	1	默认仓库	970	0.00	2026-06-20 06:09:27.475223	1
-650	3120	科尔沁袋装/——奶豆腐条/片/		袋	1	默认仓库	977	0.00	2026-06-20 06:09:27.475223	1
-651	883	阿润月饼/奶豆腐馅		袋	1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
 652	805	德吉酸奶/一斤装		瓶	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 653	3094	科尔沁糖（酸奶/嚼口/乌日末		斤	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 654	3159	牧区纯坊 纯手工月饼 五仁馅350克/一袋		袋	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 655	3172	牧区纯手工乌日莫（奶嚼口）原味500克		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
-656	880	阿润月饼/五仁馅		袋	1	默认仓库	975	0.00	2026-06-20 06:09:27.475223	1
 657	925	小/无印花/奶豆腐砖/1斤		个	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 658	869	青砖碎茶		袋	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
 659	3103	牧区酸奶小		瓶	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
-660	966	查嘎粉/小包装袋		小包	1	默认仓库	971	0.00	2026-06-20 06:09:27.475223	1
 661	864	礼盒/腰封		张	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
-662	825	故乡宝酸马奶		盒	1	默认仓库	953	0.00	2026-06-20 06:09:27.475223	1
 663	899	纯净/黄油/斤		瓶	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 664	3091	牛肉干/散称		斤	1	默认仓库	989	0.00	2026-06-20 06:09:27.475223	1
 665	3145	牧区纯坊 奶皮子有点卷草莓味180克/一盒		盒	1	默认仓库	951	0.00	2026-06-20 06:09:27.475223	1
-666	885	冻炒米/散装		斤	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 667	3108	品牌套装礼盒		套	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
-668	969	小/奶皮		张	1	默认仓库	953	0.00	2026-06-20 06:09:27.475223	1
 669	912	蓝旗绿乳糖水果		袋	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
+645	3095	牧区黄油小瓶			1	默认仓库	960	0.00	2026-06-22 03:33:13.635218	1
+670	3085	小米锅巴110g		桶	189	牧区纯坊门店	200	0.00	2026-06-22 07:32:29.527268	1
+586	830	小米/10斤/小袋/红嘴/阿旗			1	默认仓库	969	0.00	2026-06-22 10:17:37.904333	1
+662	825	故乡宝酸马奶			1	默认仓库	952	0.00	2026-06-22 10:42:24.501256	1
+656	880	阿润月饼/五仁馅			1	默认仓库	972	0.00	2026-07-19 14:01:28.188015	1
+539	924	冻炒米/袋装			1	默认仓库	957	0.00	2026-06-22 12:27:14.132537	1
+643	915	黄油渣/盒			1	默认仓库	967	0.00	2026-06-26 12:44:34.027042	1
+632	882	阿润月饼/黄油渣馅			1	默认仓库	970	0.00	2026-07-19 14:03:21.547779	1
+660	966	查嘎粉/小包装袋			1	默认仓库	970	0.00	2026-07-01 04:11:46.142992	1
+649	881	阿润月饼/奶皮子馅			1	默认仓库	968	0.00	2026-07-19 14:03:21.557099	1
+666	885	冻炒米/散装 500.0g			1	默认仓库	979	0.00	2026-07-03 02:17:01.110963	1
+629	895	黄油渣月饼			1	默认仓库	981	0.00	2026-07-05 02:39:46.015253	1
+651	883	阿润月饼/奶豆腐馅			1	默认仓库	957	0.00	2026-07-19 14:03:21.565594	1
+668	969	小/奶皮			1	默认仓库	952	0.00	2026-07-10 12:23:24.372286	1
+623	894	酸奶月饼			1	默认仓库	989	0.00	2026-07-12 12:01:44.854561	1
+648	3096	牧区黄油大瓶			1	默认仓库	992	0.00	2026-07-15 02:06:55.007235	1
+650	3120	科尔沁袋装/——奶豆腐条/片/			1	默认仓库	975	0.00	2026-07-19 04:13:36.925607	1
+618	3178	佳赫蛋糕			1	默认仓库	979	0.00	2026-07-19 14:03:21.573769	1
+671	3185	憨野 黄油/50克		瓶	189	牧区纯坊门店	1224	0.00	2026-07-19 14:36:56.615719	1
 \.
 
 
@@ -17368,6 +18021,7 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 471	CK202605305518	1		[{"num": 1, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}]	零售出库#1086	1	2026-05-30 12:37:10.173628	1
 472	CK202605302063	1		[{"num": 1, "goods_id": 865, "goods_name": "牛肉干/和希格图"}, {"num": 1, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}]	零售出库#1085	1	2026-05-30 12:37:13.684977	1
 473	CK202605302584	1		[{"num": 1, "goods_id": 902, "goods_name": "乌日莫糖/散装"}]	零售出库#1084	1	2026-05-30 12:37:19.971053	1
+1063	CK202606226246	1		[{"num": 0.5, "goods_id": 3118, "goods_name": "烤奶花 250.0g"}]	零售出库#1503	0	2026-06-22 06:40:00.545786	1
 474	CK202605302072	1		[{"num": 2, "goods_id": 857, "goods_name": "厚奶皮"}, {"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装"}]	零售出库#1083	1	2026-05-30 12:37:23.653733	1
 475	CK202605304725	1		[{"num": 2, "goods_id": 856, "goods_name": "科尔沁/大奶豆腐"}]	零售出库#1082	1	2026-05-30 12:37:26.716642	1
 476	CK202605308215	1		[{"num": 2, "goods_id": 927, "goods_name": "小奶豆腐砖/1斤"}]	零售出库#1081	1	2026-05-30 12:37:30.301398	1
@@ -17591,6 +18245,7 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 677	CK202605306051	1		[{"num": 1.2, "goods_id": 885, "goods_name": "冻炒米/散装"}, {"num": 2, "goods_id": 857, "goods_name": "厚奶皮"}]	零售出库#923	1	2026-05-30 12:46:22.816226	1
 678	CK202605309943	1		[{"num": 1, "goods_id": 917, "goods_name": "机器乌日末液体"}]	零售出库#921	1	2026-05-30 12:46:23.788195	1
 725	CK202605304064	1		[{"num": 2, "goods_id": 820, "goods_name": "天山原浆/小"}]	零售出库#900	1	2026-05-30 12:47:40.081298	1
+1066	CK202606222757	1		[{"num": 40, "goods_id": 3085, "goods_name": "小米锅巴110g"}]	零售出库#1506	1	2026-06-22 11:58:02.954446	1
 679	CK202605305057	1		[{"num": 1, "goods_id": 868, "goods_name": "16g青砖袋泡茶"}, {"num": 2, "goods_id": 880, "goods_name": "阿润月饼/五仁馅"}, {"num": 2, "goods_id": 821, "goods_name": "天山原浆/大"}]	零售出库#922	1	2026-05-30 12:46:25.7914	1
 680	CK202605304509	1		[{"num": 6, "goods_id": 857, "goods_name": "厚奶皮"}]	零售出库#920	1	2026-05-30 12:46:27.437486	1
 681	CK202605304040	1		[{"num": 1, "goods_id": 917, "goods_name": "机器乌日末液体"}]	零售出库#921	1	2026-05-30 12:46:28.778149	1
@@ -17711,6 +18366,7 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 818	CK202605303729	1		[{"num": 0.5, "goods_id": 902, "goods_name": "乌日莫糖/散装"}]	零售出库#852	1	2026-05-30 12:50:08.908839	1
 819	CK202605307876	1		[{"num": 1, "goods_id": 807, "goods_name": "蒙古果/格日勒/大"}]	零售出库#851	1	2026-05-30 12:50:10.533517	1
 820	CK202605306307	1		[{"num": 1, "goods_id": 807, "goods_name": "蒙古果/格日勒/大"}]	零售出库#851	1	2026-05-30 12:50:11.834429	1
+1064	CK202606224537	1		[{"num": 1, "goods_id": 830, "goods_name": "小米/10斤/小袋/红嘴/阿旗"}]	零售出库#1504	1	2026-06-22 10:17:37.431925	1
 794	CK202605301539	1		[{"num": 1, "goods_id": 836, "goods_name": "礼盒/2026"}, {"num": 3, "goods_id": 992, "goods_name": "奶果子/盒装/成品"}, {"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 2, "goods_id": 877, "goods_name": "憨野/奶锅巴/"}, {"num": 1, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 3, "goods_id": 935, "goods_name": "透明成品/奶皮卷/线下"}, {"num": 1, "goods_id": 808, "goods_name": "彩色奶圈圈"}, {"num": 2, "goods_id": 1014, "goods_name": "散装/甜味奶条"}]	零售出库#864	1	2026-05-30 12:49:32.256227	1
 795	CK202605305301	1		[{"num": 2, "goods_id": 923, "goods_name": "炒米/散装/硬口"}]	零售出库#863	1	2026-05-30 12:49:33.748962	1
 796	CK202605304053	1		[{"num": 2, "goods_id": 923, "goods_name": "炒米/散装/硬口"}]	零售出库#863	1	2026-05-30 12:49:35.220075	1
@@ -17777,6 +18433,8 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 863	CK202606075369	1		[{"num": 104, "goods_id": 1024, "goods_name": "标签/不干胶/奶条/甜味"}, {"num": 104, "goods_id": 1031, "goods_name": "专底盒/奶条"}, {"num": 104, "goods_id": 1033, "goods_name": "专袋/奶条"}, {"num": 104, "goods_id": 1014, "goods_name": "散装/甜味奶条"}]	BOM生产领料-甜味奶条成品	1	2026-06-07 09:34:59.672758	1
 864	CK202606071526	1		[{"num": 82, "goods_id": 1023, "goods_name": "标签/不干胶/奶条/原味"}, {"num": 82, "goods_id": 1031, "goods_name": "专底盒/奶条"}, {"num": 82, "goods_id": 1033, "goods_name": "专袋/奶条"}, {"num": 82, "goods_id": 1015, "goods_name": "散装/原味奶条"}]	BOM生产领料-原味奶条成品	1	2026-06-07 09:35:01.723609	1
 865	CK202606078936	1		[{"num": 135, "goods_id": 991, "goods_name": "奶果子/散装"}, {"num": 9, "goods_id": 1030, "goods_name": "专外盒/奶果子"}, {"num": 9, "goods_id": 1029, "goods_name": "专内盒/奶果子"}, {"num": 135, "goods_id": 1026, "goods_name": "专内袋/奶果子"}, {"num": 9, "goods_id": 990, "goods_name": "奶果子/专用塑膜袋"}, {"num": 9, "goods_id": 1020, "goods_name": "标签/不干胶/奶果子"}]	BOM生产领料-奶果子/盒装/成品	1	2026-06-07 09:35:03.754149	1
+1067	CK202606225679	1		[{"num": 2, "goods_id": 809, "goods_name": "10斤装/小米/绿色纸盒"}]	零售出库#1507	1	2026-06-22 11:59:16.673747	1
+1099	CK202607084086	1		[{"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}]	零售出库#1538	1	2026-07-08 03:55:13.333331	1
 866	CK202606072909	1		[{"num": 1027, "price": 0, "goods_id": 999, "goods_sn": "SP0000035", "unit_name": "张", "goods_name": "茶专用/不干胶/标签"}, {"num": 1027, "price": 0, "goods_id": 995, "goods_sn": "SP0000039", "unit_name": "袋", "goods_name": "茶专用/热缩膜"}, {"num": 1027, "price": 0, "goods_id": 998, "goods_sn": "SP0000036", "unit_name": "张", "goods_name": "茶专用/硫酸纸"}, {"num": 1027, "price": 0, "goods_id": 1000, "goods_sn": "SP0000034", "unit_name": "个", "goods_name": "木勺"}, {"num": 1027, "price": 0, "goods_id": 1009, "goods_sn": "SP0000025", "unit_name": "张", "goods_name": "专盒/青砖奶茶外盒"}, {"num": 16432, "price": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "个", "goods_name": "奶油球"}, {"num": 16432, "price": 0, "goods_id": 1011, "goods_sn": "SP0000023", "unit_name": "小包", "goods_name": "茶包"}, {"num": 16432, "price": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "小包", "goods_name": "茶专用/盐包"}]	BOM生产领料-青砖奶茶成品-第一批-旧标签	1	2026-06-07 10:48:06.882566	1
 869	CK202606079896	1		[{"num": 43, "price": 0, "goods_id": 978, "goods_sn": "SP0000056", "unit_name": "张", "goods_name": "新茶专用标签纸"}, {"num": 43, "price": 0, "goods_id": 995, "goods_sn": "SP0000039", "unit_name": "袋", "goods_name": "茶专用/热缩膜"}, {"num": 43, "price": 0, "goods_id": 998, "goods_sn": "SP0000036", "unit_name": "张", "goods_name": "茶专用/硫酸纸"}, {"num": 43, "price": 0, "goods_id": 1000, "goods_sn": "SP0000034", "unit_name": "个", "goods_name": "木勺"}, {"num": 43, "price": 0, "goods_id": 1009, "goods_sn": "SP0000025", "unit_name": "张", "goods_name": "专盒/青砖奶茶外盒"}, {"num": 688, "price": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "个", "goods_name": "奶油球"}, {"num": 688, "price": 0, "goods_id": 1011, "goods_sn": "SP0000023", "unit_name": "小包", "goods_name": "茶包"}]	BOM生产领料-暂用/茶 新旧更替	1	2026-06-07 11:11:19.981646	1
 868	CK202606078531	1		[{"num": 659, "price": 0, "goods_id": 978, "goods_sn": "SP0000056", "unit_name": "张", "goods_name": "新茶专用标签纸"}, {"num": 659, "price": 0, "goods_id": 995, "goods_sn": "SP0000039", "unit_name": "袋", "goods_name": "茶专用/热缩膜"}, {"num": 659, "price": 0, "goods_id": 998, "goods_sn": "SP0000036", "unit_name": "张", "goods_name": "茶专用/硫酸纸"}, {"num": 659, "price": 0, "goods_id": 1000, "goods_sn": "SP0000034", "unit_name": "个", "goods_name": "木勺"}, {"num": 659, "price": 0, "goods_id": 1009, "goods_sn": "SP0000025", "unit_name": "张", "goods_name": "专盒/青砖奶茶外盒"}, {"num": 10544, "price": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "个", "goods_name": "奶油球"}, {"num": 10544, "price": 0, "goods_id": 1011, "goods_sn": "SP0000023", "unit_name": "小包", "goods_name": "茶包"}, {"num": 10544, "price": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "小包", "goods_name": "茶专用/盐包"}]	BOM生产领料-青砖奶茶成品-第二批-新标签	1	2026-06-07 11:11:18.114027	1
@@ -17914,6 +18572,7 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 1023	CK202606132544	0		[]	拼多多出库#401	1	2026-06-13 06:13:16.776022	1
 1024	CK202606134014	0		[]	拼多多出库#402	1	2026-06-13 06:13:19.655881	1
 1058	CK202606194558	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 2, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}]	Retail outbound#1498	1	2026-06-19 09:28:32.368928	1
+1061	CK202606225716	1		[{"num": 1, "goods_id": 3095, "goods_name": "牧区黄油小瓶"}, {"num": 1, "goods_id": 867, "goods_name": "5g/青砖袋泡茶"}, {"num": 0.5, "goods_id": 860, "goods_name": "普通瓜子"}]	Retail outbound#1501	0	2026-06-22 03:33:13.332159	1
 1011	CK202606131164	0		[{"num": 1, "spec": "", "price": 330, "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "goods_name": "冻炒米成品盒"}, {"num": 1, "spec": "", "price": 42, "goods_id": 985, "goods_sn": "SP0000049", "tax_rate": 0, "unit_name": "袋", "goods_name": "甜味传统奶豆腐/袋装成品"}, {"num": 1, "spec": "", "price": 42, "goods_id": 988, "goods_sn": "SP0000046", "tax_rate": 0, "unit_name": "袋", "goods_name": "品牌传统奶豆腐/袋装成品"}, {"num": 1, "spec": "", "price": 36, "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "goods_name": "冻炒米成品盒"}]	微信小店出库#389	1	2026-06-13 05:42:32.196979	1
 1012	CK202606139879	0		[{"num": 2, "spec": "", "price": 55, "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "goods_name": "新/青砖奶茶"}]	微信小店出库#390	1	2026-06-13 05:42:38.961725	1
 1013	CK202606132185	0		[{"num": 1, "spec": "", "price": 58, "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 1, "spec": "", "price": 36, "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "goods_name": "冻炒米成品盒"}]	微信小店出库#391	1	2026-06-13 05:42:44.931666	1
@@ -17927,6 +18586,9 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 1032	CK202606144064	1		[{"num": 2, "goods_id": 836, "goods_name": "礼盒/2026"}, {"num": 2, "goods_id": 809, "goods_name": "10斤装/小米/绿色纸盒"}, {"num": 2, "goods_id": 874, "goods_name": "黄金纬度/牛肉干/成品袋"}, {"num": 2, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 2, "goods_id": 877, "goods_name": "憨野/奶锅巴/"}, {"num": 2, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 2, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 2, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}]	零售出库#1475	1	2026-06-14 09:51:53.545394	1
 1033	CK202606147772	1		[{"num": 4, "goods_id": 836, "goods_name": "礼盒/2026"}, {"num": 2, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 2, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 2, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 2, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 2, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}, {"num": 2, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}, {"num": 2, "goods_id": 936, "goods_name": "透明成品/奶条/甜味/线下"}]	零售出库#1476	1	2026-06-14 10:03:31.35893	1
 1059	CK202606207171	1		[{"num": 1, "goods_id": 907, "goods_name": "风干牛肉500g大片"}, {"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	Retail outbound#1499	1	2026-06-20 04:22:40.269393	1
+1062	CK202606224805	1		[{"num": 1, "goods_id": 901, "goods_name": "手工白花炒米/散装 500.0g"}]	零售出库#1502	1	2026-06-22 06:38:05.253994	1
+1065	CK202606223849	1		[{"num": 1, "goods_id": 825, "goods_name": "故乡宝酸马奶"}, {"num": 3, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}, {"num": 5, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}]	零售出库#1505	1	2026-06-22 10:42:23.982998	1
+1068	CK202606223235	1		[{"num": 1, "goods_id": 935, "goods_name": "透明成品/奶皮卷/线下"}]	零售出库#1508	1	2026-06-22 12:26:31.552818	1
 1034	CK202606146426	1		[{"num": 5, "goods_id": 836, "goods_name": "礼盒/2026"}, {"num": 5, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 10, "goods_id": 882, "goods_name": "阿润月饼/黄油渣馅"}, {"num": 10, "goods_id": 880, "goods_name": "阿润月饼/五仁馅"}, {"num": 8, "goods_id": 899, "goods_name": "纯净/黄油/斤"}, {"num": 5, "goods_id": 849, "goods_name": "15元组合糖"}, {"num": 3, "goods_id": 885, "goods_name": "冻炒米/散装 1500.0g"}, {"num": 3, "goods_id": 835, "goods_name": "奶果子/小包装/成品 1500.0g"}, {"num": 2, "goods_id": 823, "goods_name": "黄油/中瓶"}]	零售出库#1477	1	2026-06-14 10:18:27.929424	1
 1035	CK202606153362	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1.6, "goods_id": 920, "goods_name": "手工乌日末液体 800.0g"}]	零售出库#1478	1	2026-06-15 04:01:24.599452	1
 1036	CK202606153392	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1.6, "goods_id": 920, "goods_name": "手工乌日末液体 800.0g"}]	零售出库#1478	1	2026-06-15 04:06:55.863645	1
@@ -17951,6 +18613,75 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 1055	CK202606186726	1		[{"num": 20, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 986, "goods_name": "精品/奶豆腐块儿/原味"}]	零售出库#1495	1	2026-06-18 03:38:04.625275	1
 1056	CK202606188837	1		[{"num": 2.377, "goods_id": 901, "goods_name": "手工白花炒米/散装 1188.5g"}, {"num": 0.93, "goods_id": 920, "goods_name": "手工乌日末液体 465.0g"}]	零售出库#1496	1	2026-06-18 09:51:34.536181	1
 1057	CK202606192036	1		[{"num": 6, "goods_id": 879, "goods_name": "干肉奶茶"}]	Retail outbound#1497	1	2026-06-19 09:26:51.188942	1
+1069	CK202606228691	1		[{"num": 1, "goods_id": 915, "goods_name": "黄油渣/盒"}, {"num": 0.95, "goods_id": 920, "goods_name": "手工乌日末液体 475.0g"}, {"num": 1, "goods_id": 924, "goods_name": "冻炒米/袋装"}]	零售出库#1509	1	2026-06-22 12:27:13.658477	1
+1070	CK202606227736	1		[{"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 1, "goods_id": 849, "goods_name": "15元组合糖"}, {"num": 0.32, "goods_id": 3094, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 160.0g"}]	零售出库#1510	0	2026-06-22 12:55:06.264147	1
+1071	CK202606226381	1		[{"num": 0.95, "goods_id": 920, "goods_name": "手工乌日末液体 475.0g"}]	零售出库#1511	1	2026-06-22 13:04:33.561068	1
+1072	CK202606229061	1		[{"num": 1, "goods_id": 3104, "goods_name": "牧区酸奶/大"}, {"num": 1.4, "goods_id": 920, "goods_name": "手工乌日末液体 700.0g"}]	零售出库#1512	1	2026-06-22 13:30:54.907322	1
+1073	CK202606225352	1		[{"num": 1, "goods_id": 931, "goods_name": "炒米粉/aag"}, {"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 1, "goods_id": 916, "goods_name": "脆奶条/散装/科尔沁 500.0g"}]	零售出库#1513	1	2026-06-22 14:00:35.156609	1
+1074	CK202606233590	1		[{"num": 2, "goods_id": 906, "goods_name": "真空奶豆腐砖/原味"}]	零售出库#1514	1	2026-06-23 14:28:49.754323	1
+1075	CK202606241921	1		[{"num": 1, "goods_id": 885, "goods_name": "冻炒米/散装 500.0g"}, {"num": 1, "goods_id": 901, "goods_name": "手工白花炒米/散装 500.0g"}, {"num": 1, "goods_id": 3104, "goods_name": "牧区酸奶/大"}, {"num": 0.1953, "goods_id": 3091, "goods_name": "牛肉干/散称 97.7g"}]	零售出库#1515	0	2026-06-24 11:42:32.126386	1
+1085	CK202606305504	1		[{"num": 2, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}, {"num": 0.0469, "goods_id": 3091, "goods_name": "牛肉干/散称 23.4g"}]	零售出库#1525	0	2026-06-30 04:30:14.573794	1
+1077	CK202606267402	1		[{"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}]	零售出库#1517	1	2026-06-26 08:41:14.340715	1
+1078	CK202606265645	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1518	1	2026-06-26 12:44:18.583547	1
+1079	CK202606265859	1		[{"num": 1, "goods_id": 915, "goods_name": "黄油渣/盒"}]	零售出库#1519	1	2026-06-26 12:44:33.607505	1
+1080	CK202606285148	1		[{"num": 2, "goods_id": 3104, "goods_name": "牧区酸奶/大"}]	零售出库#1520	1	2026-06-28 02:46:16.13812	1
+1081	CK202606287954	1		[{"num": 30, "goods_id": 901, "goods_name": "手工白花炒米/散装 15000.0g"}]	零售出库#1521	1	2026-06-28 06:12:42.628119	1
+1082	CK202606292935	1		[{"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 920, "goods_name": "手工乌日末液体 1000.0g"}]	零售出库#1522	1	2026-06-29 01:33:03.495458	1
+1083	CK202606291221	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1523	1	2026-06-29 01:36:48.782837	1
+1084	CK202606297204	1		[{"num": 2, "goods_id": 920, "goods_name": "手工乌日末液体 1000.0g"}, {"num": 1, "goods_id": 3096, "goods_name": "牧区黄油大瓶"}]	零售出库#1524	1	2026-06-29 11:01:43.405194	1
+1086	CK202606306354	1		[{"num": 4, "goods_id": 3181, "goods_name": "牛奶浓"}, {"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 2, "goods_id": 879, "goods_name": "干肉奶茶"}, {"num": 1, "goods_id": 865, "goods_name": "牛肉干/和希格图"}]	零售出库#1526	1	2026-06-30 15:52:38.786536	1
+1087	CK202607018115	1		[{"num": 1, "goods_id": 3104, "goods_name": "牧区酸奶/大"}, {"num": 1, "goods_id": 966, "goods_name": "查嘎粉/小包装袋"}]	零售出库#1527	1	2026-07-01 04:11:45.59279	1
+1088	CK202607016785	1		[{"num": 0.2094, "goods_id": 3091, "goods_name": "牛肉干/散称 104.7g"}]	零售出库#1528	0	2026-07-01 06:21:08.586536	1
+1089	CK202607015490	1		[{"num": 2, "goods_id": 888, "goods_name": "河套奶粉"}]	零售出库#1529	1	2026-07-01 08:07:56.090809	1
+1090	CK202607025442	1		[{"num": 1, "goods_id": 907, "goods_name": "风干牛肉500g大片"}, {"num": 1, "goods_id": 3120, "goods_name": "科尔沁袋装/——奶豆腐条/片/"}]	零售出库#1530	1	2026-07-02 08:14:10.364016	1
+1091	CK202607037500	1		[{"num": 1, "goods_id": 3104, "goods_name": "牧区酸奶/大"}, {"num": 1, "goods_id": 885, "goods_name": "冻炒米/散装 500.0g"}, {"num": 1, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}]	零售出库#1531	1	2026-07-03 02:17:00.564057	1
+1092	CK202607032876	1		[{"num": 1, "goods_id": 916, "goods_name": "脆奶条/散装/科尔沁 500.0g"}]	零售出库#1532	1	2026-07-03 02:51:46.258802	1
+1093	CK202607041220	1		[{"num": 1, "goods_id": 829, "goods_name": "奶豆腐/原味/中/科尔沁"}]	零售出库#1533	1	2026-07-04 08:50:22.240672	1
+1094	CK202607043462	1		[{"num": 2, "goods_id": 920, "goods_name": "手工乌日末液体 1000.0g"}]	零售出库#1534	1	2026-07-04 12:51:55.114393	1
+1096	CK202607051869	1		[{"num": 1, "goods_id": 896, "goods_name": "奶皮月饼"}, {"num": 1, "goods_id": 895, "goods_name": "黄油渣月饼"}]	Retail Sale Out#1535	1	2026-07-05 02:39:45.505661	1
+1097	CK202607068792	1		[{"num": 1.0714, "goods_id": 901, "goods_name": "手工白花炒米/散装 535.7g"}, {"num": 1, "goods_id": 931, "goods_name": "炒米粉/aag"}]	零售出库#1536	1	2026-07-06 13:49:58.460701	1
+1098	CK202607086362	1		[{"num": 10, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 2, "goods_id": 1014, "goods_name": "散装/甜味奶条 1000.0g"}]	零售出库#1537	1	2026-07-08 03:53:58.901961	1
+1100	CK202607084659	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1, "goods_id": 906, "goods_name": "真空奶豆腐砖/原味"}, {"num": 1, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}]	零售出库#1539	1	2026-07-08 08:39:32.86981	1
+1101	CK202607081334	1		[{"num": 3, "goods_id": 920, "goods_name": "手工乌日末液体 1500.0g"}, {"num": 0.672, "goods_id": 885, "goods_name": "冻炒米/散装 336.0g"}]	零售出库#1540	0	2026-07-08 10:08:17.480853	1
+1102	CK202607098404	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1541	1	2026-07-09 10:36:16.212163	1
+1103	CK202607103748	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1542	1	2026-07-10 02:33:13.275058	1
+1104	CK202607106092	1		[{"num": 4, "goods_id": 901, "goods_name": "手工白花炒米/散装 2000.0g"}]	零售出库#1543	1	2026-07-10 03:19:41.25879	1
+1105	CK202607105348	1		[{"num": 1, "goods_id": 1014, "goods_name": "散装/甜味奶条 500.0g"}, {"num": 1, "goods_id": 894, "goods_name": "酸奶月饼"}, {"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1544	1	2026-07-10 10:54:07.127521	1
+1106	CK202607101088	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 1, "goods_id": 969, "goods_name": "小/奶皮"}]	零售出库#1545	1	2026-07-10 12:23:23.697704	1
+1107	CK202607102716	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1546	1	2026-07-10 12:23:42.257999	1
+1108	CK202607122068	1		[{"num": 2, "goods_id": 923, "goods_name": "海丰炒米/散装/硬口/ 1000.0g"}]	零售出库#1547	1	2026-07-12 04:24:42.507397	1
+1109	CK202607123026	1		[{"num": 3, "goods_id": 901, "goods_name": "手工白花炒米/散装 1500.0g"}]	零售出库#1548	1	2026-07-12 04:25:16.810338	1
+1110	CK202607129296	1		[{"num": 0.9, "goods_id": 920, "goods_name": "手工乌日末液体 450.0g"}]	零售出库#1549	1	2026-07-12 04:25:44.056893	1
+1111	CK202607122514	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}, {"num": 1, "goods_id": 901, "goods_name": "手工白花炒米/散装 500.0g"}]	零售出库#1550	1	2026-07-12 04:26:33.963804	1
+1112	CK202607127771	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1551	1	2026-07-12 04:48:35.2626	1
+1113	CK202607128669	1		[{"num": 0.6, "goods_id": 920, "goods_name": "手工乌日末液体 300.0g"}]	零售出库#1552	1	2026-07-12 05:46:56.37101	1
+1114	CK202607121429	1		[{"num": 2, "goods_id": 894, "goods_name": "酸奶月饼"}, {"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}, {"num": 0.5, "goods_id": 3094, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 250.0g"}]	零售出库#1553	0	2026-07-12 12:01:44.286628	1
+1115	CK202607139603	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1554	1	2026-07-13 03:08:19.227793	1
+1116	CK202607136151	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1555	1	2026-07-13 09:09:41.744413	1
+1117	CK202607144032	1		[{"num": 1.4286, "goods_id": 901, "goods_name": "手工白花炒米/散装 714.3g"}]	零售出库#1556	1	2026-07-14 02:11:44.750795	1
+1118	CK202607157705	1		[{"num": 1, "goods_id": 3096, "goods_name": "牧区黄油大瓶"}]	零售出库#1557	1	2026-07-15 02:06:54.486511	1
+1119	CK202607157358	1		[{"num": 0.5, "goods_id": 967, "goods_name": "查嘎/乳清"}]	零售出库#1558	0	2026-07-15 02:08:46.504221	1
+1120	CK202607156594	1		[{"num": 3, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}]	零售出库#1559	1	2026-07-15 03:48:49.560812	1
+1121	CK202607157003	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 1, "goods_id": 970, "goods_name": "热奶豆腐碗"}]	零售出库#1560	1	2026-07-15 15:41:45.217301	1
+1122	CK202607161636	1		[{"num": 0.2, "goods_id": 3088, "goods_name": "黑芝麻丸5㎏ 100.0g"}, {"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1561	0	2026-07-16 11:18:52.055589	1
+1123	CK202607162072	1		[{"num": 1, "goods_id": 967, "goods_name": "查嘎/乳清"}]	零售出库#1562	1	2026-07-16 11:19:26.879459	1
+1124	CK202607164511	1		[{"num": 4, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 0.2, "goods_id": 3088, "goods_name": "黑芝麻丸5㎏ 100.0g"}]	零售出库#1563	0	2026-07-16 12:05:20.451374	1
+1125	CK202607179094	1		[{"num": 10, "goods_id": 970, "goods_name": "热奶豆腐碗"}]	零售出库#1564	1	2026-07-17 11:00:57.39386	1
+1126	CK202607185039	1		[{"num": 10.001, "goods_id": 895, "goods_name": "黄油渣月饼"}, {"num": 4, "goods_id": 3085, "goods_name": "小米锅巴110g"}, {"num": 2, "goods_id": 3178, "goods_name": "佳赫蛋糕"}, {"num": 1.5333, "goods_id": 981, "goods_name": "烤奶皮 766.7g"}]	零售出库#1565	0	2026-07-18 02:44:31.421934	1
+1127	CK202607189986	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1566	1	2026-07-18 06:40:00.457603	1
+1128	CK202607195547	1		[{"num": 1, "goods_id": 3120, "goods_name": "科尔沁袋装/——奶豆腐条/片/"}, {"num": 1, "goods_id": 970, "goods_name": "热奶豆腐碗"}]	零售出库#1567	1	2026-07-19 04:13:36.407772	1
+1129	CK202607191766	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1568	1	2026-07-19 13:59:40.659147	1
+1130	CK202607197109	1		[{"num": 1, "goods_id": 880, "goods_name": "阿润月饼/五仁馅"}, {"num": 2.9, "goods_id": 1014, "goods_name": "散装/甜味奶条 1450.0g"}]	零售出库#1569	1	2026-07-19 14:00:55.223092	1
+1131	CK202607195593	1		[{"num": 2, "goods_id": 880, "goods_name": "阿润月饼/五仁馅"}, {"num": 2, "goods_id": 882, "goods_name": "阿润月饼/黄油渣馅"}]	零售出库#1570	1	2026-07-19 14:01:27.540476	1
+1132	CK202607198853	1		[{"num": 2, "goods_id": 882, "goods_name": "阿润月饼/黄油渣馅"}, {"num": 2, "goods_id": 881, "goods_name": "阿润月饼/奶皮子馅"}, {"num": 2, "goods_id": 883, "goods_name": "阿润月饼/奶豆腐馅"}, {"num": 2, "goods_id": 3178, "goods_name": "佳赫蛋糕"}, {"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 0.3, "goods_id": 3088, "goods_name": "黑芝麻丸5㎏ 150.0g"}, {"num": 0.96, "goods_id": 3088, "goods_name": "黑芝麻丸5㎏ 480.0g"}]	零售出库#1571	0	2026-07-19 14:03:20.906049	1
+1133	CK202607196155	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}]	零售出库#1572	1	2026-07-19 14:41:02.800304	1
+1134	CK202607193087	1		[{"num": 3, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 3126, "goods_name": "120克透明/奶条"}, {"num": 4, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 5, "goods_id": 877, "goods_name": "憨野/奶锅巴/"}, {"num": 2, "goods_id": 3183, "goods_name": "阿旗礼袋蒙文"}]	零售出库#1573	1	2026-07-19 14:43:50.381057	1
+1135	CK202607204046	1		[{"num": 2, "goods_id": 968, "goods_name": "大/奶皮"}, {"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1574	1	2026-07-20 02:54:24.517682	1
+1136	CK202607201653	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}, {"num": 1.3333, "goods_id": 923, "goods_name": "海丰炒米/散装/硬口/ 666.7g"}, {"num": 1, "goods_id": 929, "goods_name": "白砂糖"}]	零售出库#1575	1	2026-07-20 05:11:18.289459	1
+1137	CK202607206529	1		[{"num": 1, "goods_id": 905, "goods_name": "真空奶豆腐砖/甜味"}]	零售出库#1576	1	2026-07-20 07:10:51.761375	1
+1138	CK202607202826	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}, {"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 1, "goods_id": 932, "goods_name": "炒米海丰袋装"}]	零售出库#1577	1	2026-07-20 13:34:00.720581	1
+1139	CK202607216710	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1578	1	2026-07-21 02:21:56.297725	1
+1140	CK202607217202	1		[{"num": 1, "goods_id": 3184, "goods_name": "阿旗冰箱贴"}, {"num": 1, "goods_id": 3117, "goods_name": "车载香片"}, {"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}]	零售出库#1579	1	2026-07-21 04:41:08.128784	1
 \.
 
 
@@ -18123,6 +18854,22 @@ COPY trial.customer_levels (id, name, discount, commission_rate, sort, created_a
 --
 
 COPY trial.depts (id, name, parent_id, sort, status, created_at, shop_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_goods; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_goods (id, distributor_id, goods_id, status, sort, custom_price, commission_rate, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_materials; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_materials (id, title, type, content, file_url, goods_id, scope, distributor_id, status, sort, created_at, updated_at) FROM stdin;
 \.
 
 
@@ -18467,6 +19214,48 @@ COPY trial.mini_coupons (id, name, type, discount_value, min_order, validity_day
 533	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
 534	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
 535	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+548	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+549	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+550	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+551	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+552	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+553	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+554	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+555	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+556	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+557	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+558	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+559	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 13:41:06.766116	\N	2026-06-22 13:41:06.766116	0
+566	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+567	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+568	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+569	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+570	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+571	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-22 14:06:42.297296	\N	2026-06-22 14:06:42.297296	0
+578	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+579	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+580	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+581	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+582	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+583	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+590	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+591	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+592	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+593	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+594	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+595	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+596	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+597	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+598	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+599	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+600	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+601	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+602	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+603	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+604	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+605	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+606	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+607	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
 \.
 
 
@@ -18590,7 +19379,7 @@ COPY trial.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_at
 -- Data for Name: mini_users; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.mini_users (id, openid, phone, name, created_at, deleted_at, points, total_spent, level, vip_expire_at, birth_month, birth_day) FROM stdin;
+COPY trial.mini_users (id, openid, phone, name, created_at, deleted_at, points, total_spent, level, vip_expire_at, birth_month, birth_day, distributor_code) FROM stdin;
 \.
 
 
@@ -18903,7 +19692,7 @@ COPY trial.warehouses (id, name, address, remark, status, create_time, shop_id) 
 -- Name: admins_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.admins_id_seq', 629, true);
+SELECT pg_catalog.setval('public.admins_id_seq', 641, true);
 
 
 --
@@ -18953,6 +19742,20 @@ SELECT pg_catalog.setval('public.customer_levels_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('public.depts_id_seq', 50, true);
+
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.distributor_goods_id_seq', 1, false);
+
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.distributor_materials_id_seq', 1, false);
 
 
 --
@@ -19029,7 +19832,7 @@ SELECT pg_catalog.setval('public.goods_cate_id_seq', 424, true);
 -- Name: goods_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.goods_id_seq', 3178, true);
+SELECT pg_catalog.setval('public.goods_id_seq', 3186, true);
 
 
 --
@@ -19043,7 +19846,7 @@ SELECT pg_catalog.setval('public.goods_spec_id_seq', 247, true);
 -- Name: goods_unit_convert_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.goods_unit_convert_id_seq', 595, true);
+SELECT pg_catalog.setval('public.goods_unit_convert_id_seq', 662, true);
 
 
 --
@@ -19064,14 +19867,14 @@ SELECT pg_catalog.setval('public.jobs_id_seq', 50, true);
 -- Name: ledger_flow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.ledger_flow_id_seq', 1649, true);
+SELECT pg_catalog.setval('public.ledger_flow_id_seq', 1774, true);
 
 
 --
 -- Name: mini_coupons_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_coupons_id_seq', 541, true);
+SELECT pg_catalog.setval('public.mini_coupons_id_seq', 607, true);
 
 
 --
@@ -19120,7 +19923,7 @@ SELECT pg_catalog.setval('public.mini_refunds_id_seq', 2, true);
 -- Name: mini_reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_reviews_id_seq', 4156, true);
+SELECT pg_catalog.setval('public.mini_reviews_id_seq', 4640, true);
 
 
 --
@@ -19162,7 +19965,7 @@ SELECT pg_catalog.setval('public.mini_video_likes_id_seq', 1, false);
 -- Name: mini_videos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_videos_id_seq', 2, true);
+SELECT pg_catalog.setval('public.mini_videos_id_seq', 3, true);
 
 
 --
@@ -19183,7 +19986,7 @@ SELECT pg_catalog.setval('public.operation_logs_id_seq', 1000, true);
 -- Name: pay_receipt_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.pay_receipt_id_seq', 825, true);
+SELECT pg_catalog.setval('public.pay_receipt_id_seq', 845, true);
 
 
 --
@@ -19197,7 +20000,7 @@ SELECT pg_catalog.setval('public.prepay_record_id_seq', 50, true);
 -- Name: procure_inhouse_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.procure_inhouse_id_seq', 508, true);
+SELECT pg_catalog.setval('public.procure_inhouse_id_seq', 529, true);
 
 
 --
@@ -19218,7 +20021,7 @@ SELECT pg_catalog.setval('public.procure_return_id_seq', 50, true);
 -- Name: purchase_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.purchase_order_id_seq', 602, true);
+SELECT pg_catalog.setval('public.purchase_order_id_seq', 624, true);
 
 
 --
@@ -19239,7 +20042,7 @@ SELECT pg_catalog.setval('public.retail_members_id_seq', 10, true);
 -- Name: retail_orders_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.retail_orders_id_seq', 1500, true);
+SELECT pg_catalog.setval('public.retail_orders_id_seq', 1579, true);
 
 
 --
@@ -19260,21 +20063,21 @@ SELECT pg_catalog.setval('public.retail_stores_id_seq', 1, true);
 -- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.roles_id_seq', 13, true);
+SELECT pg_catalog.setval('public.roles_id_seq', 14, true);
 
 
 --
 -- Name: sale_contracts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_contracts_id_seq', 417, true);
+SELECT pg_catalog.setval('public.sale_contracts_id_seq', 421, true);
 
 
 --
 -- Name: sale_customers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_customers_id_seq', 63, true);
+SELECT pg_catalog.setval('public.sale_customers_id_seq', 64, true);
 
 
 --
@@ -19295,7 +20098,7 @@ SELECT pg_catalog.setval('public.sale_offers_id_seq', 51, true);
 -- Name: sale_out_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_out_order_id_seq', 253, true);
+SELECT pg_catalog.setval('public.sale_out_order_id_seq', 257, true);
 
 
 --
@@ -19344,14 +20147,14 @@ SELECT pg_catalog.setval('public.stock_checks_id_seq', 51, true);
 -- Name: stock_flow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_flow_id_seq', 3940, true);
+SELECT pg_catalog.setval('public.stock_flow_id_seq', 4068, true);
 
 
 --
 -- Name: stock_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_inventory_id_seq', 669, true);
+SELECT pg_catalog.setval('public.stock_inventory_id_seq', 671, true);
 
 
 --
@@ -19365,7 +20168,7 @@ SELECT pg_catalog.setval('public.stock_other_in_id_seq', 122, true);
 -- Name: stock_other_out_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_other_out_id_seq', 1060, true);
+SELECT pg_catalog.setval('public.stock_other_out_id_seq', 1140, true);
 
 
 --
@@ -19400,7 +20203,7 @@ SELECT pg_catalog.setval('public.user_signin_id_seq', 1, false);
 -- Name: warehouses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.warehouses_id_seq', 547, true);
+SELECT pg_catalog.setval('public.warehouses_id_seq', 558, true);
 
 
 --
@@ -19457,6 +20260,20 @@ SELECT pg_catalog.setval('trial.customer_levels_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('trial.depts_id_seq', 1, false);
+
+
+--
+-- Name: distributor_goods_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.distributor_goods_id_seq', 1, false);
+
+
+--
+-- Name: distributor_materials_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.distributor_materials_id_seq', 1, false);
 
 
 --
@@ -19978,6 +20795,30 @@ ALTER TABLE ONLY public.customer_levels
 
 ALTER TABLE ONLY public.depts
     ADD CONSTRAINT depts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_goods distributor_goods_distributor_id_goods_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_goods
+    ADD CONSTRAINT distributor_goods_distributor_id_goods_id_key UNIQUE (distributor_id, goods_id);
+
+
+--
+-- Name: distributor_goods distributor_goods_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_goods
+    ADD CONSTRAINT distributor_goods_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_materials distributor_materials_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_materials
+    ADD CONSTRAINT distributor_materials_pkey PRIMARY KEY (id);
 
 
 --
@@ -20666,6 +21507,30 @@ ALTER TABLE ONLY trial.customer_levels
 
 ALTER TABLE ONLY trial.depts
     ADD CONSTRAINT depts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_goods distributor_goods_distributor_id_goods_id_key; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_goods
+    ADD CONSTRAINT distributor_goods_distributor_id_goods_id_key UNIQUE (distributor_id, goods_id);
+
+
+--
+-- Name: distributor_goods distributor_goods_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_goods
+    ADD CONSTRAINT distributor_goods_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_materials distributor_materials_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_materials
+    ADD CONSTRAINT distributor_materials_pkey PRIMARY KEY (id);
 
 
 --
@@ -21538,5 +22403,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABL
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dQfcTSq5SeS63h3VkRsAaklq2SX2r70BoOnguc4ByufvJ4eivyDebr8rlQVa6wX
+\unrestrict skW6oOcC50oKTKWEzeNsNTRMveqQKi0cTqPuri42KgJZKIcSs6axvATnzdOI99U
 
