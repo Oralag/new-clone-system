@@ -29,23 +29,6 @@
         </button>
       </el-tooltip>
 
-      <!-- 主题切换 -->
-      <el-tooltip :content="t('layout.themeLight')" placement="bottom">
-        <button class="action-btn" :class="{ active: appStore.theme === 'light' }" @click="appStore.setTheme('light')">
-          <el-icon :size="16"><Sunny /></el-icon>
-        </button>
-      </el-tooltip>
-      <el-tooltip :content="t('layout.themeDark')" placement="bottom">
-        <button class="action-btn" :class="{ active: appStore.theme === 'dark' }" @click="appStore.setTheme('dark')">
-          <el-icon :size="16"><Moon /></el-icon>
-        </button>
-      </el-tooltip>
-      <el-tooltip :content="t('layout.themeEye')" placement="bottom">
-        <button class="action-btn" :class="{ active: appStore.theme === 'eye' }" @click="appStore.setTheme('eye')">
-          <el-icon :size="16"><View /></el-icon>
-        </button>
-      </el-tooltip>
-
       <el-tooltip :content="t('layout.notifications')" placement="bottom">
         <el-popover placement="bottom-end" :width="360" trigger="click" v-model:visible="notifVisible">
           <template #reference>
@@ -137,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { Bell, ArrowDown, Sunny, Moon, View, Grid } from '@element-plus/icons-vue'
+import { Bell, ArrowDown, Grid } from '@element-plus/icons-vue'
 import { menuData } from './menuData'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
