@@ -235,7 +235,7 @@ async function load() {
     const params: any = { page: query.page, list_rows: query.list_rows }
     if (query.status !== '') params.status = query.status
     if (query.keyword) params.keyword = query.keyword
-    const res = await http.get('/adminapi/mini/orders', { params })
+    const res = await http.get('/mini/orders', { params })
     list.value = res.data?.rows || []
     total.value = res.data?.total || 0
   } finally {
@@ -267,7 +267,7 @@ async function openPickup(row: any) {
       t('sale.miniOrders.pickupVerifyTitle'),
       { confirmButtonText: t('sale.miniOrders.pickupDoneBtn'), cancelButtonText: t('sale.miniOrders.cancelBtn'), type: 'warning' }
     )
-    await http.post('/adminapi/mini/order/pickup-confirm', { order_id: row.id })
+    await http.post('/mini/order/pickup-confirm', { order_id: row.id })
     ElMessage.success(t('sale.miniOrders.successShip'))
     load()
   } catch (e: any) {
@@ -283,7 +283,7 @@ async function doShip() {
   }
   shipping.value = true
   try {
-    await http.post('/adminapi/mini/order/ship', {
+    await http.post('/mini/order/ship', {
       order_id: current.value.id,
       express_company: deliveryType === 0 ? shipForm.express_company : '',
       tracking_no: deliveryType === 0 ? shipForm.tracking_no.trim() : '',
