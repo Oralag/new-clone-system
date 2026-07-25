@@ -16,6 +16,13 @@
           </template>
         </el-table-column>
         <el-table-column :label="$t('sale.miniVideos.colTitle')" prop="title" min-width="150" />
+        <el-table-column :label="$t('sale.miniVideos.colType')" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.content_type === 'article' ? 'success' : ''" size="small">
+              {{ row.content_type === 'article' ? $t('sale.miniVideos.typeArticle') : $t('sale.miniVideos.typeVideo') }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column :label="$t('sale.miniVideos.colVideoUrl')" min-width="200">
           <template #default="{ row }">
             <a v-if="row.video_url" :href="row.video_url" target="_blank" style="color:#409eff;font-size:12px;">{{ $t('sale.miniVideos.previewLink') }}</a>
@@ -43,6 +50,12 @@
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="form.id ? $t('sale.miniVideos.dialogTitleEdit') : $t('sale.miniVideos.dialogTitleAdd')" width="600px" :close-on-click-modal="false">
       <el-form :model="form" label-width="80px">
+        <el-form-item :label="$t('sale.miniVideos.formType')">
+          <el-radio-group v-model="form.content_type">
+            <el-radio-button label="video">{{ $t('sale.miniVideos.typeVideo') }}</el-radio-button>
+            <el-radio-button label="article">{{ $t('sale.miniVideos.typeArticle') }}</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('sale.miniVideos.formTitle')">
           <el-input v-model="form.title" :placeholder="$t('sale.miniVideos.titlePlaceholder')" />
         </el-form-item>
@@ -50,7 +63,7 @@
           <el-input v-model="form.description" type="textarea" :rows="2" :placeholder="$t('sale.miniVideos.descPlaceholder')" />
         </el-form-item>
 
-        <el-form-item :label="$t('sale.miniVideos.formVideo')">
+        <el-form-item v-if="form.content_type === 'video'" :label="$t('sale.miniVideos.formVideo')">
           <div v-if="form.video_url" style="margin-bottom:8px;">
             <a :href="form.video_url" target="_blank" style="color:#409eff;font-size:13px;">{{ $t('sale.miniVideos.currentVideo') }}</a>
             <el-button size="small" text @click="form.video_url = ''">{{ $t('sale.miniVideos.reupload') }}</el-button>
@@ -61,6 +74,24 @@
               {{ videoUploading ? t('sale.miniVideos.uploading', { progress: uploadProgress }) : t('sale.miniVideos.selectVideo') }}
             </el-button>
             <div v-if="uploadError" style="color:#f56c6c;font-size:12px;margin-top:4px;">{{ uploadError }}</div>
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="form.content_type === 'article'" :label="$t('sale.miniVideos.formContent')">
+          <el-input v-model="form.content" type="textarea" :rows="8" :placeholder="$t('sale.miniVideos.contentPlaceholder')" />
+        </el-form-item>
+
+        <el-form-item v-if="form.content_type === 'article'" :label="$t('sale.miniVideos.formImages')">
+          <div class="article-images">
+            <div v-for="(url, index) in form.images" :key="url + index" class="article-image">
+              <img :src="url" />
+              <button type="button" @click="removeArticleImage(index)">×</button>
+            </div>
+            <button v-if="form.images.length < 9" type="button" class="article-image-add" @click="articleImageInput?.click()">
+              <span>{{ articleImagesUploading ? '…' : '+' }}</span>
+              <small>{{ form.images.length }}/9</small>
+            </button>
+            <input ref="articleImageInput" type="file" accept="image/*" multiple style="display:none" @change="onArticleImagesSelect" />
           </div>
         </el-form-item>
 
@@ -116,11 +147,15 @@ const uploadProgress = ref(0)
 const uploadError = ref('')
 const videoInput = ref<HTMLInputElement>()
 const coverInput = ref<HTMLInputElement>()
+const articleImageInput = ref<HTMLInputElement>()
 
 const form = ref({
   id: 0,
+  content_type: 'video',
   title: '',
   description: '',
+  content: '',
+  images: [] as string[],
   video_url: '',
   cover_url: '',
   goods_id: null as number | null,
@@ -129,6 +164,7 @@ const form = ref({
 })
 
 const UPLOAD_URL = 'https://nomaderp.pages.dev/api/admin-upload'
+const articleImagesUploading = ref(false)
 
 async function load() {
   loading.value = true
@@ -198,19 +234,31 @@ async function onCoverSelect(e: Event) {
 }
 
 function openAdd() {
-  form.value = { id: 0, title: '', description: '', video_url: '', cover_url: '', goods_id: null, sort: 0, status: 1 }
+  form.value = {
+    id: 0, content_type: 'video', title: '', description: '', content: '', images: [],
+    video_url: '', cover_url: '', goods_id: null, sort: 0, status: 1
+  }
   uploadError.value = ''
   dialogVisible.value = true
 }
 
 function openEdit(row: any) {
-  form.value = { ...row }
+  form.value = {
+    ...row,
+    content_type: row.content_type || 'video',
+    content: row.content || '',
+    images: Array.isArray(row.images) ? [...row.images] : [],
+  }
   uploadError.value = ''
   dialogVisible.value = true
 }
 
 async function save() {
-  if (!form.value.video_url) return ElMessage.warning(t('sale.miniVideos.warnNoVideo'))
+  if (!form.value.title.trim()) return ElMessage.warning(t('sale.miniVideos.warnNoTitle'))
+  if (form.value.content_type === 'video' && !form.value.video_url) return ElMessage.warning(t('sale.miniVideos.warnNoVideo'))
+  if (form.value.content_type === 'article' && !form.value.cover_url && !form.value.images.length) {
+    return ElMessage.warning(t('sale.miniVideos.warnNoImage'))
+  }
   saving.value = true
   try {
     await http.post('mini/videos/save', form.value)
@@ -220,6 +268,30 @@ async function save() {
   } finally {
     saving.value = false
   }
+}
+
+async function onArticleImagesSelect(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || []).slice(0, 9 - form.value.images.length)
+  if (!files.length) return
+  articleImagesUploading.value = true
+  try {
+    for (const file of files) {
+      form.value.images.push(await uploadFile(file, 'cover'))
+    }
+    if (!form.value.cover_url && form.value.images[0]) form.value.cover_url = form.value.images[0]
+  } catch (err: any) {
+    ElMessage.error(err.message || t('sale.miniVideos.errorCoverUpload'))
+  } finally {
+    articleImagesUploading.value = false
+    input.value = ''
+  }
+}
+
+function removeArticleImage(index: number) {
+  const removed = form.value.images[index]
+  form.value.images.splice(index, 1)
+  if (form.value.cover_url === removed) form.value.cover_url = form.value.images[0] || ''
 }
 
 async function del(row: any) {
@@ -235,3 +307,22 @@ async function del(row: any) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.article-images { display: flex; flex-wrap: wrap; gap: 10px; }
+.article-image, .article-image-add {
+  position: relative; width: 92px; height: 92px; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--el-border-color); background: var(--el-fill-color-light);
+}
+.article-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.article-image button {
+  position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff; cursor: pointer;
+}
+.article-image-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--el-text-color-secondary); cursor: pointer;
+}
+.article-image-add span { font-size: 28px; line-height: 1; }
+.article-image-add small { margin-top: 7px; }
+</style>

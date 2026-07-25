@@ -2974,7 +2974,7 @@ export default {
       'personnel-social': 'Social Insurance',
       'personnel-welfare': 'Benefits',
       'mini-orders': 'Mini Program Orders',
-      'mini-videos': 'Videos',
+      'mini-videos': 'Discover Content',
       'mini-qrcode': 'Package QR Codes',
       'distributor': 'Distributors',
       'refund': 'Refunds / After-sales',

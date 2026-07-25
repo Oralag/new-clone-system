@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/return', name: 'SaleReturn', component: () => import('@/views/sale/SaleReturn.vue'), meta: { title: '销售退货' } },
       { path: 'sale/exchange', name: 'SaleExchange', component: () => import('@/views/sale/SaleExchange.vue'), meta: { title: '换货单' } },
       { path: 'sale/mini-orders', name: 'MiniOrders', component: () => import('@/views/sale/MiniOrders.vue'), meta: { title: '小程序订单' } },
+      { path: 'sale/mini-videos', name: 'MiniVideos', component: () => import('@/views/sale/MiniVideos.vue'), meta: { title: '小程序内容' } },
       { path: 'sale/distributor', name: 'SaleDistributor', component: () => import('@/views/miniprogram/Distributor.vue'), meta: { title: '分销商管理' } },
       { path: 'sale/distributor-withdraw', name: 'DistributorWithdraw', component: () => import('@/views/miniprogram/Withdraw.vue'), meta: { title: '分销提现审批' } },
       { path: 'sale/refund', name: 'Refund', component: () => import('@/views/miniprogram/Refund.vue'), meta: { title: '退款管理' } },

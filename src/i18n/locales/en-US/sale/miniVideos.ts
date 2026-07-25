@@ -1,13 +1,16 @@
 // Translations for src/views/sale/miniVideos.vue
 export default {
   // Header
-  pageTitle: 'Videos · Management',
-  uploadBtn: '+ Upload Video',
+  pageTitle: 'Discover · Content',
+  uploadBtn: '+ Publish Content',
 
   // Table columns
   colCover: 'Cover',
   noCover: 'No Cover',
   colTitle: 'Title',
+  colType: 'Type',
+  typeVideo: 'Video',
+  typeArticle: 'Article',
   colVideoUrl: 'Video Link',
   previewLink: 'Preview',
   colLike: 'Likes',
@@ -25,10 +28,14 @@ export default {
   dialogTitleAdd: 'Upload Video',
   dialogTitleEdit: 'Edit Video',
   formTitle: 'Title',
+  formType: 'Type',
   titlePlaceholder: 'Video title',
   formDesc: 'Description',
   descPlaceholder: 'Short description',
   formVideo: 'Video File',
+  formContent: 'Body',
+  formImages: 'Images',
+  contentPlaceholder: 'Share an origin story, ingredient guide, or table inspiration',
   currentVideo: 'Current video: click to preview',
   reupload: 'Re-upload',
   uploading: 'Uploading {progress}%',
@@ -47,6 +54,8 @@ export default {
 
   // Messages
   warnNoVideo: 'Please upload a video first',
+  warnNoTitle: 'Please enter a title',
+  warnNoImage: 'Please upload at least one image',
   successSave: 'Saved successfully',
   successDelete: 'Deleted',
   confirmDeleteTitle: 'Confirm',

@@ -1,13 +1,16 @@
 // Translations for src/views/sale/miniVideos.vue
 export default {
   // Header
-  pageTitle: '看看 · 视频管理',
-  uploadBtn: '+ 上传视频',
+  pageTitle: '看看 · 内容管理',
+  uploadBtn: '+ 发布内容',
 
   // Table columns
   colCover: '封面',
   noCover: '无封面',
   colTitle: '标题',
+  colType: '类型',
+  typeVideo: '视频',
+  typeArticle: '图文',
   colVideoUrl: '视频链接',
   previewLink: '预览',
   colLike: '点赞',
@@ -25,10 +28,14 @@ export default {
   dialogTitleAdd: '上传视频',
   dialogTitleEdit: '编辑视频',
   formTitle: '标题',
+  formType: '类型',
   titlePlaceholder: '视频标题',
   formDesc: '描述',
   descPlaceholder: '简短描述',
   formVideo: '视频文件',
+  formContent: '正文',
+  formImages: '图文图片',
+  contentPlaceholder: '写下产地故事、食材知识或餐桌灵感',
   currentVideo: '当前视频：点击预览',
   reupload: '重新上传',
   uploading: '上传中 {progress}%',
@@ -47,6 +54,8 @@ export default {
 
   // Messages
   warnNoVideo: '请先上传视频',
+  warnNoTitle: '请填写标题',
+  warnNoImage: '请至少上传一张图片',
   successSave: '保存成功',
   successDelete: '已删除',
   confirmDeleteTitle: '提示',

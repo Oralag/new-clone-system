@@ -2974,7 +2974,7 @@ export default {
       'personnel-social': '社保管理',
       'personnel-welfare': '福利管理',
       'mini-orders': '小程序订单',
-      'mini-videos': '看看视频',
+      'mini-videos': '看看内容',
       'mini-qrcode': '包装二维码',
       'distributor': '分销商管理',
       'refund': '退款/售后',
