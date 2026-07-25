@@ -242,6 +242,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'mini-videos', title: 'menu.item.mini-videos', path: '/sale/mini-videos' },
       { key: 'mini-qrcode', title: 'menu.item.mini-qrcode', path: '/sale/mini-qrcode' },
       { key: 'distributor', title: 'menu.item.distributor', path: '/sale/distributor' },
+      { key: 'distributor-withdraw', title: '分销提现审批', path: '/sale/distributor-withdraw' },
       { key: 'refund', title: 'menu.item.refund', path: '/sale/refund' },
     ],
   },

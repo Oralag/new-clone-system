@@ -99,14 +99,33 @@
         <el-radio-button label="approved">已通过</el-radio-button><el-radio-button label="rejected">已驳回</el-radio-button>
       </el-radio-group>
       <el-table :data="productReviews" border height="460">
-        <el-table-column label="商品" min-width="220"><template #default="{row}"><div class="material-cell"><img v-if="firstImage(row)" :src="firstImage(row)" class="material-thumb"/><div><strong>{{row.title}}</strong><div>¥{{Number(row.suggested_price||0).toFixed(2)}} · 库存 {{row.stock_qty||0}}</div></div></div></template></el-table-column>
+        <el-table-column label="商品" min-width="240"><template #default="{row}"><div class="material-cell"><img v-if="firstImage(row)" :src="firstImage(row)" class="material-thumb"/><div><strong>{{row.title}}</strong><div v-if="row.short_title">{{row.short_title}}</div><div>¥{{Number(row.suggested_price||0).toFixed(2)}} · 库存 {{row.stock_qty||0}}</div></div></div></template></el-table-column>
         <el-table-column prop="distributor_name" label="分销商" width="130"/>
         <el-table-column prop="category" label="分类" width="100"/>
         <el-table-column label="平台费" width="100"><template #default="{row}">{{row.platform_fee_rate ?? row.distributor_platform_fee_rate}}%</template></el-table-column>
         <el-table-column label="状态" width="90"><template #default="{row}"><el-tag :type="row.review_status==='approved'?'success':row.review_status==='rejected'?'danger':'warning'">{{reviewLabel(row.review_status)}}</el-tag></template></el-table-column>
-        <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip/>
+        <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip/>
+        <el-table-column label="资料" width="150"><template #default="{row}">
+          <el-button link :disabled="!submissionAssets(row.detail_images).length" @click="previewSubmissionAssets('商品详情图', row.detail_images)">详情图 {{submissionAssets(row.detail_images).length}}</el-button>
+          <el-button link :disabled="!submissionAssets(row.qualification_urls).length" @click="previewSubmissionAssets('资质材料', row.qualification_urls)">资质 {{submissionAssets(row.qualification_urls).length}}</el-button>
+        </template></el-table-column>
+        <el-table-column prop="freight_template" label="发货" min-width="160" show-overflow-tooltip/>
         <el-table-column label="操作" width="150" fixed="right"><template #default="{row}"><el-button v-if="row.review_status!=='approved'" link type="success" @click="reviewProduct(row,'approved')">通过</el-button><el-button v-if="row.review_status!=='rejected'" link type="danger" @click="reviewProduct(row,'rejected')">驳回</el-button></template></el-table-column>
       </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="productAssetVisible" :title="productAssetTitle" width="720px">
+      <div class="submission-assets">
+        <el-image
+          v-for="(url, index) in productAssetUrls"
+          :key="url"
+          :src="url"
+          fit="cover"
+          :preview-src-list="productAssetUrls"
+          :initial-index="index"
+          preview-teleported
+        />
+      </div>
     </el-dialog>
 
     <el-dialog v-model="settlementVisible" title="分销商结算与协议" width="560px">
@@ -743,6 +762,9 @@ async function deleteMaterial(row: any) {
 const productReviewVisible = ref(false)
 const productReviewStatus = ref('pending')
 const productReviews = ref<any[]>([])
+const productAssetVisible = ref(false)
+const productAssetTitle = ref('')
+const productAssetUrls = ref<string[]>([])
 const settlementVisible = ref(false)
 const settlementForm = ref<any>({})
 
@@ -750,6 +772,15 @@ function firstImage(row: any) {
   const value = row.images
   if (Array.isArray(value)) return value[0] || ''
   try { return JSON.parse(value || '[]')[0] || '' } catch { return '' }
+}
+function submissionAssets(value: any): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean)
+  try { return JSON.parse(value || '[]').filter(Boolean) } catch { return [] }
+}
+function previewSubmissionAssets(title: string, value: any) {
+  productAssetTitle.value = title
+  productAssetUrls.value = submissionAssets(value)
+  productAssetVisible.value = productAssetUrls.value.length > 0
 }
 function reviewLabel(status: string) { return status === 'approved' ? '已通过' : status === 'rejected' ? '已驳回' : '待审核' }
 async function openProductReviews() { productReviewVisible.value = true; await loadProductReviews() }
@@ -805,6 +836,8 @@ onMounted(loadList)
 .material-cell-copy { display: flex; flex-direction: column; min-width: 0; }
 .material-cell-copy strong { color: #172033; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .material-cell-copy span { color: #9097a3; font-size: 12px; margin-top: 3px; }
+.submission-assets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.submission-assets :deep(.el-image) { width: 100%; aspect-ratio: 1; border-radius: 10px; background: #f4f6f8; }
 .material-form :deep(.el-form-item) { margin-bottom: 18px; }
 .sync-field { width: 100%; display: flex; flex-direction: column; gap: 6px; }
 .sync-field span { color: #9097a3; font-size: 12px; line-height: 1.5; }
