@@ -2,6 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <h2>{{ t('miniprogramDistributor.title') }}</h2>
+      <el-button type="primary" @click="openProductReviews">自营商品审核</el-button>
       <div class="tab-bar">
         <el-radio-group v-model="activeTab" @change="loadList">
           <el-radio-button label="">{{ t('miniprogramDistributor.all') }}</el-radio-button>
@@ -56,6 +57,7 @@
           </template>
           <template v-else-if="row.status === 1">
             <el-button size="small" @click="openEditRate(row)">{{ t('miniprogramDistributor.editRate') }}</el-button>
+            <el-button size="small" @click="openSettlement(row)">结算配置</el-button>
             <el-button size="small" @click="openGoodsDialog(row)">商品池</el-button>
             <el-button size="small" @click="openMaterialDialog(row)">素材库</el-button>
           </template>
@@ -88,6 +90,36 @@
         <el-button @click="approveVisible = false">{{ t('miniprogramDistributor.cancel') }}</el-button>
         <el-button type="primary" :loading="acting" @click="handleApprove">{{ t('miniprogramDistributor.confirmApprove') }}</el-button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="productReviewVisible" title="分销商自营商品审核" width="980px">
+      <div class="dialog-tip">分销商自营商品由分销商供货、发货和售后；审核通过前不会进入销售流程。平台服务费可按单品覆盖分销商协议比例。</div>
+      <el-radio-group v-model="productReviewStatus" size="small" @change="loadProductReviews" style="margin-bottom:16px">
+        <el-radio-button label="">全部</el-radio-button><el-radio-button label="pending">待审核</el-radio-button>
+        <el-radio-button label="approved">已通过</el-radio-button><el-radio-button label="rejected">已驳回</el-radio-button>
+      </el-radio-group>
+      <el-table :data="productReviews" border height="460">
+        <el-table-column label="商品" min-width="220"><template #default="{row}"><div class="material-cell"><img v-if="firstImage(row)" :src="firstImage(row)" class="material-thumb"/><div><strong>{{row.title}}</strong><div>¥{{Number(row.suggested_price||0).toFixed(2)}} · 库存 {{row.stock_qty||0}}</div></div></div></template></el-table-column>
+        <el-table-column prop="distributor_name" label="分销商" width="130"/>
+        <el-table-column prop="category" label="分类" width="100"/>
+        <el-table-column label="平台费" width="100"><template #default="{row}">{{row.platform_fee_rate ?? row.distributor_platform_fee_rate}}%</template></el-table-column>
+        <el-table-column label="状态" width="90"><template #default="{row}"><el-tag :type="row.review_status==='approved'?'success':row.review_status==='rejected'?'danger':'warning'">{{reviewLabel(row.review_status)}}</el-tag></template></el-table-column>
+        <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip/>
+        <el-table-column label="操作" width="150" fixed="right"><template #default="{row}"><el-button v-if="row.review_status!=='approved'" link type="success" @click="reviewProduct(row,'approved')">通过</el-button><el-button v-if="row.review_status!=='rejected'" link type="danger" @click="reviewProduct(row,'rejected')">驳回</el-button></template></el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="settlementVisible" title="分销商结算与协议" width="560px">
+      <el-form label-width="130px">
+        <el-form-item label="官方商品佣金"><el-input-number v-model="settlementForm.commission_rate" :min="0" :max="50" :precision="1"/> %</el-form-item>
+        <el-form-item label="自营商品平台费"><el-input-number v-model="settlementForm.platform_fee_rate" :min="0" :max="50" :precision="1"/> %</el-form-item>
+        <el-form-item label="售后结算周期"><el-input-number v-model="settlementForm.settlement_cycle_days" :min="0" :max="60"/> 天</el-form-item>
+        <el-form-item label="协议类型"><el-radio-group v-model="settlementForm.agreement_type"><el-radio label="offline">线下协议</el-radio><el-radio label="online">线上协议</el-radio></el-radio-group></el-form-item>
+        <el-form-item label="协议编号"><el-input v-model="settlementForm.agreement_no"/></el-form-item>
+        <el-form-item label="二级商户号"><el-input v-model="settlementForm.sub_mchid" placeholder="平台收付通开通后填写"/></el-form-item>
+        <el-form-item label="结算方式"><el-select v-model="settlementForm.settlement_mode"><el-option label="人工结算" value="manual"/><el-option label="微信自动分账（预留）" value="wechat_profit_sharing"/></el-select></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="settlementVisible=false">取消</el-button><el-button type="primary" :loading="acting" @click="saveSettlement">保存</el-button></template>
     </el-dialog>
 
     <!-- 改佣金弹窗 -->
@@ -706,6 +738,54 @@ async function deleteMaterial(row: any) {
   await http.post('/distributor/materials/del', { id: row.id })
   ElMessage.success('已删除')
   loadMaterials()
+}
+
+const productReviewVisible = ref(false)
+const productReviewStatus = ref('pending')
+const productReviews = ref<any[]>([])
+const settlementVisible = ref(false)
+const settlementForm = ref<any>({})
+
+function firstImage(row: any) {
+  const value = row.images
+  if (Array.isArray(value)) return value[0] || ''
+  try { return JSON.parse(value || '[]')[0] || '' } catch { return '' }
+}
+function reviewLabel(status: string) { return status === 'approved' ? '已通过' : status === 'rejected' ? '已驳回' : '待审核' }
+async function openProductReviews() { productReviewVisible.value = true; await loadProductReviews() }
+async function loadProductReviews() {
+  const res = await http.get('/distributor/product-submissions', { params: { status: productReviewStatus.value || undefined } })
+  productReviews.value = res.data || []
+}
+async function reviewProduct(row: any, review_status: string) {
+  let note = ''
+  if (review_status === 'rejected') {
+    try { note = await ElMessageBox.prompt('请填写驳回原因', '驳回商品').then((r:any) => r.value) } catch { return }
+  }
+  const rate = row.platform_fee_rate ?? row.distributor_platform_fee_rate ?? 10
+  await http.post('/distributor/product-submissions/review', { id: row.id, review_status, review_note: note, platform_fee_rate: rate })
+  ElMessage.success(review_status === 'approved' ? '审核已通过' : '已驳回')
+  loadProductReviews()
+}
+function openSettlement(row: any) {
+  settlementForm.value = {
+    id: row.id, commission_rate: Number(row.commission_rate || 10),
+    platform_fee_rate: Number(row.platform_fee_rate || 10),
+    settlement_cycle_days: Number(row.settlement_cycle_days || 7),
+    agreement_type: row.agreement_type || 'offline', agreement_no: row.agreement_no || '',
+    agreement_url: row.agreement_url || '', sub_mchid: row.sub_mchid || '',
+    merchant_onboarding_status: row.merchant_onboarding_status || 'not_started',
+    settlement_mode: row.settlement_mode || 'manual',
+  }
+  settlementVisible.value = true
+}
+async function saveSettlement() {
+  acting.value = true
+  try {
+    await http.post('/distributor/rate', { id: settlementForm.value.id, commission_rate: settlementForm.value.commission_rate })
+    await http.post('/distributor/settlement-config', settlementForm.value)
+    ElMessage.success('结算配置已保存'); settlementVisible.value = false; loadList()
+  } finally { acting.value = false }
 }
 
 onMounted(loadList)
