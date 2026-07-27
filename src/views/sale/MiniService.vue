@@ -3,6 +3,7 @@
     <el-card shadow="never" class="toolbar">
       <el-input v-model="keyword" placeholder="搜索手机号或商品" clearable style="width:280px" @keyup.enter="loadSessions" />
       <el-button type="primary" @click="loadSessions">查询</el-button>
+      <el-button :loading="exporting" @click="exportRecords">导出记录</el-button>
       <el-tag type="danger" effect="light">待人工 {{ pendingCount }}</el-tag>
     </el-card>
     <div class="desk">
@@ -24,7 +25,11 @@
         <template v-if="current">
           <div class="conversation-head">
             <div><b>{{ current.phone || '游客' }}</b><span>{{ current.product_name || '通用咨询' }}</span></div>
-            <span>会话记录保留 180 天</span>
+            <div class="head-actions">
+              <span>会话记录保留 180 天</span>
+              <el-button size="small" @click="exportCurrent">导出本会话</el-button>
+              <el-button type="danger" plain size="small" :loading="deleting" @click="deleteCurrent">提前删除</el-button>
+            </div>
           </div>
           <div ref="messageBox" class="messages">
             <div v-for="msg in current.messages" :key="msg.id" class="message" :class="msg.role">
@@ -45,7 +50,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 
 const sessions = ref<any[]>([])
@@ -54,12 +59,30 @@ const keyword = ref('')
 const reply = ref('')
 const loading = ref(false)
 const sending = ref(false)
+const exporting = ref(false)
+const deleting = ref(false)
 const messageBox = ref<HTMLElement>()
 const pendingCount = computed(() => sessions.value.filter(i => i.status === 'human_requested').length)
 let timer: number | undefined
 
 const formatTime = (value: string) => value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : ''
 const sourceName = (msg: any) => msg.source === 'human' ? '人工客服' : msg.role === 'user' ? '客户' : msg.source === 'nova' ? 'Nova' : '系统'
+const csvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
+function downloadCsv(rows: any[], filename: string) {
+  const headers = ['会话ID', '客户', '商品', '会话状态', '消息角色', '消息来源', '消息内容', '消息时间', '会话到期时间']
+  const lines = rows.map(row => [
+    row.id, row.phone || '游客', row.product_name || '通用咨询', row.status,
+    row.role || '', row.source || '', row.content || '',
+    formatTime(row.message_created_at), formatTime(row.expires_at),
+  ].map(csvCell).join(','))
+  const blob = new Blob([`\uFEFF${headers.map(csvCell).join(',')}\n${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 async function loadSessions() {
   loading.value = true
@@ -88,6 +111,46 @@ async function sendReply() {
     loadSessions()
   } finally { sending.value = false }
 }
+async function exportRecords() {
+  exporting.value = true
+  try {
+    const res = await http.get('/mini/service/export', { params: { keyword: keyword.value } })
+    const rows = res.data || []
+    if (!rows.length) return ElMessage.warning('没有可导出的记录')
+    downloadCsv(rows, `客服记录_${new Date().toISOString().slice(0, 10)}.csv`)
+    ElMessage.success(`已导出 ${rows.length} 条消息`)
+  } finally { exporting.value = false }
+}
+function exportCurrent() {
+  if (!current.value) return
+  const rows = (current.value.messages || []).map((msg: any) => ({
+    ...msg,
+    id: current.value.id,
+    phone: current.value.phone,
+    product_name: current.value.product_name,
+    status: current.value.status,
+    expires_at: current.value.expires_at,
+    message_created_at: msg.created_at,
+  }))
+  downloadCsv(rows, `客服会话_${current.value.id}_${new Date().toISOString().slice(0, 10)}.csv`)
+}
+async function deleteCurrent() {
+  if (!current.value || deleting.value) return
+  try {
+    await ElMessageBox.confirm(
+      '提前删除后，该会话及全部聊天消息将立即永久删除，无法恢复。确认继续吗？',
+      '提前删除客服记录',
+      { confirmButtonText: '确认永久删除', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch { return }
+  deleting.value = true
+  try {
+    await http.post(`/mini/service/session/${current.value.id}/delete`)
+    current.value = null
+    ElMessage.success('会话记录已删除')
+    await loadSessions()
+  } finally { deleting.value = false }
+}
 onMounted(() => {
   loadSessions()
   timer = window.setInterval(async () => {
@@ -112,6 +175,7 @@ onBeforeUnmount(() => timer && clearInterval(timer))
 .conversation :deep(.el-card__body) { height: 100%; padding: 0; display: flex; flex-direction: column; }
 .conversation-head { display: flex; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #eef0f3; color: #86909c; font-size: 13px; }
 .conversation-head b { color: #1d2129; margin-right: 12px; }
+.head-actions { display: flex; align-items: center; gap: 10px; }
 .messages { flex: 1; overflow-y: auto; padding: 20px; background: #f7f8fa; }
 .message { max-width: 72%; margin-bottom: 16px; }
 .message.user { margin-left: auto; }
