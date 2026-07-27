@@ -239,6 +239,7 @@ export const menuData: TopMenuItem[] = [
     icon: 'Cellphone',
     children: [
       { key: 'mini-orders', title: 'menu.item.mini-orders', path: '/sale/mini-orders' },
+      { key: 'mini-service', title: '小程序客服', path: '/sale/mini-service' },
       { key: 'mini-videos', title: 'menu.item.mini-videos', path: '/sale/mini-videos' },
       { key: 'mini-qrcode', title: 'menu.item.mini-qrcode', path: '/sale/mini-qrcode' },
       { key: 'distributor', title: 'menu.item.distributor', path: '/sale/distributor' },
