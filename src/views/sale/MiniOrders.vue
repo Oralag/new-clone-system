@@ -53,6 +53,7 @@
         </el-table-column>
         <el-table-column :label="t('sale.miniOrders.colAmount')" width="100" align="right">
           <template #default="{ row }">
+            <div v-if="row.price_adjusted_from" class="original-price">¥{{ row.price_adjusted_from }}</div>
             <b>¥{{ row.total_amount }}</b>
           </template>
         </el-table-column>
@@ -72,9 +73,15 @@
         <el-table-column :label="t('sale.miniOrders.colCreatedAt')" width="160">
           <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAction')" width="140" fixed="right">
+        <el-table-column :label="t('sale.miniOrders.colAction')" width="260" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 1" type="primary" size="small" @click="openShip(row)">{{ shipBtnText(row.delivery_type) }}</el-button>
+            <template v-if="row.status === 0">
+              <el-button v-if="row.price_change_requested" type="warning" size="small" @click="openAdjustPrice(row)">改价</el-button>
+              <el-button type="primary" plain size="small" @click="remindPayment(row)">催付款</el-button>
+              <el-button type="success" plain size="small" @click="openGrantCoupon(row)">发优惠券</el-button>
+              <el-button size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
+            </template>
+            <el-button v-else-if="row.status === 1" type="primary" size="small" @click="openShip(row)">{{ shipBtnText(row.delivery_type) }}</el-button>
             <el-button v-else-if="row.status === 2 && row.delivery_type === 2" type="success" size="small" @click="openPickup(row)">{{ t('sale.miniOrders.pickupVerifyBtn') }}</el-button>
             <el-button v-else size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
           </template>
@@ -137,6 +144,71 @@
       <template #footer>
         <el-button @click="shipDialog = false">{{ t('sale.miniOrders.cancelBtn') }}</el-button>
         <el-button type="primary" :loading="shipping" @click="doShip">{{ shipDialogConfirmText }}</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 发放优惠券 -->
+    <el-dialog v-model="couponDialog" title="给客户发优惠券" width="440px" :close-on-click-modal="false">
+      <el-alert
+        type="warning"
+        :closable="false"
+        title="优惠券供客户后续下单使用，不会自动抵扣当前已生成订单"
+        style="margin-bottom:16px;"
+      />
+      <el-form label-width="90px">
+        <el-form-item label="客户">
+          <span>{{ current?.user_phone || '—' }}</span>
+        </el-form-item>
+        <el-form-item label="选择优惠券" required>
+          <el-select v-model="selectedCouponId" filterable placeholder="请选择有效优惠券" style="width:100%;">
+            <el-option
+              v-for="coupon in availableCoupons"
+              :key="coupon.id"
+              :label="`${coupon.name}（满${coupon.min_order}减${coupon.discount_value}）`"
+              :value="coupon.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="couponDialog = false">取消</el-button>
+        <el-button type="primary" :loading="grantingCoupon" @click="grantCoupon">确认发放</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 待付款订单改价 -->
+    <el-dialog v-model="adjustDialog" title="修改待付款金额" width="440px" :close-on-click-modal="false">
+      <el-alert
+        type="info"
+        :closable="false"
+        title="客户付款时将按修改后的金额发起微信支付"
+        style="margin-bottom:16px;"
+      />
+      <el-form label-width="90px">
+        <el-form-item label="订单编号">
+          <span>{{ current?.order_no }}</span>
+        </el-form-item>
+        <el-form-item label="当前金额">
+          <span>¥{{ current?.total_amount }}</span>
+        </el-form-item>
+        <el-form-item label="优惠后金额" required>
+          <el-input-number
+            v-model="adjustForm.amount"
+            :min="0.01"
+            :max="Number(current?.price_adjusted_from || current?.total_amount || 0)"
+            :precision="2"
+            :step="1"
+            controls-position="right"
+            style="width:100%;"
+          />
+        </el-form-item>
+        <el-form-item label="改价说明">
+          <el-input v-model="adjustForm.note" maxlength="255" show-word-limit placeholder="如：老客户优惠、批量采购优惠" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustDialog = false">取消</el-button>
+        <el-button type="primary" :loading="adjusting" @click="submitAdjustPrice">确认改价</el-button>
       </template>
     </el-dialog>
 
@@ -207,9 +279,16 @@ const total = ref(0)
 const loading = ref(false)
 const shipDialog = ref(false)
 const detailDialog = ref(false)
+const adjustDialog = ref(false)
+const couponDialog = ref(false)
 const shipping = ref(false)
+const adjusting = ref(false)
+const grantingCoupon = ref(false)
 const current = ref<any>(null)
 const shipForm = reactive({ express_company: DEFAULT_EXPRESS_COMPANY, tracking_no: '' })
+const adjustForm = reactive({ amount: 0, note: '' })
+const availableCoupons = ref<any[]>([])
+const selectedCouponId = ref<number | null>(null)
 
 const query = reactive({ page: 1, list_rows: 20, status: '' as number | '', keyword: '' })
 
@@ -253,6 +332,80 @@ function openShip(row: any) {
 function viewDetail(row: any) {
   current.value = row
   detailDialog.value = true
+}
+
+function openAdjustPrice(row: any) {
+  current.value = row
+  adjustForm.amount = Number(row.total_amount || 0)
+  adjustForm.note = row.price_adjustment_note || ''
+  adjustDialog.value = true
+}
+
+async function submitAdjustPrice() {
+  if (!current.value || !adjustForm.amount) return
+  adjusting.value = true
+  try {
+    await http.post('/mini/order/adjust-price', {
+      order_id: current.value.id,
+      amount: adjustForm.amount,
+      note: adjustForm.note.trim(),
+    })
+    ElMessage.success('订单金额已修改，客户可按新金额付款')
+    adjustDialog.value = false
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e.message || '改价失败')
+  } finally {
+    adjusting.value = false
+  }
+}
+
+async function remindPayment(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      `确认向客户 ${row.user_phone || ''} 发送待付款提醒？`,
+      '催付款',
+      { confirmButtonText: '发送提醒', cancelButtonText: '取消', type: 'warning' }
+    )
+    await http.post('/mini/order/remind-payment', { order_id: row.id })
+    ElMessage.success('催付款提醒已发送')
+    load()
+  } catch (e: any) {
+    if (e === 'cancel' || e?.message === 'cancel') return
+    ElMessage.error(e.message || '催付款失败')
+  }
+}
+
+async function openGrantCoupon(row: any) {
+  current.value = row
+  selectedCouponId.value = null
+  try {
+    const res = await http.get('/mini/coupons', { params: { page: 1, list_rows: 200 } })
+    availableCoupons.value = (res.data?.rows || []).filter((coupon: any) =>
+      Number(coupon.status) === 1 &&
+      (!coupon.end_at || new Date(coupon.end_at).getTime() > Date.now())
+    )
+    couponDialog.value = true
+  } catch (e: any) {
+    ElMessage.error(e.message || '优惠券加载失败')
+  }
+}
+
+async function grantCoupon() {
+  if (!current.value || !selectedCouponId.value) return ElMessage.warning('请选择优惠券')
+  grantingCoupon.value = true
+  try {
+    const res = await http.post('/mini/order/grant-coupon', {
+      order_id: current.value.id,
+      coupon_id: selectedCouponId.value,
+    })
+    ElMessage.success(`已发放：${res.data?.coupon_name || '优惠券'}`)
+    couponDialog.value = false
+  } catch (e: any) {
+    ElMessage.error(e.message || '优惠券发放失败')
+  } finally {
+    grantingCoupon.value = false
+  }
 }
 
 async function openPickup(row: any) {
@@ -347,6 +500,7 @@ onMounted(load)
 .tracking { font-size: 12px; color: #409eff; }
 .tracking-alt { font-size: 12px; color: #67c23a; }
 .no-tracking { color: #ccc; }
+.original-price { color:#999; font-size:12px; text-decoration:line-through; }
 .addr-block { background: #f8f9fa; padding: 12px 16px; border-radius: 4px; font-size: 14px; line-height: 1.8; }
 .addr-title { font-weight: 600; margin-bottom: 4px; }
 .remark { color: #e6a23c; margin-top: 4px; }
