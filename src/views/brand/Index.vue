@@ -578,7 +578,9 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&display=swap');
 
 /* ── 设计变量（Two Leaves 同款配色）── */
-:root {
+.brand-mode-overlay,
+.brand-home,
+.bi-edit-overlay {
   --blue:   #8BBDD6;
   --cream:  #EDE6D5;
   --orange: #D14B0A;
