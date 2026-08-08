@@ -71,10 +71,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 import http from '@/api/http'
+
+// 动态条目按所属模块权限过滤：有该模块任一权限才可见（与 MobileWorkbench.vue 保持一致）
+const ERP_ACTIVITY_TYPES = new Set(['sale', 'retail', 'procure', 'warehouse', 'finance', 'goods', 'personnel', 'production', 'online', 'outsource', 'reports'])
 
 const router = useRouter()
 const authStore = useAuthStore()
+const permStore = usePermissionStore()
+
+function canSeeActivity(a: any): boolean {
+  const type = (a?.action_type || '').split('_')[0]
+  return ERP_ACTIVITY_TYPES.has(type) ? permStore.canSeeModule(type) : true
+}
 
 const activeTab = ref('all')
 const dateRange = ref('today')
@@ -229,7 +239,8 @@ async function loadActivities(reset = false) {
     if (activeTab.value === 'team') params.scope = 'team'
 
     const res = await http.get('/mobile/operation-logs', { params })
-    const rows = res?.data?.rows ?? res?.rows ?? []
+    const allRows = res?.data?.rows ?? res?.rows ?? []
+    const rows = allRows.filter(canSeeActivity)
     const total = res?.data?.total ?? res?.total ?? 0
 
     if (reset) {

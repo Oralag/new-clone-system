@@ -17,7 +17,7 @@
       </div>
 
       <!-- 品牌未配置时的黄色警告条 -->
-      <div v-if="!brandStore.isConfigured" class="brand-warn-bar" @click="router.push('/agent/brand')">
+      <div v-if="!brandStore.isConfigured" class="brand-warn-bar" @click="router.push('/agent/brand-settings')">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="warn-icon">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
@@ -56,6 +56,16 @@
             <span class="active-pulse"></span>
           </span>
         </router-link>
+        <!-- 作战公告板 -->
+        <router-link to="/agent/bulletin" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <rect x="2" y="2" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M5 5.5h5M5 8h5M5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">{{ t('agentLayout.bulletinBoard') }}</span>
+        </router-link>
         <router-link to="/agent/tasks" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -77,38 +87,50 @@
         <!-- 各部门 -->
         <div class="nav-section-label" style="margin-top:10px">{{ t('agentLayout.sectionDepartments') }}</div>
 
-        <!-- 内容部 -->
-        <router-link to="/agent/content" class="nav-item" active-class="nav-item--active">
-          <span class="nav-item-icon">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <rect x="2" y="1" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
-              <path d="M4.5 4.5h6M4.5 7h6M4.5 9.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="nav-item-label">{{ t('agentLayout.contentDept') }}</span>
-        </router-link>
-
-        <!-- 创意部 -->
-        <router-link to="/agent/creative" class="nav-item" active-class="nav-item--active">
+        <!-- AI 创意实验室（原「内容部/创意部」合并入口） -->
+        <router-link to="/agent/creative-lab" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/>
               <path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">{{ t('agentLayout.creativeDept') }}</span>
+          <span class="nav-item-label">AI 创意实验室</span>
         </router-link>
 
-        <!-- 品牌部 -->
-        <router-link to="/agent/brand" class="nav-item" active-class="nav-item--active">
+        <!-- AI分身 -->
+        <router-link to="/agent/persona" class="nav-item" active-class="nav-item--active">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <path d="M7.5 1.5l1.8 4h4l-3.3 2.4 1.3 4-3.8-2.8-3.8 2.8 1.3-4L1.7 5.5h4l1.8-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+              <circle cx="7.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M2.5 13c.6-2.6 2.6-4 5-4s4.4 1.4 5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
           </span>
-          <span class="nav-item-label">{{ t('agentLayout.brandDept') }}</span>
+          <span class="nav-item-label">{{ t('agentLayout.personaDept') }}</span>
         </router-link>
-        <!-- 品牌配置（独立入口） -->
+
+        <!-- 内容工作台 -->
+        <router-link to="/agent/studio" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M5 10l2-3 1.5 1.8L10 6.5l2 3.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">{{ t('agentLayout.contentStudio') }}</span>
+        </router-link>
+
+        <!-- 素材库 -->
+        <router-link to="/agent/assets" class="nav-item" active-class="nav-item--active">
+          <span class="nav-item-icon">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M2 4.5A1.5 1.5 0 013.5 3h3l1.5 1.5h3.5A1.5 1.5 0 0113 6v5a1.5 1.5 0 01-1.5 1.5h-8A1.5 1.5 0 012 11V4.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-item-label">{{ t('agentLayout.assetLibrary') }}</span>
+        </router-link>
+
+        <!-- 品牌配置（原「品牌部」已合并到此） -->
         <router-link to="/agent/brand-settings" class="nav-item nav-item-settings" active-class="nav-item--active">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
@@ -198,16 +220,6 @@
       <!-- 底部 -->
       <div class="sidebar-footer">
         <div class="nav-section-label" style="margin-bottom:4px">{{ t('agentLayout.sectionOther') }}</div>
-        <router-link to="/agent/history" class="nav-item" active-class="nav-item--active">
-          <span class="nav-item-icon">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <path d="M3 7.5A4.5 4.5 0 117.5 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-              <path d="M3 4v3.5h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M7.5 5v3l2 1.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="nav-item-label">{{ t('agentLayout.history') }}</span>
-        </router-link>
         <router-link to="/portal" class="nav-item nav-item--back">
           <span class="nav-item-icon">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -257,29 +269,11 @@
           <div v-if="brandStore.isConfigured" class="topbar-brand-tag">
             <span class="brand-dot"></span>{{ brandStore.brand.name }}
           </div>
-          <div v-else class="topbar-brand-warn" @click="router.push('/agent/brand')">
+          <div v-else class="topbar-brand-warn" @click="router.push('/agent/brand-settings')">
             {{ t('agentLayout.brandWarnCompact') }}
           </div>
         </div>
         <div class="topbar-right">
-          <!-- 主题切换 -->
-          <div class="topbar-theme-btns">
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('agentLayout.themeLight')" @click="appStore.setTheme('light')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              </svg>
-            </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('agentLayout.themeDark')" @click="appStore.setTheme('dark')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            </button>
-            <button class="topbar-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('agentLayout.themeEye')" @click="appStore.setTheme('eye')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
           <div class="ai-status">
             <span class="ai-status-dot"></span>
             <span class="ai-status-text">{{ t('agentLayout.aiOnline') }}</span>
@@ -299,14 +293,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBrandStore } from '@/stores/brand'
-import { useAppStore } from '@/stores/app'
 import { useMeetingStore } from '@/stores/meeting'
 import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
 const brandStore = useBrandStore()
-const appStore = useAppStore()
 const meetingStore = useMeetingStore()
 const { t } = useI18n()
 
@@ -330,35 +322,36 @@ function handleResize() { isMobile.value = window.innerWidth < 768 }
 const mobileNavItems = computed(() => [
   { path: '/agent', label: t('agentLayout.workbench') },
   { path: '/agent/meeting', label: t('agentLayout.meetingRoom') },
-  { path: '/agent/content', label: t('agentLayout.contentDept') },
-  { path: '/agent/creative', label: t('agentLayout.creativeDept') },
-  { path: '/agent/brand', label: t('agentLayout.brandDept') },
+  { path: '/agent/creative-lab', label: 'AI 创意实验室' },
+  { path: '/agent/persona', label: t('agentLayout.personaDept') },
+  { path: '/agent/studio', label: t('agentLayout.contentStudio') },
+  { path: '/agent/assets', label: t('agentLayout.assetLibrary') },
+  { path: '/agent/bulletin', label: t('agentLayout.bulletinBoard') },
+  { path: '/agent/brand-settings', label: t('agentLayout.brandSettings') },
   { path: '/agent/trending', label: t('agentLayout.trendingDept') },
   { path: '/agent/publish', label: t('agentLayout.publishDept') },
   { path: '/agent/tasks', label: t('agentLayout.taskCenter') },
   { path: '/agent/triggers', label: t('agentLayout.triggers') },
   { path: '/agent/marketing', label: t('agentLayout.marketingAdvisor') },
   { path: '/agent/designer', label: t('agentLayout.designer') },
-  { path: '/agent/history', label: t('agentLayout.history') },
 ])
 
 // 页面标题映射
 const pageTitleMap = computed<Record<string, string>>(() => ({
   '/agent': t('agentLayout.workbench'),
   '/agent/meeting': t('agentLayout.meetingRoom'),
-  '/agent/content': t('agentLayout.contentDept'),
-  '/agent/creative': t('agentLayout.creativeDept'),
-  '/agent/brand': t('agentLayout.brandDept'),
+  '/agent/brand-settings': t('agentLayout.brandSettings'),
+  '/agent/creative-lab': 'AI 创意实验室',
+  '/agent/persona': t('agentLayout.personaDept'),
+  '/agent/studio': t('agentLayout.contentStudio'),
+  '/agent/assets': t('agentLayout.assetLibrary'),
+  '/agent/bulletin': t('agentLayout.bulletinBoard'),
   '/agent/trending': t('agentLayout.trendingDept'),
   '/agent/publish': t('agentLayout.publishDept'),
   '/agent/tasks': t('agentLayout.taskCenter'),
   '/agent/triggers': t('agentLayout.triggers'),
   '/agent/marketing': t('agentLayout.marketingAdvisor'),
   '/agent/designer': t('agentLayout.designer'),
-  '/agent/history': t('agentLayout.history'),
-  '/agent/copywriting': t('agentLayout.copywriting'),
-  '/agent/poster': t('agentLayout.poster'),
-  '/agent/video': t('agentLayout.video'),
 }))
 const currentPageTitle = computed(() => pageTitleMap.value[route.path] || t('agentLayout.defaultPageTitle'))
 </script>
@@ -582,20 +575,6 @@ const currentPageTitle = computed(() => pageTitleMap.value[route.path] || t('age
   padding: 3px 10px; border-radius: 20px; cursor: pointer; font-weight: 600;
 }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
-
-.topbar-theme-btns {
-  display: flex; align-items: center; gap: 2px;
-  background: var(--gray); border-radius: 999px; padding: 3px 5px;
-  border: 1px solid var(--border);
-}
-.topbar-theme-btn {
-  width: 28px; height: 28px; border-radius: 50%; border: none;
-  background: transparent; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--mid); transition: background 0.15s, color 0.15s;
-}
-.topbar-theme-btn:hover { background: var(--gray-2); color: var(--dark); }
-.topbar-theme-btn.active { background: var(--card-bg); color: var(--blue); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
 .ai-status { display: flex; align-items: center; gap: 5px; }
 .ai-status-dot {

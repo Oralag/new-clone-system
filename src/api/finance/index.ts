@@ -115,9 +115,13 @@ export const createInvoice = (data: any) => http.post('/finance/Invoice/add', da
 export const updateInvoice = (data: any) => http.post('/finance/Invoice/edit', data)
 export const deleteInvoice = (id: number) => http.post('/finance/Invoice/del', { id })
 export const getStatementList = (params?: any) => http.get('/finance/Statement/index', { params })
+export const getStatementDetail = (id: number) => http.get('/finance/Statement/read', { params: { id } })
 export const createStatement = (data: any) => http.post('/finance/Statement/add', data)
 export const updateStatement = (data: any) => http.post('/finance/Statement/edit', data)
 export const deleteStatement = (id: number) => http.post('/finance/Statement/del', { id })
+/** 对账单状态流转：0草稿 1已发出 2对方已确认 3有异议 4已结清 */
+export const confirmStatement = (id: number, status: number, confirm_remark = '') =>
+  http.post('/finance/Statement/confirm', { id, status, confirm_remark })
 export async function getExpenseList(params?: any) {
   const safeParams = { ...(params || {}) }
   if (safeParams.type_name && !safeParams.title) safeParams.title = safeParams.type_name

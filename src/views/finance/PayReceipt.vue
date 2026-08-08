@@ -99,7 +99,6 @@ import { getPayReceiptList, deletePayReceipt, unAuditPayReceipt } from '@/api/fi
 import http from '@/api/http'
 import { applyProcureReturnsToPayReceiptRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
-import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
 const { t } = useI18n()
@@ -204,11 +203,9 @@ async function handleRevoke(row: any) {
   )
   try {
     await deletePayReceipt(row.id)
-    if (Number(row.amount || 0) > 0) {
-      try {
-        await adjustFundBalance({ fundId: row.fund_id, fundName: row.fund_name || row.account_name, delta: Number(row.amount) })
-      } catch { /* 回退失败不阻塞 */ }
-    }
+    // ⚠️ 不要在这里再调 adjustFundBalance 加回余额！
+    // 后端 /finance/PayReceipt/del 已经做了 `balance = balance + amount`（index.js:2604），
+    // 前端再加一次会导致资金账户凭空多出一笔钱。同 CollectReceipt 的双重扣减问题。
     ElMessage.success(t('finance.payReceipt.revokeSuccess'))
     tableRef.value?.refresh()
   } catch (e: any) {

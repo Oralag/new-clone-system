@@ -1122,7 +1122,13 @@ function findContactName(id: string): string | null {
 }
 
 // 亚当 inbox 注入：把链上钱包检测 / 主动消息合并到亚当会话条目
+// 亚当是超管专属的对外投资 Agent，店员/子账号看不到
 async function mergeAdamInbox() {
+  const SUPER_ADMIN = '17747344571'
+  if (authStore.userInfo?.account !== SUPER_ADMIN) {
+    adamGroup.value = null
+    return
+  }
   try {
     const token = localStorage.getItem('erp_token') || ''
     const [histRes, inboxRes] = await Promise.all([

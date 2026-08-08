@@ -1077,8 +1077,10 @@ async function loadRankData(fallbackSaleRows: any[], fallbackRetailRows: any[]) 
 
   if (token !== rankLoadToken) return
 
-  if (contractRes.status === 'fulfilled' && contractRes.value.length) {
-    _rankSaleRows.value = contractRes.value
+  if (contractRes.status === 'fulfilled') {
+    // 后端忽略 status 参数，必须前端过滤（铁律）
+    const filteredContracts = contractRes.value.filter((r: any) => Number(r.status) === 1)
+    if (filteredContracts.length) _rankSaleRows.value = filteredContracts
   }
   if (retailRes.status === 'fulfilled') {
     const filtered = retailRes.value.filter((r: any) => Number(r.status) === 1)

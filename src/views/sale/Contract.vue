@@ -722,7 +722,7 @@
           </div>
 
           <!-- 赠品（折叠） -->
-          <div v-if="!isReadonly || giftItems.length > 0" class="gift-block">
+          <div class="gift-block">
             <div class="gift-divider"></div>
             <div class="gift-head" @click="giftExpanded = !giftExpanded">
               <el-icon class="gift-arrow" :class="{ open: giftExpanded }"><ArrowDown /></el-icon>
@@ -1424,6 +1424,7 @@ import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
 import { usePermissionStore } from '@/stores/permission'
+import { useAuthStore } from '@/stores/auth'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
@@ -1436,6 +1437,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
+const authStore = useAuthStore()
 const stockRefreshStore = useStockRefreshStore()
 const router = useRouter()
 const route = useRoute()
@@ -1852,7 +1854,13 @@ const filteredContractApi = async (params: any) => {
   const res = await getContractList(apiParams)
   // 线上平台订单（美团/微信小店/拼多多/抖音/淘宝/小红书）只在各自页面显示，不在销售合同里出现
   const ONLINE_CUSTOMER_IDS = new Set([63, 10, 12, 7, 8, 11])
-  const allRows: any[] = (res.data?.rows ?? []).filter((r: any) => !ONLINE_CUSTOMER_IDS.has(Number(r.customer_id)))
+  // 数据隔离：子账号只看自己创建的（超管看全部）
+  const myId = Number((authStore.userInfo as any)?.id || 0)
+  const myName = authStore.userInfo?.name || ''
+  const scopeMine = (rows: any[]) => permStore.isSubAccount
+    ? rows.filter((r: any) => (myId && Number(r.admin_id) === myId) || (myName && r.admin_name === myName))
+    : rows
+  const allRows: any[] = scopeMine((res.data?.rows ?? []).filter((r: any) => !ONLINE_CUSTOMER_IDS.has(Number(r.customer_id))))
   lastAllRows.value = allRows
   const allFoldedIds = new Set(foldedGroups.value.flatMap(g => [...g.ids]))
   const s = searchForm.start_date

@@ -226,6 +226,7 @@ import { getSupplierList, createSupplier, updateSupplier, deleteSupplier, getPro
 import { getPayableList, getPayReceiptList } from '@/api/finance'
 import http from '@/api/http'
 import { readScopedJson, writeScopedJson } from '@/utils/storageScope'
+import { buildSupplierPayableRows } from '@/utils/payableCalc'
 import * as XLSX from 'xlsx'
 
 const { t, locale } = useI18n()
@@ -264,8 +265,8 @@ async function loadSupplierFinance() {
       // 检查是否有行级供应商
       const hasRowSupplier = items.some((i: any) => Number(i.supplier_id))
       if (!hasRowSupplier) {
-        // 单一供应商，整单金额归头部
-        if (headSid) pMap[headSid] = (pMap[headSid] || 0) + Number(o.total_amount || 0)
+        // 单一供应商，整单金额归头部（与 Payable.vue 同口径：after_discount 优先）
+        if (headSid) pMap[headSid] = (pMap[headSid] || 0) + Number(o.after_discount ?? o.total_amount ?? 0)
       } else {
         // 多供应商，按行拆分
         for (const item of items) {
@@ -326,11 +327,11 @@ async function loadSupplierFinance() {
       if (sid) pmMap[sid] = (pmMap[sid] || 0) + amt
     }
     paidMap.value = pmMap
-    // 欠款 = 采购 - 付款
+    // 欠款：统一口径，与 Payable.vue / Overview.vue / FundFlow.vue 完全一致（utils/payableCalc.ts）
     const dMap: Record<number, number> = {}
-    const allIds = new Set([...Object.keys(pMap), ...Object.keys(pmMap)].map(Number))
-    for (const sid of allIds) {
-      dMap[sid] = (pMap[sid] || 0) - (pmMap[sid] || 0)
+    for (const row of buildSupplierPayableRows(orders, payments)) {
+      const sid = Number(row.supplier_id || 0)
+      if (sid > 0) dMap[sid] = (dMap[sid] || 0) + Number(row.un_pay_amount || 0)
     }
     debtMap.value = dMap
   } catch { /* ignore */ }
@@ -346,7 +347,8 @@ async function loadFinanceInfo(supplierId: number) {
     financeInfo.totalPurchase = purchaseMap.value[supplierId] ?? 0
     financeInfo.totalPaid = paidMap.value[supplierId] ?? 0
     financeInfo.prepaid = Math.max(0, financeInfo.totalPaid - financeInfo.totalPurchase)
-    financeInfo.debtBalance = Math.max(0, financeInfo.totalPurchase - financeInfo.totalPaid)
+    // 欠款与应付账款页统一口径
+    financeInfo.debtBalance = Math.max(0, getDebtBalance(supplierId))
   } finally {
     financeLoading.value = false
   }

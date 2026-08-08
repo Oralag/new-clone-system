@@ -47,7 +47,7 @@ export async function onRequestPost({ request, env }) {
 
   const file = formData.get('file')
   if (!file) {
-    return Response.json({ code: 0, message: '未收到图片' }, { status: 400, headers: CORS_HEADERS })
+    return Response.json({ code: 0, message: '未收到文件' }, { status: 400, headers: CORS_HEADERS })
   }
 
   const arrayBuffer = await file.arrayBuffer()

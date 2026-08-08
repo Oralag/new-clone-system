@@ -94,11 +94,14 @@
             <div
               v-for="(v, i) in skuVariants"
               :key="i"
-              :class="['bd-sku-chip', { active: selectedSku === i }]"
-              @click="selectedSku = i; if (skuImageList[i]) activeImg = skuImageList[i]"
+              :class="['bd-sku-chip', { active: selectedSku === i, 'has-img': !!(v as any).image }]"
+              @click="selectedSku = i; if ((v as any).image) activeImg = (v as any).image; else if (skuImageList[i]) activeImg = skuImageList[i]"
             >
-              <span class="bd-chip-label">{{ v.label }}</span>
-              <span class="bd-chip-price">¥{{ v.price }}</span>
+              <img v-if="(v as any).image" :src="(v as any).image" class="bd-chip-img" referrerpolicy="no-referrer" />
+              <div class="bd-chip-body">
+                <span class="bd-chip-label">{{ v.label }}</span>
+                <span class="bd-chip-price">¥{{ v.price }}</span>
+              </div>
             </div>
           </div>
           <!-- 纯图片规格（无 skuVariants 时） -->
@@ -193,13 +196,9 @@
         <div class="bed-body">
           <!-- 图片编辑 -->
           <template v-if="editType === 'images'">
-            <label class="bed-label">主图</label>
-            <div class="bed-input-row">
-              <input v-model="editData.image" type="url" class="bed-input" placeholder="https://... 或点击上传" />
-              <button class="bed-upload-btn" @click="upload(v => { editData.image = v; activeImg = v })">上传</button>
-            </div>
-            <img v-if="editData.image" :src="editData.image" class="bed-preview-img" referrerpolicy="no-referrer" />
-            <label class="bed-label">轮播图（最多4张，可拖拽排序）</label>
+            <label class="bed-label">主图预览（= 下方第 1 张）</label>
+            <img v-if="editData.headerImages && editData.headerImages[0]" :src="editData.headerImages[0]" class="bed-preview-img" referrerpolicy="no-referrer" />
+            <label class="bed-label">商品图片（最多 4 张，可拖拽排序，第 1 张 = 主图）</label>
             <div
               v-for="(img, i) in editData.headerImages"
               :key="i"
@@ -213,7 +212,8 @@
               :class="{ 'bed-drag-over': carouselDragOver === i }"
             >
               <span class="bed-drag-handle" title="拖拽排序">⠿</span>
-              <input v-model="editData.headerImages[i]" type="url" class="bed-input" :placeholder="`第 ${i+1} 张`" />
+              <span v-if="i === 0" class="bed-main-tag">主图</span>
+              <input v-model="editData.headerImages[i]" type="url" class="bed-input" :placeholder="i === 0 ? '第 1 张 · 主图' : `第 ${i+1} 张`" />
               <button class="bed-upload-btn" @click="upload(v => editData.headerImages[i] = v)">上传</button>
             </div>
           </template>
@@ -339,11 +339,11 @@ function openEdit(type: string) {
   if (!brandEdit.editMode || !product.value) return
   editType.value = type
   if (type === 'images') {
+    const arr = [...(product.value.headerImages || [])]
+    while (arr.length < 4) arr.push('')
     editData.value = {
       image: product.value.image,
-      headerImages: product.value.headerImages?.length
-        ? [...product.value.headerImages]
-        : ['', '', '', ''],
+      headerImages: arr.slice(0, 4),
     }
   } else if (type === 'info') {
     editData.value = {
@@ -367,8 +367,9 @@ async function saveEdit() {
   try {
     const patch: any = {}
     if (editType.value === 'images') {
-      patch.image = editData.value.image
-      patch.headerImages = editData.value.headerImages.filter((s: string) => s.trim())
+      const filtered = editData.value.headerImages.filter((s: string) => s.trim())
+      patch.headerImages = filtered
+      patch.image = filtered[0] || ''
       activeImg.value = patch.image || activeImg.value
     } else if (editType.value === 'info') {
       Object.assign(patch, editData.value)
@@ -481,6 +482,7 @@ function addAndGo() {
 .bed-carousel-row.bed-drag-over { background: rgba(124,58,237,0.08); outline: 2px dashed rgba(124,58,237,0.4); }
 .bed-drag-handle { font-size: 16px; color: rgba(29,29,31,0.3); cursor: grab; padding: 0 4px; flex-shrink: 0; user-select: none; }
 .bed-drag-handle:active { cursor: grabbing; }
+.bed-main-tag { font-size: 11px; font-weight: 700; color: #7c3aed; background: rgba(124,58,237,0.1); padding: 3px 8px; border-radius: 6px; margin-right: 4px; flex-shrink: 0; }
 .bed-tags-row { display: flex; gap: 16px; }
 .bed-tag-check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .bed-footer { padding: 16px 24px; border-top: 1px solid rgba(0,0,0,0.06); display: flex; gap: 10px; justify-content: flex-end; }
@@ -516,6 +518,9 @@ function addAndGo() {
 .bd-sku-chip.active { border-color: #0071e3; background: rgba(0,113,227,0.07); box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
 .bd-chip-label { font-size: 13px; font-weight: 700; color: #1d1d1f; }
 .bd-chip-price { font-size: 12px; font-weight: 600; color: #0071e3; }
+.bd-sku-chip.has-img { padding: 6px 12px 6px 6px; flex-direction: row; gap: 8px; min-width: 110px; align-items: center; }
+.bd-chip-body { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.bd-chip-img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; background: #fff; flex-shrink: 0; }
 
 /* 移动端评价预览（默认隐藏，768px以下显示） */
 .bd-reviews-mobile { display: none; margin-bottom: 32px; }

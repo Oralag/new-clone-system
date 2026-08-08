@@ -51,6 +51,22 @@ export const onRequestPost: PagesFunction<{ VOLC_ACCESS_KEY_ID: string; VOLC_SEC
   const { task_id } = await request.json() as { task_id: string }
   if (!task_id) return Response.json({ status: 'error', message: '缺少 task_id' }, { status: 400 })
 
+  // 老版任务（task_id 带 legacy: 前缀）：走 CVProcess 查询
+  if (task_id.startsWith('legacy:')) {
+    const realId = task_id.slice(7)
+    const legacyBody = JSON.stringify({ req_key: 'jimeng_video_t2v_async_result', task_id: realId })
+    const lh = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVProcess&Version=2022-08-31', legacyBody, 'visual.volcengineapi.com', 'cv')
+    const lresp = await fetch('https://visual.volcengineapi.com/?Action=CVProcess&Version=2022-08-31', { method: 'POST', headers: lh, body: legacyBody })
+    const ldata = await lresp.json() as any
+    const st: string = ldata?.data?.status || ''
+    const legacyMap: Record<string, string> = { succeeded: 'done', processing: 'processing', pending: 'queued', failed: 'failed' }
+    return Response.json({
+      status: legacyMap[st] ?? 'processing',
+      video_url: ldata?.data?.video_url || '',
+      raw_status: st,
+    })
+  }
+
   const reqBody = JSON.stringify({ req_key: 'jimeng_ti2v_v30_pro', task_id })
   const headers = await volcSign(akId, akSecret, 'POST', '/', 'Action=CVSync2AsyncGetResult&Version=2022-08-31', reqBody, 'visual.volcengineapi.com', 'cv')
   const resp = await fetch('https://visual.volcengineapi.com/?Action=CVSync2AsyncGetResult&Version=2022-08-31', {

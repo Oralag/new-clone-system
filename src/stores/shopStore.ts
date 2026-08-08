@@ -7,6 +7,7 @@ export interface SkuVariant {
   label: string    // 如 "1盒" "2盒"
   price: number    // 该规格零售价
   erpId?: number
+  image?: string   // 规格图片 URL（选填）
 }
 
 export interface ShopProduct {
@@ -17,17 +18,24 @@ export interface ShopProduct {
   price: number          // 零售价 (sell_price)
   wholesalePrice: number // 批发价 (remark JSON)
   minOrderQuantity: number
+  spec: string           // 规格，如 "16次泡" "250克"
+  unit: string           // 单位，如 "盒" "袋"
+  erpCategory: string    // ERP 商品分类（cate_name），brand.category 没填时兜底
+  // 休闲快消品的固定供货价（不按零售价折算，逐个商品填）
+  supplyPrices: { t2: number; t1: number } | null
   image: string
   headerImages: string[]
   detailImage: string
   detailImages: string[]
   skuImages: string[]    // SKU白底图
   skuVariants: SkuVariant[] // 规格列表（含各自价格）
-  category: string
+  category: string       // 小程序分类（__brand__.category），与小程序同源
+  memberOnly: boolean    // 会员专属商品
   tags: string[]         // 'new' | 'hot' | 'sale'
   rating: number
   reviewsCount: number
   sort: number
+  delivery?: boolean     // 是否进门店外卖商品池
 }
 
 export interface ShopCartItem extends ShopProduct {
@@ -55,18 +63,42 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
     price: parseFloat(item.sell_price) || 0,
     wholesalePrice: brand.wholesalePrice || 0,
     minOrderQuantity: brand.minOrderQuantity || 1,
+    // ERP 的 spec 有历史脏数据（存过 JSON 串），以 { 或 [ 开头的一律当空
+    spec: /^\s*[{[]/.test(String(item.spec || '')) ? '' : String(item.spec || ''),
+    unit: item.unit_name || '',
+    erpCategory: item.cate_name || '',
+    supplyPrices: (brand as any).supplyPrices || null,
     image: brand.image || (item.images ? item.images.split(',')[0] : '') || '',
     headerImages: brand.headerImages || [],
     detailImage: brand.detailImage || '',
     detailImages: brand.detailImages || [],
     skuImages: brand.skuImages || [],
-    skuVariants: brand.skuVariants || [],
-    category: item.cate_name || '',
+    skuVariants: (() => {
+      const variants: SkuVariant[] = (brand.skuVariants as SkuVariant[]) || []
+      const groups: any[] = (brand as any).specGroups || []
+      if (!groups.length) return variants
+      return variants.map(v => {
+        if (v.image) return v
+        const parts = String(v.label || '').split(' / ')
+        for (let gi = 0; gi < groups.length; gi++) {
+          const val = (groups[gi]?.values || []).find((x: any) => x.label === parts[gi])
+          if (val?.image) return { ...v, image: val.image }
+        }
+        return v
+      })
+    })(),
+    // 分类跟小程序同源：用 __brand__.category（小程序分类），不是 ERP 后台的商品分类树 cate_name
+    category: (brand as any).category || '',
+    memberOnly: (brand as any).member_only === true || (brand as any).memberOnly === true,
     tags: brand.tags || [],
     rating: brand.rating || 5.0,
     reviewsCount: brand.reviewsCount || 0,
     sort: item.sort || 0,
     show: brand.show === true,
+    // 门店外卖池：品牌已上架的默认可送，门店独有的单独开 delivery，deliveryOff 显式排除
+    delivery: (brand as any).deliveryOff === true
+      ? false
+      : (brand.show === true || (brand as any).delivery === true),
   }
 }
 
@@ -74,6 +106,9 @@ export const useShopStore = defineStore('shop', () => {
   const shopMode = ref<'retail' | 'wholesale' | null>(null)
   const cart = ref<ShopCartItem[]>([])
   const products = ref<ShopProduct[]>([])
+  // 全量（含只在门店卖、未上架商城的），products 按 channel 从这里筛
+  const allProducts = ref<ShopProduct[]>([])
+  const channel = ref<'shop' | 'delivery'>('shop')
   const checkoutSuccess = ref(false)
   const loading = ref(false)
 
@@ -85,6 +120,18 @@ export const useShopStore = defineStore('shop', () => {
   const cartCount = computed(() => cart.value.length)
 
   // 从 ERP 拉取商品列表
+  // 按当前渠道从全量里筛出要展示的商品
+  function applyChannel() {
+    products.value = channel.value === 'delivery'
+      ? allProducts.value.filter(p => p.delivery === true)
+      : allProducts.value.filter(p => (p as any).show === true)
+  }
+
+  function setChannel(c: 'shop' | 'delivery') {
+    channel.value = c
+    applyChannel()
+  }
+
   async function fetchProducts() {
     loading.value = true
     try {
@@ -109,9 +156,10 @@ export const useShopStore = defineStore('shop', () => {
       if (json.code === 1 && json.data?.rows) {
         const rows: ShopProduct[] = json.data.rows
           .map(erpGoodsToShopProduct)
-          .filter((p: ShopProduct) => p.name && (p as any).show === true)
+          .filter((p: ShopProduct) => p.name && ((p as any).show === true || p.delivery === true))
           .sort((a: ShopProduct, b: ShopProduct) => a.sort - b.sort)
-        products.value = rows
+        allProducts.value = rows
+        applyChannel()
       }
     } catch (e) {
       console.error('fetchProducts error', e)
@@ -121,28 +169,17 @@ export const useShopStore = defineStore('shop', () => {
   }
 
   // 保存单个商品的品牌中心字段到 ERP remark
+  // 用 patchBrand（PG jsonb 原子 merge，只改传入的字段，绝不覆盖其他）
   async function saveBrandFields(erpId: number, brandData: Partial<ShopProduct>) {
     const token = localStorage.getItem('erp_token') || ''
     if (!token) return
 
-    // 先拿当前 remark
-    const res = await fetch(`${API_BASE}/goods/ShopGoods/index?id=${erpId}`, {
-      headers: { token }
-    })
-    const json = await res.json()
-    const current = json.data?.rows?.[0]
-    let existingRemark: any = {}
-    try { existingRemark = JSON.parse(current?.remark || '{}') } catch { /* ignore */ }
-
-    existingRemark.__brand__ = { ...existingRemark.__brand__, ...brandData }
-
-    await fetch(`${API_BASE}/goods/ShopGoods/edit`, {
+    await fetch(`${API_BASE}/goods/ShopGoods/patchBrand`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', token },
-      body: JSON.stringify({ id: erpId, remark: JSON.stringify(existingRemark) }),
+      body: JSON.stringify({ id: erpId, brand_fields: brandData }),
     })
 
-    // 本地同步
     const idx = products.value.findIndex(p => p.erpId === erpId)
     if (idx >= 0) {
       products.value[idx] = { ...products.value[idx], ...brandData }
@@ -210,9 +247,9 @@ export const useShopStore = defineStore('shop', () => {
   }
 
   return {
-    shopMode, cart, products, checkoutSuccess, loading,
+    shopMode, cart, products, allProducts, channel, checkoutSuccess, loading,
     isWholesale, totalAmount, cartCount,
-    setShopMode, resetShopMode, fetchProducts, saveBrandFields, saveSortOrder,
+    setShopMode, resetShopMode, setChannel, fetchProducts, saveBrandFields, saveSortOrder,
     addToCart, removeFromCart, updateQuantity, checkout, clearCart,
   }
 })

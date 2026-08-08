@@ -6,6 +6,9 @@
 interface Env {
   AI_API_KEY: string
   AI_BASE_URL?: string
+  AI_MODEL?: string
+  NVIDIA_API_KEY?: string
+  SILICONFLOW_API_KEY?: string
   AGENT_MEMORY: KVNamespace
 }
 
@@ -37,20 +40,40 @@ function tokenKey(token: string) {
 }
 
 async function callAI(env: Env, system: string, user: string, maxTokens = 6000): Promise<string> {
-  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '')
-  const res = await fetch(`${baseURL}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.AI_API_KEY}` },
-    body: JSON.stringify({
-      model: (env as any).AI_MODEL || 'deepseek-chat',
-      max_tokens: maxTokens,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-    }),
+  const aiBase = env.AI_BASE_URL?.toLowerCase() || ''
+  const apiKey = aiBase.includes('nvidia') ? env.NVIDIA_API_KEY
+    : aiBase.includes('siliconflow') ? env.SILICONFLOW_API_KEY
+    : env.AI_API_KEY
+  const baseURL = (env.AI_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '').replace(/\/v1$/, '')
+  const model = env.AI_MODEL || 'deepseek-chat'
+  const body = JSON.stringify({
+    model,
+    max_tokens: maxTokens,
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
   })
-  if (!res.ok) throw new Error(`AI call failed: ${res.status}`)
-  const data = await res.json() as any
-  return data.choices?.[0]?.message?.content || ''
+  // Retry up to 4 times with exponential backoff for 429/5xx (rate limit / transient)
+  let lastStatus = 0
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch(`${baseURL}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body,
+    })
+    if (res.ok) {
+      const data = await res.json() as any
+      return data.choices?.[0]?.message?.content || ''
+    }
+    lastStatus = res.status
+    // Only retry on rate limit / server errors
+    if (res.status !== 429 && res.status < 500) throw new Error(`AI call failed: ${res.status}`)
+    const backoffMs = 1500 * Math.pow(2, attempt) // 1.5s, 3s, 6s, 12s
+    await new Promise(r => setTimeout(r, backoffMs))
+  }
+  throw new Error(`AI call failed after retries: ${lastStatus}`)
 }
+
+// Small delay between sequential chapter calls to avoid rate limits
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 async function writeBook(env: Env, nicheHint?: string): Promise<KdpBook> {
   // Step 1: 选题 + 元数据
@@ -75,13 +98,76 @@ async function writeBook(env: Env, nicheHint?: string): Promise<KdpBook> {
   }
   try { meta = JSON.parse(metaRaw.replace(/```json|```/g, '').trim()) } catch {}
 
-  // Step 2: 书稿 + 简介 + 封面（合并成一次调用减少超时风险）
-  const manuscript = await callAI(
+  // Step 2: 分段生成书稿 —— flash 模型一次写不够长，改成 Preface + 7 章 + CTA 分开调用
+  const authorSystem = 'You are a professional non-fiction author writing practical Kindle books. Write in second person, use contractions, vary sentence length, include specific numbers and real examples. Sound human. No filler. Never stop early — if you feel the section is short, keep writing with more examples and detail until you hit the word target.'
+
+  // Step 2a: 让 AI 先给出 7 个章节的标题
+  const outlineRaw = await callAI(
     env,
-    'You are a professional non-fiction author writing practical Kindle books. Write in second person, use contractions, vary sentence length, include specific numbers and real examples. Sound human. No filler.',
-    `Write a complete Kindle e-book manuscript.\n\nTitle: ${meta.title}\nSubtitle: ${meta.subtitle}\nTarget reader: ${meta.target_reader}\n\nRequirements:\n- 5,000-6,500 words\n- 7 chapters with clear titles\n- Each chapter: practical, actionable, specific examples\n- Opening hook in preface\n- Closing CTA asking for a review\n\nWrite the full manuscript now:`,
-    6000,
+    'You are a Kindle book editor. Output ONLY valid JSON, no markdown.',
+    `For a book titled "${meta.title}" (subtitle: "${meta.subtitle}") targeting ${meta.target_reader}, write 7 chapter titles that flow logically from beginner to advanced. Each title should be specific and benefit-driven.\n\nOutput JSON:\n{"chapter_titles":["Chapter 1: ...","Chapter 2: ...","Chapter 3: ...","Chapter 4: ...","Chapter 5: ...","Chapter 6: ...","Chapter 7: ..."]}`,
+    600,
   )
+  let chapterTitles: string[] = []
+  try {
+    const parsed = JSON.parse(outlineRaw.replace(/```json|```/g, '').trim())
+    chapterTitles = Array.isArray(parsed.chapter_titles) ? parsed.chapter_titles.slice(0, 7) : []
+  } catch {}
+  if (chapterTitles.length !== 7) {
+    chapterTitles = [
+      'Chapter 1: Getting Started',
+      'Chapter 2: Core Foundations',
+      'Chapter 3: Practical Tools',
+      'Chapter 4: Common Pitfalls',
+      'Chapter 5: Advanced Strategies',
+      'Chapter 6: Real Case Studies',
+      'Chapter 7: Your 30-Day Action Plan',
+    ]
+  }
+
+  // Step 2b: Preface（开场钩子）
+  const preface = await callAI(
+    env,
+    authorSystem,
+    `Write the Preface for the book "${meta.title}" targeting ${meta.target_reader}.\n\nRequirements:\n- 400-500 words MINIMUM\n- Start with a vivid, specific opening scene or a surprising statistic\n- State the problem the reader is facing\n- Promise the transformation they'll get\n- Preview what the 7 chapters will cover\n- Do NOT include a chapter heading, just the body text\n\nWrite the full preface now:`,
+    900,
+  )
+
+  // Step 2c: 7 个章节各写一次（每章 700-900 词）
+  const chapterBodies: string[] = []
+  for (const title of chapterTitles) {
+    await sleep(1500) // 章节之间间隔，避免 rate limit
+    const body = await callAI(
+      env,
+      authorSystem,
+      `Write "${title}" for the book "${meta.title}" (target reader: ${meta.target_reader}).\n\nRequirements:\n- 700-900 words MINIMUM\n- Start with a concrete scene, story, or problem\n- Include at least 2 specific examples with real numbers, prices, tools, or names\n- End with a clear "This Week's Action" checklist of 3-5 items the reader does now\n- Do NOT summarize or shorten — write the full chapter\n- Do NOT include the chapter title in the output, just the body\n\nWrite the full chapter now:`,
+      1400,
+    )
+    chapterBodies.push(body)
+  }
+
+  // Step 2d: 结尾 CTA（求评论）
+  const conclusion = await callAI(
+    env,
+    authorSystem,
+    `Write the closing section for the book "${meta.title}" targeting ${meta.target_reader}.\n\nRequirements:\n- 300-400 words\n- Recap the transformation the reader now has\n- One motivating final scene / metaphor\n- Genuine CTA asking for a review (be human, not spammy)\n\nWrite it now:`,
+    700,
+  )
+
+  // 组装完整手稿
+  const manuscript = [
+    `# ${meta.title}`,
+    `**${meta.subtitle}**`,
+    '',
+    '## Preface',
+    preface.trim(),
+    '',
+    ...chapterTitles.map((t, i) => `## ${t}\n\n${(chapterBodies[i] || '').trim()}\n`),
+    '## A Final Note',
+    conclusion.trim(),
+    '',
+    '**— End —**',
+  ].join('\n')
 
   const descAndCover = await callAI(
     env,

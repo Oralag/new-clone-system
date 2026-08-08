@@ -1124,6 +1124,7 @@ import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
 import { usePermissionStore } from '@/stores/permission'
+import { useAuthStore } from '@/stores/auth'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
@@ -1138,6 +1139,7 @@ const { t, locale } = useI18n()
 const taxRates = TAX_RATES
 
 const permStore = usePermissionStore()
+const authStore = useAuthStore()
 const stockRefreshStore = useStockRefreshStore()
 
 const KAONAIPI_SN = 'SP0000053'
@@ -1543,7 +1545,14 @@ async function getProcureOrderListWithInhouse(params: any) {
   const fetchParams = needClientFilter ? { ...params, list_rows: 10000, page: 1 } : params
   if (isUnreconciled) delete (fetchParams as any).status
   const res = await getProcureOrderList(fetchParams)
-  const rows: any[] = res?.data?.rows ?? res?.data ?? []
+  let rows: any[] = res?.data?.rows ?? res?.data ?? []
+  // 数据隔离：子账号只看自己创建的
+  const myId = Number((authStore.userInfo as any)?.id || 0)
+  const myName = authStore.userInfo?.name || ''
+  if (permStore.isSubAccount) {
+    rows = rows.filter((r: any) => (myId && Number(r.admin_id) === myId) || (myName && r.admin_name === myName))
+    if (res?.data) { res.data.rows = rows; res.data.total = rows.length }
+  }
   hydrateOrderListSortDates(rows)
   if (rows.length) {
     try {

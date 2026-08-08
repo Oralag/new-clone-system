@@ -232,3 +232,9 @@ npm run deploy
 - [2026-07-03] 园区地图"进入大厅"跳转 `/investment/city/hall/:id`，但路由表从未注册该路由，HallView（1234行）写完从未可达；另有"待执行转账"面板无任何生产端、永远为空 → **凡是新增页面/跳转，写完必须在路由表注册并实际点一遍；凡是审批类 UI，必须确认有对应的生产端数据源，否则删掉**
 
 - [2026-07-02] 投资部门改版被做成在 `InvestmentLayout.vue` 里堆约 1700 行不带 scoped 的全局 CSS，用 `!important` + `nth-child` 强行覆盖所有子页面样式，还把 4200 行的 City.vue 异步加载进首页当背景装饰、模板引用了未 import 的 `adamAvatarUrl` → **铁律：视觉改版必须改组件本身的模板和 scoped 样式，禁止在布局文件里用全局 `!important` 批量覆盖子页面；禁止为了装饰引入整个业务页面组件。** 另注意：投资子页面（Market/City/Library/Archive/AdamChat）依赖 `.inv-layout` 上定义的 `--dark/--mid/--dim/--faint/--border/--card-bg/--accent/--gray` 兼容变量，重写布局时必须保留这组变量
+
+- [2026-07-19] 权限过滤代码全对但店员仍看到全部功能，排查多轮才发现根因：**登录响应的 userInfo 不带 remark 字段（权限串存在 remark 里），`permConfig` 恒为 null，子账号全部被当成全权限**。修复：`auth.ts` 登录后调用 `ensureSubAccountRemark()`，从 `/setting/admin/index` 补拉本账号 remark。**铁律：排查权限问题先确认权限数据是否真的到了前端（看 localStorage `erp_user` 里有没有 `__perm__:` 串），再查过滤逻辑**；改完权限相关代码，必须让子账号退出重新登录才生效（localStorage 缓存的旧 userInfo 没有权限串）
+
+- [2026-07-18] 手机端店员登录看到全部功能 → 手机端首页 `MobileWorkbench.vue` 的功能入口曾是写死列表，未接权限。**铁律：手机端任何新增功能入口/tab，必须用 `permStore.canAccessPath(path)` 过滤**；权限唯一入口是 `src/stores/permission.ts` 的 `canAccessPath`（收银台→`retail-order`，统计页→`reports-overview`/`finance-overview`），禁止在页面里自行判断权限
+
+- [2026-07-11] 全站业务逻辑审计发现应收/应付计算在 4 处页面各自实现、口径漂移（FundFlow 未收款漏 status=4 合同/线上客户排除/退货扣减；Overview 应付漏零售附加费、附加费已付含"审核自动生成"；SupplierList 欠款用 total_amount 且不含附加费）→ **铁律：应收计算唯一入口 `src/utils/receivableCalc.ts`（buildContractReceivableItems + deductSaleReturnsByCustomer），应付计算唯一入口 `src/utils/payableCalc.ts`（buildSupplierPayableRows + buildContractFeePayableRows + buildRetailFeePayableRows）。任何页面需要应收/应付数字必须调用这两个 utils，禁止在页面内复制实现；口径要改就改 utils，所有页面自动同步。**

@@ -65,6 +65,7 @@ import http from '@/api/http'
 import { ElMessageBox } from 'element-plus'
 import { TOKEN_NAME } from '@/config'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 import { useI18n } from 'vue-i18n'
 import MobileMeetingPinned from './MobileMeetingPinned.vue'
 
@@ -73,13 +74,15 @@ const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
 
+const permStore = usePermissionStore()
+
 const tabs = computed(() => ([
   { key: 'chat', label: t('mobile.chat'), path: '/mobile/chat' },
   { key: 'contacts', label: t('mobile.contacts'), path: '/mobile/contacts' },
   { key: 'workbench', label: t('mobile.home'), path: '/mobile/dashboard' },
   { key: 'stats', label: t('mobile.stats'), path: '/mobile/stats' },
   { key: 'modules', label: t('mobile.modules'), path: '/mobile/modules' },
-]))
+]).filter(tab => permStore.canAccessPath(tab.path)))
 
 const routeTitle = computed(() => {
   const meta = route.meta as { title?: string; titleKey?: string }

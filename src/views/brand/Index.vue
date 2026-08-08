@@ -60,10 +60,17 @@
         </button>
       </section>
 
-      <button class="mini-explore-bar" @click="$router.push('/brand/products')">
-        <span>浏览全部商品</span>
-        <span>→</span>
-      </button>
+      <!-- 与小程序首页购买场景入口保持一致 -->
+      <section class="mini-shop-entries">
+        <div class="mini-shop-entry" @click="$router.push('/brand/products')">
+          <span class="mini-entry-title">品牌商城</span>
+          <span class="mini-entry-arrow">→</span>
+        </div>
+        <div class="mini-shop-entry" @click="$router.push('/brand/products?scene=delivery')">
+          <span class="mini-entry-title">门店外卖</span>
+          <span class="mini-entry-arrow">→</span>
+        </div>
+      </section>
 
       <section class="mini-stats-row">
         <div v-for="item in cfg.stats" :key="item.label" class="mini-stat">
@@ -1031,30 +1038,45 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
     font-size: 15px;
     flex: 0 0 auto;
   }
-  .mini-explore-bar {
-    width: 100%;
+  .mini-shop-entries {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #E7DFD3;
+  }
+  .mini-shop-entry {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 24px;
-    background: var(--cream);
-    border: 0;
-    border-bottom: 1px solid rgba(17,17,17,0.08);
-    color: #111;
-    font-size: 15px;
-    font-weight: 800;
-    letter-spacing: 0.03em;
+    justify-content: center;
+    gap: 8px;
+    min-height: 55px;
+    padding: 0 12px;
     cursor: pointer;
   }
-  .mini-explore-bar span:last-child {
-    color: rgba(17,17,17,0.35);
-    font-size: 16px;
+  .mini-shop-entry + .mini-shop-entry::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 17px;
+    bottom: 17px;
+    width: 1px;
+    background: rgba(17,17,17,0.16);
+  }
+  .mini-entry-title {
+    color: #1A1713;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+  }
+  .mini-entry-arrow {
+    color: rgba(17,17,17,0.4);
+    font-size: 12px;
   }
   .mini-stats-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
-    padding: 28px 12px;
+    padding: 24px 12px;
     background: var(--cream);
   }
   .mini-stat {
@@ -1062,16 +1084,16 @@ function addAndGo(product: any) { shopStore.addToCart(product); router.push('/br
     text-align: center;
   }
   .mini-stat-num {
-    color: #111;
+    color: rgba(17,17,17,0.78);
     font-family: var(--serif);
-    font-size: 22px;
-    font-weight: 900;
+    font-size: 18px;
+    font-weight: 600;
     line-height: 1;
     white-space: nowrap;
   }
   .mini-stat-label {
     margin-top: 7px;
-    color: rgba(17,17,17,0.42);
+    color: rgba(17,17,17,0.34);
     font-size: 10px;
     letter-spacing: 0.08em;
     white-space: nowrap;

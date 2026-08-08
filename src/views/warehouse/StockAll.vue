@@ -470,7 +470,10 @@ async function loadCates() {
   try {
     const res = await getGoodsCateList({ list_rows: 200 })
     const rows = res.data?.rows ?? []
-    cateOptions.value = rows.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+    // 从 API 赋值必须按 name 去重（同 Info.vue：name + parent_id 维度，铁律 2026-03-14）
+    const deduped = rows.filter((c: any, i: number) =>
+      rows.findIndex((x: any) => x.name === c.name && String(x.parent_id ?? '0') === String(c.parent_id ?? '0')) === i)
+    cateOptions.value = deduped.sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
   } finally {
     cateLoading.value = false
   }

@@ -229,6 +229,15 @@
               />
             </template>
           </el-table-column>
+          <el-table-column v-if="!isMobileList" :label="$t('goods.info.brandDelivery')" width="90" align="center">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="getBrandDelivery(row)"
+                size="small"
+                @change="(val: boolean) => toggleBrandDelivery(row, val)"
+              />
+            </template>
+          </el-table-column>
           <!-- BOM视图：显示用量 -->
           <el-table-column v-if="leftView === 'bom' && bomViewGoodsId !== null" :label="$t('goods.info.usageCol')" width="110" align="center">
             <template #default="{ row }">
@@ -710,6 +719,24 @@
               <span class="brand-sec-badge">{{ $t('goods.info.brandBadge') }}</span>
             </div>
             <el-row :gutter="24">
+              <el-col :span="24">
+                <el-form-item :label="$t('goods.info.miniCategory')">
+                  <div class="brand-mini-category-row">
+                    <el-select
+                      v-model="brandFd.category"
+                      filterable
+                      allow-create
+                      :placeholder="$t('goods.info.miniCategoryPh')"
+                      class="brand-mini-category-select"
+                      @focus="loadBrandCategoryOptions"
+                    >
+                      <el-option v-for="cat in brandCategoryOptions" :key="cat" :value="cat" :label="cat" />
+                    </el-select>
+                    <el-button size="small" @click="syncMiniCategoryFromGoodsCate">{{ $t('goods.info.syncGoodsCate') }}</el-button>
+                    <el-button size="small" @click="openCategoryManager">{{ $t('goods.info.manageCate') }}</el-button>
+                  </div>
+                </el-form-item>
+              </el-col>
               <el-col :span="12">
                 <el-form-item :label="$t('goods.info.wholesalePrice')">
                   <el-input-number v-model="brandFd.wholesalePrice" :min="0" :precision="2" controls-position="right" style="width:100%" :placeholder="$t('goods.info.wholesalePricePh')" />
@@ -725,20 +752,16 @@
                   <el-input-number v-model="brandFd.baseSales" :min="0" :precision="0" controls-position="right" style="width:100%" :placeholder="$t('goods.info.baseSalesPh')" />
                 </el-form-item>
               </el-col>
-              <el-col :span="12">
-                <el-form-item :label="$t('goods.info.miniCategory')">
-                  <div style="display:flex;gap:6px;width:100%">
-                    <el-select
-                      v-model="brandFd.category"
-                      filterable
-                      allow-create
-                      :placeholder="$t('goods.info.miniCategoryPh')"
-                      style="flex:1"
-                      @focus="loadBrandCategoryOptions"
-                    >
-                      <el-option v-for="cat in brandCategoryOptions" :key="cat" :value="cat" :label="cat" />
-                    </el-select>
-                    <el-button size="small" @click="openCategoryManager">{{ $t('goods.info.manageCate') }}</el-button>
+              <el-col :span="24">
+                <el-form-item :label="$t('goods.info.categoryTagLabel')">
+                  <div class="brand-tag-row">
+                    <label
+                      v-for="cat in miniCategoryTagOptions"
+                      :key="cat"
+                      class="brand-tag-check"
+                      :class="{ active: brandFd.category === cat }"
+                      @click="!isView && selectMiniCategoryTag(cat)"
+                    >{{ cat }}</label>
                   </div>
                 </el-form-item>
               </el-col>
@@ -790,14 +813,21 @@
                       <div v-for="(val, vi) in group.values" :key="vi" class="spec-brand-value-row">
                         <el-input v-model="val.label" :placeholder="$t('goods.info.specValuePh')"
                           size="small" style="width:160px;" @blur="generateSkuCombos" />
-                        <el-tooltip :content="$t('goods.info.specImageTooltip')" placement="top">
-                          <el-button size="small" :type="val.image ? 'primary' : 'default'" link
-                            @click="val.image = val.image === undefined ? '' : undefined">
+                        <template v-if="val.image">
+                          <img :src="val.image" referrerpolicy="no-referrer"
+                            style="width:32px;height:32px;object-fit:cover;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer"
+                            :title="$t('goods.info.uploadSpecImg')"
+                            @click="uploadSpecImage(val)" />
+                          <el-button size="small" link @click="val.image = ''"
+                            style="color:#909399;font-size:11px;padding:0 4px">
+                            {{ $t('goods.info.clearImg') }}
+                          </el-button>
+                        </template>
+                        <el-tooltip v-else :content="$t('goods.info.uploadSpecImg')" placement="top">
+                          <el-button size="small" type="default" link @click="uploadSpecImage(val)">
                             <el-icon><Picture /></el-icon>
                           </el-button>
                         </el-tooltip>
-                        <el-input v-if="val.image !== undefined" v-model="val.image"
-                          placeholder="Image URL" size="small" style="width:200px;" />
                         <el-button size="small" type="danger" link @click="removeBrandSpecValue(gi, vi)">×</el-button>
                       </div>
                       <el-button size="small" class="spec-brand-add-btn" @click="addBrandSpecValue(gi)">
@@ -807,6 +837,14 @@
 
                     <el-button size="small" class="spec-brand-new-group" @click="addSpecGroup">
                       {{ $t('goods.info.createNewSpec') }}
+                    </el-button>
+                    <el-button
+                      v-if="fd.multi_unit && auxUnitRows.length > 0 && !isView"
+                      size="small" type="primary" plain
+                      style="margin-left:8px"
+                      @click="importSpecFromAuxUnits"
+                    >
+                      {{ $t('goods.info.importFromAuxUnits') }}
                     </el-button>
 
                     <!-- SKU 组合表格 -->
@@ -1010,9 +1048,17 @@
         <el-button type="primary" @click="addMiniCategory">{{ $t('goods.info.addCate') }}</el-button>
       </div>
       <div v-if="managedCategories.length === 0" style="color:#999;text-align:center;padding:20px 0">{{ $t('goods.info.noMiniCate') }}</div>
-      <div v-for="cat in managedCategories" :key="cat" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
-        <span>{{ cat }}</span>
-        <el-button type="danger" link size="small" @click="removeMiniCategory(cat)">{{ $t('goods.info.delete') }}</el-button>
+      <div v-for="(item, idx) in managedCategories" :key="idx" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <el-input v-model="item.name" size="small" style="flex:1" placeholder="分类名称" />
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <el-button link size="small" :disabled="idx === 0" @click="moveMiniCategory(idx, -1)" title="上移">
+            <el-icon><ArrowUp /></el-icon>
+          </el-button>
+          <el-button link size="small" :disabled="idx === managedCategories.length - 1" @click="moveMiniCategory(idx, 1)" title="下移">
+            <el-icon><ArrowDown /></el-icon>
+          </el-button>
+          <el-button type="danger" link size="small" @click="removeMiniCategoryAt(idx)">{{ $t('goods.info.delete') }}</el-button>
+        </div>
       </div>
       <template #footer>
         <el-button @click="categoryManagerVisible = false">{{ $t('goods.info.cancel') }}</el-button>
@@ -1026,7 +1072,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Edit, Delete, ArrowRight, Upload, Download, Camera, Picture } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, ArrowRight, ArrowUp, ArrowDown, Upload, Download, Camera, Picture } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { BrowserMultiFormatReader } from '@zxing/browser'
@@ -1042,6 +1088,7 @@ import {
   getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
+import { useImageUpload } from '@/composables/useImageUpload'
 
 const { t } = useI18n()
 
@@ -1229,6 +1276,31 @@ async function toggleBrandShow(row: any, val: boolean) {
     const res = await http.post('/goods/ShopGoods/patchBrand', { id: row.id, brand_fields: { show: val } })
     if (res.data?.remark) row.remark = res.data.remark
     ElMessage.success(val ? t('goods.info.msgBrandShowOn') : t('goods.info.msgBrandShowOff'))
+  } catch {
+    ElMessage.error(t('goods.info.msgBrandOpFailed'))
+  }
+}
+
+// 门店外卖：品牌展示已开的默认就能外卖送，这里只用来「额外放进外卖」（门店独有商品）
+// 或「从外卖里排除」（品牌展示开着但不适合同城配送的）
+function getBrandDelivery(row: any): boolean {
+  try {
+    const b = JSON.parse(row.remark || '{}')?.__brand__ || {}
+    if (b.deliveryOff === true) return false
+    return b.show === true || b.delivery === true
+  } catch { return false }
+}
+
+async function toggleBrandDelivery(row: any, val: boolean) {
+  try {
+    const b = (() => { try { return JSON.parse(row.remark || '{}')?.__brand__ || {} } catch { return {} } })()
+    // 品牌展示开着的商品，关外卖要用 deliveryOff 显式排除；否则直接改 delivery
+    const fields = b.show === true
+      ? { delivery: val, deliveryOff: !val }
+      : { delivery: val, deliveryOff: false }
+    const res = await http.post('/goods/ShopGoods/patchBrand', { id: row.id, brand_fields: fields })
+    if (res.data?.remark) row.remark = res.data.remark
+    ElMessage.success(val ? t('goods.info.msgBrandDeliveryOn') : t('goods.info.msgBrandDeliveryOff'))
   } catch {
     ElMessage.error(t('goods.info.msgBrandOpFailed'))
   }
@@ -1624,6 +1696,7 @@ function openCreate() {
   defaultSaleUnitIdx.value = 0
   showForm.value = true
   activeTab.value = 'base'
+  loadBrandCategoryOptions()
   nextTick(() => scrollRef.value?.scrollTo({ top: 0 }))
 }
 
@@ -1651,6 +1724,7 @@ function openEdit(row: any) {
   })
   showForm.value = true
   activeTab.value = 'base'
+  loadBrandCategoryOptions()
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
   if (row.id) {
     loadBrandFd(row.id)
@@ -1715,6 +1789,7 @@ function openView(row: any) {
   } catch { fd.user_remark = '' }
   showForm.value = true
   activeTab.value = 'base'
+  loadBrandCategoryOptions()
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
   if (row.id) loadBrandFd(row.id)
 }
@@ -1729,6 +1804,7 @@ function openCopy(row: any) {
   fd.user_remark = ''
   showForm.value = true
   activeTab.value = 'base'
+  loadBrandCategoryOptions()
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
 }
 
@@ -1821,7 +1897,14 @@ async function handleSave() {
           skuCombos: brandFd.skuCombos,
           skuVariants: brandFd.skuCombos
             .filter((c: any) => c.combo?.length)
-            .map((c: any) => ({ label: c.combo.join(' / '), price: c.price, erpId: c.erpId })),
+            .map((c: any) => {
+              let img = ''
+              for (let gi = 0; gi < brandFd.specGroups.length; gi++) {
+                const v = brandFd.specGroups[gi].values.find((x: any) => x.label === c.combo[gi])
+                if (v?.image) { img = v.image; break }
+              }
+              return { label: c.combo.join(' / '), price: c.price, erpId: c.erpId, image: img }
+            }),
           isRedeemable: brandFd.isRedeemable,
           pointsCost: brandFd.pointsCost,
           note: fd.user_remark.trim(),
@@ -2437,7 +2520,10 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
-function onCateChange(v: any) { fd.cate_name = cateOptions.value.find(x => x.id === v)?.name ?? '' }
+function onCateChange(v: any) {
+  fd.cate_name = cateOptions.value.find(x => x.id === v)?.name ?? ''
+  syncMiniCategoryFromGoodsCate(false)
+}
 function onBrandChange(v: any) { fd.brand_name = brandOptions.value.find(x => x.id === v)?.name ?? '' }
 function onUnitChange(v: any) { fd.unit_name = unitOptions.value.find(x => x.id === v)?.name ?? '' }
 
@@ -3043,74 +3129,127 @@ const defaultBrandFd = (): BrandCenterItem => ({
 
 const brandFd = reactive(defaultBrandFd())
 
-const FIXED_CATEGORIES = ['食品', '文创', '礼装']
+const FALLBACK_MINI_CATEGORIES = ['食品', '文创', '礼装']
 const brandCategoryOptions = ref<string[]>([])
 const categoryManagerVisible = ref(false)
-const managedCategories = ref<string[]>([])
+const managedCategories = ref<Array<{ orig: string; name: string }>>([])
 const newCategoryInput = ref('')
 const savingCategories = ref(false)
 
-async function fetchMiniCategories(): Promise<string[]> {
+function normalizeMiniCategory(name: any): string {
+  return String(name ?? '').trim()
+}
+
+function uniqueMiniCategories(list: any[]): string[] {
+  const seen = new Set<string>()
+  const next: string[] = []
+  list.forEach(item => {
+    const name = normalizeMiniCategory(item)
+    if (!name || seen.has(name)) return
+    seen.add(name)
+    next.push(name)
+  })
+  return next
+}
+
+async function fetchBrandConfig(): Promise<Record<string, any>> {
   try {
-    const res = await fetch('/api/brand-config')
+    const token = localStorage.getItem('erp_token') || ''
+    const res = await fetch('/api/brand-config', {
+      cache: 'no-store',
+      headers: token ? { 'x-erp-token': token } : {},
+    })
     const d = await res.json()
-    return Array.isArray(d?.data?.miniCategories) ? d.data.miniCategories : []
-  } catch { return [] }
+    return d?.data || {}
+  } catch { return {} }
+}
+
+async function fetchMiniCategories(): Promise<string[]> {
+  const cfg = await fetchBrandConfig()
+  return Array.isArray(cfg?.miniCategories) ? uniqueMiniCategories(cfg.miniCategories) : []
+}
+
+// KV `miniCategories` is the single source of truth for the mini-app category menu.
+// Do NOT merge in categories scraped from products — otherwise deleting a category via
+// the manager would be undone the moment any existing product still references it.
+async function loadMiniCategoriesFromKv(includeCurrent = false): Promise<string[]> {
+  const saved = await fetchMiniCategories()
+  const list = [...saved]
+  if (includeCurrent) {
+    const cur = normalizeMiniCategory(brandFd.category)
+    if (cur && !list.includes(cur)) list.push(cur)
+  }
+  return list
 }
 
 async function loadBrandCategoryOptions() {
   if (brandCategoryOptions.value.length > 0) return
-  const cats = new Set<string>(FIXED_CATEGORIES)
-  const [mini, goodsRes] = await Promise.allSettled([
-    fetchMiniCategories(),
-    http.get('/goods/ShopGoods/index', { params: { list_rows: 1000 } }),
-  ])
-  if (mini.status === 'fulfilled') mini.value.forEach(c => cats.add(c))
-  if (goodsRes.status === 'fulfilled') {
-    const rows: any[] = goodsRes.value.data?.rows ?? []
-    rows.forEach(r => {
-      try {
-        const b = JSON.parse(r.remark || '{}')
-        if (b.__brand__?.category) cats.add(b.__brand__.category)
-      } catch { /* ignore */ }
-    })
-  }
-  brandCategoryOptions.value = [...cats]
+  const list = await loadMiniCategoriesFromKv(true)
+  brandCategoryOptions.value = list.length ? list : [...FALLBACK_MINI_CATEGORIES]
 }
 
 async function openCategoryManager() {
+  // Manager edits the KV master list only — never seed with product-scraped values.
   const saved = await fetchMiniCategories()
-  managedCategories.value = saved.length ? [...saved] : [...FIXED_CATEGORIES]
+  managedCategories.value = saved.map(name => ({ orig: name, name }))
   newCategoryInput.value = ''
   categoryManagerVisible.value = true
 }
 
 function addMiniCategory() {
-  const name = newCategoryInput.value.trim()
-  if (!name || managedCategories.value.includes(name)) return
-  managedCategories.value.push(name)
+  const name = normalizeMiniCategory(newCategoryInput.value)
+  if (!name || managedCategories.value.some(c => c.name === name)) return
+  managedCategories.value.push({ orig: '', name })
   newCategoryInput.value = ''
 }
 
-function removeMiniCategory(cat: string) {
-  managedCategories.value = managedCategories.value.filter(c => c !== cat)
+function removeMiniCategoryAt(idx: number) {
+  managedCategories.value.splice(idx, 1)
+}
+
+function moveMiniCategory(idx: number, delta: number) {
+  const target = idx + delta
+  if (target < 0 || target >= managedCategories.value.length) return
+  const arr = [...managedCategories.value]
+  const [item] = arr.splice(idx, 1)
+  arr.splice(target, 0, item)
+  managedCategories.value = arr
 }
 
 async function saveMiniCategories() {
+  // Validate: no empty names, no duplicates.
+  const trimmed = managedCategories.value.map(c => ({ orig: c.orig, name: normalizeMiniCategory(c.name) }))
+  if (trimmed.some(c => !c.name)) { ElMessage.warning('分类名称不能为空'); return }
+  const dup = trimmed.map(c => c.name).find((n, i, arr) => arr.indexOf(n) !== i)
+  if (dup) { ElMessage.warning(`分类「${dup}」重复`); return }
+
+  // Detect renames: items with a non-empty orig where the name changed.
+  const renames = trimmed.filter(c => c.orig && c.orig !== c.name).map(c => ({ from: c.orig, to: c.name }))
+
+  let cascade = false
+  if (renames.length) {
+    const list = renames.map(r => `「${r.from}」→「${r.to}」`).join('、')
+    try {
+      await ElMessageBox.confirm(
+        `检测到 ${renames.length} 个分类改名：${list}。\n是否同时把已经用这些旧名称的商品分类标签也改成新名称？`,
+        '分类改名',
+        { confirmButtonText: '同步更新商品', cancelButtonText: '只改分类列表', type: 'warning' },
+      )
+      cascade = true
+    } catch { cascade = false }
+  }
+
   savingCategories.value = true
   try {
-    const cfgRes = await fetch('/api/brand-config')
-    const cfgJson = await cfgRes.json()
-    const cfg = cfgJson?.data || {}
-    cfg.miniCategories = [...managedCategories.value]
-    const token = localStorage.getItem('erp_token') || ''
-    await fetch('/api/brand-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
-      body: JSON.stringify(cfg),
-    })
+    const next = uniqueMiniCategories(trimmed.map(c => c.name))
+    await saveMiniCategoryConfig(next)
+    if (cascade) await cascadeRenameProductCategories(renames)
+    managedCategories.value = next.map(name => ({ orig: name, name }))
     brandCategoryOptions.value = []
     await loadBrandCategoryOptions()
+    // If the currently open product's category was renamed, follow it.
+    const hit = renames.find(r => r.from === brandFd.category)
+    if (hit) brandFd.category = hit.to
     categoryManagerVisible.value = false
     ElMessage.success(t('goods.info.msgCateSyncSuccess'))
   } catch {
@@ -3120,22 +3259,82 @@ async function saveMiniCategories() {
   }
 }
 
+async function cascadeRenameProductCategories(renames: Array<{ from: string; to: string }>) {
+  if (!renames.length) return
+  const map = new Map(renames.map(r => [r.from, r.to]))
+  const res = await http.get('/goods/ShopGoods/index', { params: { list_rows: 1000 } })
+  const rows: any[] = res.data?.rows ?? []
+  for (const row of rows) {
+    let brand: any = null
+    try { brand = JSON.parse(row.remark || '{}')?.__brand__ ?? null } catch { brand = null }
+    const cur = brand?.category
+    if (!cur || !map.has(cur)) continue
+    // Atomic jsonb merge — only category field is touched, other __brand__ fields preserved.
+    await http.post('/goods/ShopGoods/patchBrand', {
+      id: row.id,
+      brand_fields: { category: map.get(cur) },
+    })
+  }
+}
+
+async function saveMiniCategoryConfig(categories: string[]) {
+  const cfg = await fetchBrandConfig()
+  cfg.miniCategories = uniqueMiniCategories(categories)
+  const token = localStorage.getItem('erp_token') || ''
+  const res = await fetch('/api/brand-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-erp-token': token },
+    body: JSON.stringify(cfg),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data?.code === 0) throw new Error(data?.message || 'mini category sync failed')
+}
+
+function syncMiniCategoryFromGoodsCate(showMessage = true) {
+  const name = normalizeMiniCategory(fd.cate_name || cateOptions.value.find(x => x.id === fd.cate_id)?.name || '')
+  if (!name) {
+    if (showMessage) ElMessage.warning(t('goods.info.msgSelectGoodsCateFirst'))
+    return
+  }
+  // Only set the field if the ERP goods category also exists in the mini-app category menu.
+  // Never silently add ERP categories to the mini-app master list — user must add via "管理".
+  if (!brandCategoryOptions.value.includes(name)) {
+    if (showMessage) ElMessage.warning(`「${name}」不在小程序分类中，请先在"管理"中添加`)
+    return
+  }
+  brandFd.category = name
+  if (showMessage) ElMessage.success(t('goods.info.msgMiniCateSynced'))
+}
+
 watch(() => brandFd.category, (val) => {
-  if (val && !brandCategoryOptions.value.includes(val)) {
-    brandCategoryOptions.value.push(val)
+  const name = normalizeMiniCategory(val)
+  if (name && !brandCategoryOptions.value.includes(name)) {
+    brandCategoryOptions.value.push(name)
   }
 })
 
-const TAG_OPTIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'hot', label: 'Hot' },
-  { value: 'sale', label: 'Sale' },
-]
+const miniCategoryTagOptions = computed(() => {
+  // Only mini-app categories + this product's saved value — never the ERP goods category.
+  const list = uniqueMiniCategories([
+    ...brandCategoryOptions.value,
+    brandFd.category,
+  ])
+  return list.length ? list : [...FALLBACK_MINI_CATEGORIES]
+})
+
 const tagOptions = computed(() => [
   { value: 'new', label: t('goods.info.tagNew') },
   { value: 'hot', label: t('goods.info.tagHot') },
   { value: 'sale', label: t('goods.info.tagSale') },
+  { value: 'presale', label: t('goods.info.tagPresale') },
 ])
+
+function selectMiniCategoryTag(category: string) {
+  const name = normalizeMiniCategory(category)
+  if (!name) return
+  brandFd.category = name
+  if (!brandCategoryOptions.value.includes(name)) brandCategoryOptions.value.push(name)
+}
 
 function loadBrandFd(goodsId: number) {
   const map = loadBrandMap()
@@ -3147,6 +3346,41 @@ function loadBrandFd(goodsId: number) {
 
 function addSpecGroup() {
   brandFd.specGroups.push({ name: '', values: [{ label: '' }] })
+}
+async function importSpecFromAuxUnits() {
+  const rows = auxUnitRows.value.filter(r => (r.unit_name || '').trim())
+  if (rows.length === 0) {
+    ElMessage.warning(t('goods.info.msgNoAuxToImport'))
+    return
+  }
+  const hasExisting = brandFd.specGroups.some(g =>
+    (g.name || '').trim() || g.values.some(v => (v.label || '').trim())
+  )
+  if (hasExisting) {
+    try {
+      await ElMessageBox.confirm(
+        t('goods.info.msgConfirmOverwriteSpec'),
+        t('goods.info.msgConfirmTitle'),
+        { type: 'warning' }
+      )
+    } catch { return }
+  }
+  brandFd.specGroups = [{
+    name: t('goods.info.defaultSpecName'),
+    values: rows.map(r => ({ label: (r.unit_name || '').trim() })),
+  }]
+  generateSkuCombos()
+  const priceMap = new Map(rows.map(r => [(r.unit_name || '').trim(), Number(r.sell_price || 0)]))
+  brandFd.skuCombos = brandFd.skuCombos.map(c => {
+    const p = priceMap.get(c.combo[0])
+    return p && p > 0 ? { ...c, price: p } : c
+  })
+  ElMessage.success(t('goods.info.msgImportSpecSuccess', { n: rows.length }))
+}
+
+const { triggerUpload: triggerSpecImgUpload } = useImageUpload()
+function uploadSpecImage(val: { image?: string }) {
+  triggerSpecImgUpload((url: string) => { val.image = url }, 1)
 }
 function removeBrandSpecGroup(gi: number) {
   brandFd.specGroups.splice(gi, 1)
@@ -3180,10 +3414,16 @@ function saveBrandFd(goodsId: number) {
   map[String(goodsId)] = {
     wholesalePrice: brandFd.wholesalePrice,
     minOrderQuantity: brandFd.minOrderQuantity,
+    baseSales: brandFd.baseSales,
+    category: brandFd.category,
     tags: brandFd.tags,
     image: brandFd.image,
     headerImages: brandFd.headerImages.slice(0, 4),
     detailImage: brandFd.detailImage,
+    specGroups: brandFd.specGroups,
+    skuCombos: brandFd.skuCombos,
+    isRedeemable: brandFd.isRedeemable,
+    pointsCost: brandFd.pointsCost,
   }
   saveBrandMap(map)
 }
@@ -3424,6 +3664,9 @@ function stopListScanner() {
   .goods-list-wrap { overflow: visible !important; min-height: 0 !important; }
   .goods-list-wrap :deep(.sc-table) { min-width: 0 !important; padding: 10px !important; }
   .bom-cate-tree { max-height: 200px !important; overflow-y: auto !important; }
+  .brand-mini-category-row { flex-wrap: wrap; }
+  .brand-mini-category-select { flex-basis: 100%; }
+  .brand-center-section :deep(.el-col-12) { flex: 0 0 100%; max-width: 100%; }
 }
 
 /* 商品卡片（移动端） */
@@ -3601,6 +3844,16 @@ function stopListScanner() {
   font-size: 10px; font-weight: 600;
   background: rgba(124,58,237,0.1); color: #7c3aed;
   padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em;
+}
+.brand-mini-category-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  align-items: center;
+}
+.brand-mini-category-select { flex: 1; min-width: 180px; }
+@media (max-width: 1100px) {
+  .brand-center-section :deep(.el-col-12) { flex: 0 0 100%; max-width: 100%; }
 }
 .brand-tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .brand-tag-check {

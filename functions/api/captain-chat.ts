@@ -9,6 +9,8 @@ interface Env {
   AGENT_MEMORY: KVNamespace
 }
 
+import { getUserKey } from '../utils/userKey'
+
 const DEFAULT_BACKEND = 'https://saas.mzth.cn/adminapi'
 
 function decodeErpToken(wrapped: string): { realToken: string; backend: string } {
@@ -213,6 +215,12 @@ ERP里的每一笔订单、每一条库存、每一张发票，都在我的视�
 - 全程中文，关键数字加粗
 - 禁止说"好的，我来帮你"、"没问题"、"当然可以"开头
 
+【定时任务能力】
+- 用户说"每天X点准备好XX内容"、"定时生成"、"自动安排"时，调用 schedule_task 工具创建定时任务
+- 到点系统自动按品牌配置生成内容（文案+配图），直接进入发布管理队列，用户打开发布页即见
+- 用 list_scheduled_tasks 查看现有任务，cancel_scheduled_task 删除
+- 创建后告知用户：任务ID、执行时间、可在触发器页面管理
+
 【铁律 — 禁止虚构数据】
 - 严禁编造任何具体信息：人名（小张、小李、亚当等）、任务名称、进度状态、金额、数字，一律不得凭空生成
 - 只能说通过工具查到的真实数据；没有工具返回就没有数据
@@ -323,7 +331,68 @@ const captainTools = [
       required: ['title', 'content'],
     },
   },
+  {
+    name: 'schedule_task',
+    description: '创建广告部门的定时任务。到点自动执行：按品牌配置生成内容（文案+配图），产出直接进入发布管理队列。适合"每天早上7点准备好当天的短视频内容"这类需求。',
+    parameters: {
+      type: 'object',
+      properties: {
+        instruction: { type: 'string', description: '任务指令，如"准备当天的3条小红书种草内容，围绕奶食品新品"' },
+        time: { type: 'string', description: '执行时间 HH:MM（北京时间24小时制），如 07:00' },
+        repeat: { type: 'string', enum: ['daily', 'once'], description: 'daily=每天执行，once=只执行一次' },
+        count: { type: 'number', description: '生成内容条数，默认3，最多10' },
+      },
+      required: ['instruction', 'time'],
+    },
+  },
+  { name: 'list_scheduled_tasks', description: '查看当前所有定时任务（含执行状态和上次结果）', parameters: { type: 'object', properties: {} } },
+  { name: 'cancel_scheduled_task', description: '删除指定的定时任务', parameters: { type: 'object', properties: { id: { type: 'string', description: '任务ID，从 list_scheduled_tasks 获取' } }, required: ['id'] } },
 ]
+
+const SCHEDULE_TOOLS = ['schedule_task', 'list_scheduled_tasks', 'cancel_scheduled_task']
+
+// ── 定时任务工具（需要 KV，在请求处理器内调用）──
+async function executeScheduleTool(name: string, input: Record<string, any>, userKey: string, kv: KVNamespace): Promise<string> {
+  const tasksKey = `sched:tasks:${userKey}`
+  let tasks = (await kv.get(tasksKey, 'json')) as any[] || []
+
+  if (name === 'schedule_task') {
+    if (!input.instruction || !/^\d{2}:\d{2}$/.test(input.time || '')) return '参数错误：需要 instruction 和 time(HH:MM)'
+    const task = {
+      id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      instruction: String(input.instruction).slice(0, 500),
+      time: input.time,
+      repeat: input.repeat === 'once' ? 'once' : 'daily',
+      count: Math.min(Math.max(Number(input.count) || 3, 1), 10),
+      genVideo: false,
+      enabled: true,
+      lastRunDate: '',
+      lastRunResult: '',
+      createdAt: Date.now(),
+    }
+    tasks.push(task)
+    await kv.put(tasksKey, JSON.stringify(tasks))
+    const idx = (await kv.get('sched:userkeys', 'json')) as string[] || []
+    if (!idx.includes(userKey)) { idx.push(userKey); await kv.put('sched:userkeys', JSON.stringify(idx)) }
+    return `定时任务已创建（ID: ${task.id}）：${task.repeat === 'daily' ? '每天' : '单次'} ${task.time} 执行「${task.instruction}」，生成 ${task.count} 条内容，产出自动进入发布管理队列。可在触发器页面查看和管理。`
+  }
+
+  if (name === 'list_scheduled_tasks') {
+    if (!tasks.length) return '当前没有定时任务。'
+    return tasks.map((t: any) =>
+      `- [${t.id}] ${t.repeat === 'daily' ? '每天' : '单次'} ${t.time}「${t.instruction}」${t.enabled ? '启用中' : '已停用'}${t.lastRunDate ? `，上次执行 ${t.lastRunDate}：${t.lastRunResult}` : '，尚未执行'}`
+    ).join('\n')
+  }
+
+  if (name === 'cancel_scheduled_task') {
+    const before = tasks.length
+    tasks = tasks.filter((t: any) => t.id !== input.id)
+    if (tasks.length === before) return `未找到任务 ${input.id}`
+    await kv.put(tasksKey, JSON.stringify(tasks))
+    return `任务 ${input.id} 已删除。`
+  }
+  return '未知的定时任务操作'
+}
 
 async function geminiCall(apiKey: string, systemPrompt: string, contents: any[], tools: any[]): Promise<{ text: string; functionCalls: any[] }> {
   const body: any = {
@@ -467,7 +536,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         for (const tc of toolCalls) {
           const input = JSON.parse(tc.function.arguments || '{}')
           await send({ type: 'tool_start', id: tc.id, name: tc.function.name, input })
-          const result = await executeTool(tc.function.name, input, realToken, backend, books)
+          const result = SCHEDULE_TOOLS.includes(tc.function.name)
+            ? await executeScheduleTool(tc.function.name, input, getUserKey(erpToken), env.AGENT_MEMORY)
+            : await executeTool(tc.function.name, input, realToken, backend, books)
           await send({ type: 'tool_result', id: tc.id, name: tc.function.name, result })
           toolResults.push({ role: 'tool', tool_call_id: tc.id, content: result })
         }

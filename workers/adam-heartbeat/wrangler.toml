@@ -1,0 +1,7 @@
+name = "adam-heartbeat"
+main = "index.ts"
+compatibility_date = "2024-09-23"
+
+# 每小时整点触发（Cloudflare Cron Trigger，比 GitHub Actions 可靠得多）
+[triggers]
+crons = ["0 * * * *"]

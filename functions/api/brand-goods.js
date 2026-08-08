@@ -84,7 +84,9 @@ export async function onRequest(context) {
 
   try {
     const res = await fetch(
-      `${backend}/adminapi/goods/ShopGoods/index?list_rows=200&can_sale=1&status=1&goods_type=1&page=1`,
+      // list_rows 必须和登录态 shopStore.fetchProducts 的 1000 保持一致，
+      // 否则未登录访客会因为截断少看到商品（曾经 200 上限砍掉了第 201~306 条）
+      `${backend}/adminapi/goods/ShopGoods/index?list_rows=1000&can_sale=1&status=1&goods_type=1&page=1`,
       { headers: { token } }
     )
     const data = await res.json()

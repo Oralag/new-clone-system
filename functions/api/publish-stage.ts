@@ -3,12 +3,16 @@
 // GET: 拉取并清空当前用户的暂存条目
 // POST: 追加一条 bundle 到暂存
 
+import { getUserKey } from '../utils/userKey'
+
 interface Env {
   AGENT_MEMORY: KVNamespace
 }
 
 const TTL = 7 * 24 * 3600
-const KEY = (token: string) => `publish:staged:${token.slice(-16)}`
+// 账号级 key（token 刷新后仍可取到）；LEGACY_KEY 兼容旧数据
+const KEY = (token: string) => `publish:staged:${getUserKey(token)}`
+const LEGACY_KEY = (token: string) => `publish:staged:${token.slice(-16)}`
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,7 +26,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const token = request.headers.get('x-erp-token') || ''
   if (!token) return Response.json({ items: [] }, { headers: corsHeaders })
   const key = KEY(token)
+  const legacyKey = LEGACY_KEY(token)
   const items = (await env.AGENT_MEMORY.get(key, 'json')) as any[] || []
+  if (legacyKey !== key) {
+    const legacy = (await env.AGENT_MEMORY.get(legacyKey, 'json')) as any[] || []
+    if (legacy.length) { items.push(...legacy); await env.AGENT_MEMORY.delete(legacyKey) }
+  }
   if (items.length) await env.AGENT_MEMORY.delete(key)
   return Response.json({ items }, { headers: corsHeaders })
 }

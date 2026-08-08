@@ -51,23 +51,6 @@
 
         <div class="nav-right">
           <span class="nav-clock">{{ clockStr }}</span>
-          <div class="nav-theme-btns">
-            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'light' }" :title="t('layout.themeLight')" @click="appStore.setTheme('light')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              </svg>
-            </button>
-            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'dark' }" :title="t('layout.themeDark')" @click="appStore.setTheme('dark')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            </button>
-            <button class="nav-theme-btn" :class="{ active: appStore.theme === 'eye' }" :title="t('layout.themeEye')" @click="appStore.setTheme('eye')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
           <span class="status-pill" :class="adamStore.core.status">
             <span class="status-dot"></span>
             <span class="status-text">{{ statusLabel }}</span>
@@ -100,14 +83,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdamStore } from '@/stores/adam'
-import { useAppStore } from '@/stores/app'
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, Menu } from 'lucide-vue-next'
 import AdamChat from '@/components/AdamChat.vue'
 
 const route = useRoute()
 const adamStore = useAdamStore()
-const appStore = useAppStore()
 const { t, locale } = useI18n()
 
 const drawerOpen = ref(false)
@@ -349,30 +330,6 @@ const statusLabel = computed(() => {
   font-size: 11px;
   color: var(--inv-ink-muted);
 }
-.nav-theme-btns {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  border-radius: 999px;
-  background: rgba(19, 19, 17, 0.06);
-}
-.nav-theme-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--inv-ink-soft);
-  transition: background 0.15s, color 0.15s;
-}
-.nav-theme-btn:hover { background: rgba(255, 255, 255, 0.8); color: var(--inv-ink); }
-.nav-theme-btn.active { background: var(--inv-black); color: #fff; }
-
 .status-pill {
   display: flex;
   align-items: center;

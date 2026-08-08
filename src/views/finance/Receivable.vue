@@ -207,8 +207,7 @@ import { fmtDt } from '@/utils/date'
 import { createCollectReceipt, getFundList, createFund } from '@/api/finance'
 import { getSaleCustomerList } from '@/api/sale'
 import { adjustFundBalance } from '@/utils/fund'
-import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
-import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
+import { buildContractReceivableItems } from '@/utils/receivableCalc'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -420,85 +419,12 @@ async function load() {
       returnAmtByCustomer.set(key, (returnAmtByCustomer.get(key) ?? 0) + amt)
     }
 
-    // 与 Overview.vue 口径一致：status=1 已审核 + status=4 已转单（均有应收）
-    // 排除线上电商平台（现收现结，不走应收账款）
-    const ONLINE_CUSTOMER_IDS = new Set([63, 10, 12, 7, 8, 11])
-    const audited = contractRows.filter(r => isEffectiveSaleContract(r) && !ONLINE_CUSTOMER_IDS.has(Number(r.customer_id)))
-    const snToId = new Map<string, number>()
-    for (const c of audited) {
-      if (c.order_sn) snToId.set(String(c.order_sn), c.id)
-      if (c.order_no)  snToId.set(String(c.order_no),  c.id)
-    }
-
-    const contractDirectPaid = new Map<number, number>()
-    const custUnmatchedPaid = new Map<number, number>()
-
-    for (const r of receipts) {
-      if (String(r.remark || '').startsWith('[other]')) continue  // 杂项收入，跳过
-      const amount = Number(r.amount || 0)
-      const rSn = String(r.order_sn || '').trim()
-      const custId = Number(r.customer_id || 0)
-      if (rSn && snToId.has(rSn)) {
-        const cid = snToId.get(rSn)!
-        contractDirectPaid.set(cid, (contractDirectPaid.get(cid) ?? 0) + amount)
-      } else if (custId > 0) {
-        custUnmatchedPaid.set(custId, (custUnmatchedPaid.get(custId) ?? 0) + amount)
-      }
-    }
-    const byCustomer = new Map<number, any[]>()
-    for (const r of audited) {
-      const custId = Number(r.customer_id || 0)
-      if (custId > 0 && custUnmatchedPaid.has(custId)) {
-        if (!byCustomer.has(custId)) byCustomer.set(custId, [])
-        byCustomer.get(custId)!.push(r)
-      }
-    }
-    for (const contracts of byCustomer.values()) {
-      contracts.sort((a: any, b: any) =>
-        new Date(a.order_date || a.created_at).getTime() - new Date(b.order_date || b.created_at).getTime()
-      )
-    }
-
-    const calcAmt = (c: any): number => {
-      return calcSaleContractReceivable(c)
-    }
-
-    // FIFO 分配无合同引用的收款到剩余未付合同
-    const contractFifoPaid = new Map<number, number>()
-    for (const [custId, contracts] of byCustomer) {
-      let remaining = custUnmatchedPaid.get(custId) ?? 0
-      for (const c of contracts) {
-        const total = calcAmt(c)
-        const directPaid = contractDirectPaid.get(c.id) ?? 0
-        const leftover = Math.max(0, total - directPaid)
-        const applied = Math.min(remaining, leftover)
-        if (applied > 0) contractFifoPaid.set(c.id, applied)
-        remaining = Math.max(0, remaining - applied)
-        if (remaining <= 0) break
-      }
-    }
-
-    const contractPaid = new Map<number, number>()
-    for (const id of new Set([...contractDirectPaid.keys(), ...contractFifoPaid.keys()])) {
-      contractPaid.set(id, (contractDirectPaid.get(id) ?? 0) + (contractFifoPaid.get(id) ?? 0))
-    }
-
-    const contractItems = audited.map((r: any) => {
-      const receiptPaid = contractPaid.get(r.id)
-      // 与 Contract.vue getReceivedAmount 一致：收款单有记录优先，否则用合同自身的 receive_amount
-      const paid = receiptPaid !== undefined ? receiptPaid : Number(r.receive_amount || 0)
-      const total = calcAmt(r)
-      return {
-        ...r,
-        source: '销售订单',
-        order_sn: r.order_sn || r.order_no || '',
-        out_date: r.order_date || r.created_at,
-        total_amount: total,
-        paid_amount: paid,
-        un_pay_amount: Math.max(0, total - paid),
-        _return_amount: returnAmtByCustomer.get(String(r.customer_name || '').trim()) ?? 0,
-      }
-    })
+    // 统一口径：应收计算全部走 utils/receivableCalc.ts（与 Overview.vue / FundFlow.vue 共用）
+    const contractItems = buildContractReceivableItems(contractRows, receipts).map((r: any) => ({
+      ...r,
+      source: '销售订单',
+      _return_amount: returnAmtByCustomer.get(String(r.customer_name || '').trim()) ?? 0,
+    }))
 
     allRows.value = contractItems.filter((r: any) => {
       if (r.un_pay_amount <= 0) return false

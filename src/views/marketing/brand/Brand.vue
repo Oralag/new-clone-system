@@ -153,9 +153,9 @@
         </div>
         <div class="done-desc" style="font-size:13px;color:#94a3b8;margin-bottom:12px">{{ t('agentBrand.doneDesc') }}</div>
         <div class="done-btns">
-          <button class="btn-secondary" @click="router.push('/agent/copywriting')">📝 {{ t('agentBrand.brandCopywriting') }}</button>
-          <button class="btn-secondary" @click="router.push('/agent/poster')">🖼 {{ t('agentBrand.brandPoster') }}</button>
-          <button class="btn-secondary" @click="router.push('/agent/video')">🎬 {{ t('agentBrand.brandVideoScript') }}</button>
+          <button class="btn-secondary" @click="router.push('/agent/creative-lab')">📝 {{ t('agentBrand.brandCopywriting') }}</button>
+          <button class="btn-secondary" @click="router.push('/agent/creative-lab')">🖼 {{ t('agentBrand.brandPoster') }}</button>
+          <button class="btn-secondary" @click="router.push('/agent/creative-lab')">🎬 {{ t('agentBrand.brandVideoScript') }}</button>
           <button class="btn-goto" @click="router.push('/agent/publish')">{{ t('agentBrand.brandPublishNow') }}</button>
         </div>
       </div>

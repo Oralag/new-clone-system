@@ -645,15 +645,24 @@ async function triggerAgentReplies(groupId, senderId, content, memberIds, env, e
         if (namedAgentId) {
           activeAgentIds = [namedAgentId]
         } else {
-          // 3. 找最近回复过的 Agent 兜底；没有就用秘书；还没有就用群里第一个 Agent
-          const recentAgentId = (msgMap[groupId] || []).slice().reverse()
-            .find(m => AGENT_IDS.has(String(m.sender_id)) && agentIds.includes(String(m.sender_id)))
-            ?.sender_id
-          const fallback = recentAgentId ||
-            agentIds.find(id => String(id) === 'secretary') ||
-            agentIds.find(id => AGENT_CONFIGS[String(id)])
-          if (fallback && AGENT_CONFIGS[String(fallback)] && (env.ANTHROPIC_API_KEY || env.AI)) {
-            activeAgentIds = [String(fallback)]
+          // 3. 群体招呼（短消息+招呼词）→ 秘书统一接待，避免 recentAgentId 粘性导致某个 agent 独占
+          const trimmed = (content || '').trim()
+          const isGroupGreeting = trimmed.length > 0 && trimmed.length <= 10 &&
+            /^(大家好|大家|hi|hello|嗨|hey|哈喽|哈啰|你们好|在吗|在嘛|大家在|早上好|中午好|下午好|晚上好|早|晚安)/i.test(trimmed)
+          const secretaryId = agentIds.find(id => String(id) === 'secretary')
+          if (isGroupGreeting && secretaryId) {
+            activeAgentIds = [secretaryId]
+          } else {
+            // 非群体招呼：保留原有粘性逻辑（延续上一位 agent 的对话）
+            const recentAgentId = (msgMap[groupId] || []).slice().reverse()
+              .find(m => AGENT_IDS.has(String(m.sender_id)) && agentIds.includes(String(m.sender_id)))
+              ?.sender_id
+            const fallback = recentAgentId ||
+              secretaryId ||
+              agentIds.find(id => AGENT_CONFIGS[String(id)])
+            if (fallback && AGENT_CONFIGS[String(fallback)] && (env.ANTHROPIC_API_KEY || env.AI)) {
+              activeAgentIds = [String(fallback)]
+            }
           }
         }
       }

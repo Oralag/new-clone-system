@@ -34,6 +34,8 @@
         }
         const keys = await caches.keys()
         await Promise.all(keys.map(k => caches.delete(k)))
+        try { localStorage.clear() } catch(_) {}
+        try { sessionStorage.clear() } catch(_) {}
         status.textContent = '✅ 清除成功，正在跳转...'
         setTimeout(() => { window.location.href = '/' }, 800)
       } catch(e) {

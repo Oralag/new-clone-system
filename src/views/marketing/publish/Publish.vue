@@ -96,7 +96,7 @@
       <div class="empty-icon">🚀</div>
       <div class="empty-title">{{ t('agentPublish.emptyTitle') }}</div>
       <div class="empty-desc">{{ t('agentPublish.emptyDesc') }}</div>
-      <button class="btn-goto-brand" @click="router.push('/agent/brand')">{{ t('agentPublish.gotoBrand') }}</button>
+      <button class="btn-goto-brand" @click="router.push('/agent/brand-settings')">{{ t('agentPublish.gotoBrand') }}</button>
     </div>
 
     <!-- 卡片网格 -->
@@ -379,7 +379,13 @@ function cardTime(idx: number) {
 
 function platformEmoji(platform: string): string {
   const map: Record<string, string> = {
-    douyin: '🎵', xiaohongshu: '📕', kuaishou: '⚡', weibo: '🌐', bilibili: '📺', zhihu: '💡',
+    // 国内
+    douyin: '🎵', xiaohongshu: '📕', xhs: '📕', kuaishou: '⚡',
+    weibo: '🌐', bilibili: '📺', zhihu: '💡',
+    wechat_mp: '📗', wechat_video: '📹',
+    // 国际
+    tiktok: '🎶', youtube: '📹', instagram: '📷', facebook: '👥',
+    threads: '🧵', twitter: '𝕏', pinterest: '📌', linkedin: '💼',
   }
   return map[platform] ?? '📱'
 }
@@ -634,13 +640,27 @@ async function publishByRealIdx(realIdx: number) {
     }
   } catch {}
 
-  // 降级：复制文案 + 跳转
+  // 降级：复制文案 + 跳转到平台创作后台（或扫码进草稿）
   const PLATFORM_URLS: Record<string, string> = {
+    // 国内 —— 走创作者中心网页版
     xiaohongshu: 'https://creator.xiaohongshu.com/publish/publish',
+    xhs: 'https://creator.xiaohongshu.com/publish/publish',
     douyin: 'https://creator.douyin.com/creator-micro/content/upload',
     weibo: 'https://weibo.com/minipublish',
     bilibili: 'https://member.bilibili.com/platform/upload/text/edit',
     kuaishou: 'https://cp.kuaishou.com/article/publish/video',
+    zhihu: 'https://zhuanlan.zhihu.com/write',
+    wechat_mp: 'https://mp.weixin.qq.com/',
+    wechat_video: 'https://channels.weixin.qq.com/platform/post/create',
+    // 国际 —— 走各平台官方 Studio / Composer
+    tiktok: 'https://www.tiktok.com/tiktokstudio/upload',
+    youtube: 'https://studio.youtube.com/',
+    instagram: 'https://www.instagram.com/',  // Instagram web 发布受限，多走移动端
+    facebook: 'https://www.facebook.com/',
+    threads: 'https://www.threads.net/',
+    twitter: 'https://twitter.com/compose/tweet',
+    pinterest: 'https://www.pinterest.com/pin-builder/',
+    linkedin: 'https://www.linkedin.com/feed/?shareActive=true',
   }
   const url = PLATFORM_URLS[item.platform]
   if (url && item.imageUrl) {

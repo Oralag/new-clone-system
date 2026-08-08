@@ -7,13 +7,6 @@
       <!-- 移动端顶部栏：仅在非底部Tab页时显示页面标题 -->
       <div v-if="isMobile" class="mobile-topbar">
         <span class="mobile-title">{{ tt(mobilePageTitle) }}</span>
-        <div class="mobile-topbar-actions">
-          <button class="mobile-theme-btn-wrap" @click="cycleTheme">
-            <el-icon :size="17" v-if="appStore.theme === 'dark'"><Moon /></el-icon>
-            <el-icon :size="17" v-else-if="appStore.theme === 'eye'"><View /></el-icon>
-            <el-icon :size="17" v-else><Sunny /></el-icon>
-          </button>
-        </div>
       </div>
 
       <!-- 桌面端顶部栏 + 标签栏 -->
@@ -184,11 +177,9 @@ import AiAssistant from '@/components/AiAssistant.vue'
 import OnboardingGuide from '@/components/OnboardingGuide.vue'
 import TrialBanner from '@/components/TrialBanner.vue'
 import { useTabsStore } from '@/stores/tabs'
-import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
-import { Sunny, Moon, View } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { TOKEN_NAME } from '@/config'
@@ -199,7 +190,6 @@ const tt = (key: string) => (key && (key.startsWith('route.') || key.startsWith(
 const route = useRoute()
 const router = useRouter()
 const tabsStore = useTabsStore()
-const appStore = useAppStore()
 const authStore = useAuthStore()
 const permStore = usePermissionStore()
 const trialBannerRef = ref<any>(null)
@@ -327,12 +317,6 @@ const mobilePageTitle = computed(() => {
   return (route.meta?.title as string) || t('app.name')
 })
 
-function cycleTheme() {
-  const themes = ['light', 'dark', 'eye'] as const
-  const idx = themes.indexOf(appStore.theme as any)
-  appStore.setTheme(themes[(idx + 1) % 3])
-}
-
 function goCreate(path: string) {
   showQuickCreate.value = false
   router.push(path)
@@ -374,17 +358,6 @@ watch(() => route.path, () => { tabsStore.addTab(route) }, { immediate: true })
   color: var(--dark);
   letter-spacing: -0.02em;
 }
-.mobile-topbar-actions { display: flex; align-items: center; gap: 4px; }
-.mobile-theme-btn-wrap {
-  width: 34px; height: 34px;
-  background: var(--gray);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--mid);
-}
-
 /* ── 移动端底部导航 ── */
 .mobile-bottom-nav {
   position: fixed;

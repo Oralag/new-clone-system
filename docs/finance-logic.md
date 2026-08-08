@@ -326,6 +326,28 @@ getBomList()                                     → pBomRes
 只显示 un_pay_amount > 0 的记录
 ```
 
+### ⚠️ 收款单匹配合同：只认 order_sn，不认 order_no
+
+`receivableCalc.ts` 建「单号 → 合同」映射表时**只索引 `order_sn`**。
+
+原因：合同的 `order_no` 是另一套独立生成的号（238 张合同没有一张 order_no == order_sn），
+会撞上别张合同的 order_sn。生产数据实例：
+
+| 合同 | 客户 | order_sn | order_no |
+|---|---|---|---|
+| #139 | 阿斯娜 | XS202604038966 | **XS202604038854** |
+| #164 | 蒙优农品 | **XS202604038854** | XS202604031767 |
+
+撞号后果：一笔 ¥3,950 的收款（本该记给蒙优农品合同#164）被记到阿斯娜那张只有 ¥408
+的合同#139 上，超出的 ¥3,542 被 `Math.max(0, total - paid)` 抹掉，**钱凭空消失**，
+导致蒙优农品显示"未收款"，后续被人工补了一张重复收款单，资金账户虚增 ¥3,950。
+
+已核实：没有任何一笔收款单是只能靠 `order_no` 才匹配得上合同的，去掉零风险
+（修复前后全站 18 个客户应收数字完全不变，合计均为 ¥26,568.25）。
+
+> 注：`payableCalc.ts:40` 的 `orderNoSet` 语义不同——它只用来判断"这笔付款是否已链接到
+> 某张采购单"，不是 单号→归属方 的映射，不存在错记风险，无需修改。
+
 ---
 
 ### 3.4 Payable.vue — 应付账款
@@ -648,3 +670,25 @@ getPayReceiptSupplierLabel(payRow, purchaseOrders, supplierList):
 | `contact_type` | `customer` | 付款单 → 客户退款 |
 | `contact_type` | `staff` | 付款单 → 员工费用 |
 | `contact_type` | `other` | 付款单 → 其他支出 |
+
+---
+
+## ⚠️ 删除收/付款单：资金回退只能做一次（后端已做，前端禁止再做）
+
+后端删除接口**自带**资金账户回退，前端**不要**再调 `adjustFundBalance`：
+
+| 接口 | 后端行为 | 位置 |
+|---|---|---|
+| `/finance/CollectReceipt/del` | `balance = balance − amount` | `index.js:2526-2528` |
+| `/finance/PayReceipt/del` | `balance = balance + amount` | `index.js:2604` |
+| `/finance/Expense/del` | `balance = balance + amount` | `index.js:2778` |
+
+**2026-08-04 事故**：删除一张 ¥3,950 的收款单（SK202606099406），
+`公司收入账号` 被扣了 ¥7,900 —— 后端扣一次 + 前端 `CollectReceipt.vue` 又扣一次。
+余额已手工改正回 ¥101,322.46。
+
+同样的缺陷在 `PayReceipt.vue` 的「撤销付款」里（方向相反，会让账户凭空多钱），
+两处的前端 `adjustFundBalance` 调用已删除。
+
+> `Expense.vue:264` 的 `adjustFundBalance` 在**付款**流程里（不是删除），后端该路径不动资金，
+> 属于正常调用，不要误删。

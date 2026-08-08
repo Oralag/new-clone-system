@@ -135,9 +135,13 @@ import { useReconcile } from '@/composables/useReconcile'
 import http from '@/api/http'
 import { getPayReceiptList, createPayReceipt, deletePayReceipt, getFundList, createFund, updateFund } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
+import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 
 const { t } = useI18n()
 const router = useRouter()
+const authStore = useAuthStore()
+const permStore = usePermissionStore()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, createFilteredApi } = useReconcile('reconcile_other_expense', tableRef)
 const formRef = ref<FormInstance>()
@@ -192,6 +196,12 @@ async function getOtherExpenseList(params?: any) {
   let rows = res.data?.rows ?? res.data?.list ?? []
   // 前端过滤 contact_type=other
   rows = rows.filter((r: any) => r.contact_type === 'other')
+  // 子账号只看自己创建的支出
+  if (permStore.isSubAccount) {
+    const myId = Number((authStore.userInfo as any)?.id || 0)
+    const myName = authStore.userInfo?.name || ''
+    rows = rows.filter((r: any) => (myId && Number(r.admin_id) === myId) || (myName && r.admin_name === myName))
+  }
   if (keyword) {
     const kw = keyword.toLowerCase()
     rows = rows.filter((r: any) =>

@@ -165,12 +165,13 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getPayReceiptList, getCollectReceiptList, getExpenseList, getFundList } from '@/api/finance'
 import http from '@/api/http'
-import { normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
-import { buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
+import { normalizeProcureReturnFinanceRows, applyProcureReturnsToPayableRows } from '@/utils/procureReturnFinance'
+import { normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
-import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
+import { buildExpensePayableRows } from '@/utils/expensePayable'
+import { buildSupplierPayableRows, buildContractFeePayableRows, buildRetailFeePayableRows } from '@/utils/payableCalc'
+import { buildContractReceivableItems, deductSaleReturnsByCustomer } from '@/utils/receivableCalc'
 import { fmtDt } from '@/utils/date'
-import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -448,98 +449,25 @@ onMounted(async () => {
     summary.income = incomeTotal
     summary.expense = expenseTotal
     summary.balance = incomeTotal - expenseTotal
-    // 未付款 = 待付款费用 + 已审核采购单欠款（已付从付款单匹配）
-    const pendingExpenseTotal = expenses
-      .filter((r: any) => r.payment_status === 'pending')
-      .reduce((s: number, r: any) => s + Math.max(0, Number(r.amount || 0)), 0)
+    // 未付款：统一口径，与 Payable.vue / Overview.vue 完全一致（utils/payableCalc.ts）
     const payRows: any[] = payRes.data?.rows ?? payRes.data?.list ?? []
-    const procurePaidById: Record<number, number> = {}
-    const procurePaidByKey: Record<string, number> = {}
-    const procurePaidBySn: Record<string, number> = {}
-    const procureFeePaidById = buildProcureFeePaidByOrder(payRows)
-    for (const r of payRows) {
-      const amt = Number(r.amount || 0)
-      if (!amt) continue
-      if (isProcureExtraFeePayment(r)) continue
-      if (/审核自动生成/.test(String(r.remark || ''))) continue
-      const orderSn = String(r.order_sn || '').trim()
-      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      const m1 = String(r.remark || '').match(/采购单(?:自动)?付款\s+#(\d+)/)
-      if (m1) { const id = Number(m1[1]); procurePaidById[id] = (procurePaidById[id] || 0) + amt }
-      else if (orderSn && supplierName) procurePaidByKey[`${orderSn}@@${supplierName}`] = (procurePaidByKey[`${orderSn}@@${supplierName}`] || 0) + amt
-    }
-    const purchaseUnpaidTotal = (procureRes.data?.rows ?? [])
-      .filter((r: any) => Number(r.status) === 1)
-      .reduce((s: number, r: any) => {
-        const orderAmt = Number(r.after_discount != null ? r.after_discount : r.total_amount)
-        const oSn = String(r.order_sn || '').trim()
-        const oNo = String(r.order_no || '').trim()
-        const sup = String(r.supplier_name || '').trim()
-        const paid = (procurePaidById[r.id] || 0)
-          + (procurePaidBySn[oSn] || procurePaidBySn[oNo] || 0)
-          + (procurePaidByKey[`${oSn}@@${sup}`] || procurePaidByKey[`${oNo}@@${sup}`] || 0)
-        const feeUnpaid = Math.max(0, getProcureFeeNeedPayAmount(r) - (procureFeePaidById[r.id] || 0))
-        return s + Math.max(0, orderAmt - paid) + feeUnpaid
-      }, 0)
-    summary.unpaid = pendingExpenseTotal + purchaseUnpaidTotal
+    const payableRows = applyProcureReturnsToPayableRows([
+      ...buildSupplierPayableRows(procureRes.data?.rows ?? [], payRows, supRes.data?.rows ?? [])
+        .filter((s: any) => s.un_pay_amount > 0),
+      ...buildExpensePayableRows(expenses),
+      ...buildContractFeePayableRows(contractRes.data?.rows ?? [], payRows),
+      ...buildRetailFeePayableRows(retailRes.data?.rows ?? retailRes.data?.list ?? [], payRows),
+    ], normalizedReturns)
+    summary.unpaid = payableRows.reduce((s: number, r: any) => s + Number(r.un_pay_amount || 0), 0)
 
-    // 未收款：FIFO 匹配已审核销售合同与收款单
-    const audited = (contractRes.data?.rows ?? []).filter((c: any) => Number(c.status) === 1)
-    const snToContractId = new Map<string, number>()
-    for (const c of audited) {
-      if (c.order_sn) snToContractId.set(String(c.order_sn), c.id)
-    }
-    const contractCalcAmt = (c: any): number => {
-      return calcSaleContractReceivable(c)
-    }
-    const contractDirectPaid = new Map<number, number>()
-    const custUnmatchedPaid = new Map<number, number>()
-    for (const r of collects) {
-      if (String(r.remark || '').startsWith('[other]')) continue
-      const amount = Number(r.amount || 0)
-      const rsn = String(r.order_sn || '').trim()
-      const custId = Number(r.customer_id || 0)
-      if (rsn && snToContractId.has(rsn)) {
-        const cid = snToContractId.get(rsn)!
-        contractDirectPaid.set(cid, (contractDirectPaid.get(cid) ?? 0) + amount)
-      } else if (custId > 0) {
-        custUnmatchedPaid.set(custId, (custUnmatchedPaid.get(custId) ?? 0) + amount)
-      }
-    }
-    const byCustomer = new Map<number, any[]>()
-    for (const c of audited) {
-      const custId = Number(c.customer_id || 0)
-      if (custId > 0 && custUnmatchedPaid.has(custId)) {
-        if (!byCustomer.has(custId)) byCustomer.set(custId, [])
-        byCustomer.get(custId)!.push(c)
-      }
-    }
-    for (const cl of byCustomer.values()) {
-      cl.sort((a: any, b: any) => String(a.order_date || a.created_at || '').localeCompare(String(b.order_date || b.created_at || '')))
-    }
-    const contractFifoPaid = new Map<number, number>()
-    for (const [custId, cl] of byCustomer) {
-      let remaining = custUnmatchedPaid.get(custId) ?? 0
-      for (const c of cl) {
-        const total = contractCalcAmt(c)
-        const direct = contractDirectPaid.get(c.id) ?? 0
-        const leftover = Math.max(0, total - direct)
-        const applied = Math.min(remaining, leftover)
-        if (applied > 0) contractFifoPaid.set(c.id, applied)
-        remaining = Math.max(0, remaining - applied)
-        if (remaining <= 0) break
-      }
-    }
-    let uncollectedTotal = 0
-    for (const c of audited) {
-      const receiptPaid = contractDirectPaid.has(c.id) || contractFifoPaid.has(c.id)
-        ? (contractDirectPaid.get(c.id) ?? 0) + (contractFifoPaid.get(c.id) ?? 0)
-        : undefined
-      const paid = receiptPaid !== undefined ? receiptPaid : Number(c.receive_amount || 0)
-      const total = contractCalcAmt(c)
-      uncollectedTotal += Math.max(0, total - paid)
-    }
-    summary.uncollected = uncollectedTotal
+    // 未收款：统一口径，与 Receivable.vue / Overview.vue 完全一致（utils/receivableCalc.ts）
+    // 有效合同 status 1|4、排除线上现结客户、扣已审核销售退货
+    const normalizedSaleReturnsForSummary = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
+    const receivableRows = deductSaleReturnsByCustomer(
+      buildContractReceivableItems(contractRes.data?.rows ?? [], collects).filter((r: any) => r.un_pay_amount > 0),
+      normalizedSaleReturnsForSummary,
+    )
+    summary.uncollected = receivableRows.reduce((s: number, r: any) => s + Number(r.un_pay_amount || 0), 0)
 
   } catch { /* ignore */ } finally {
     summaryLoading.value = false

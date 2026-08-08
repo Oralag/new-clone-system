@@ -56,12 +56,60 @@ export const usePermissionStore = defineStore('permission', {
       return result
     },
 
+    // 是否拥有某个模块下的任一权限（modulePrefix 如 'finance'、'sale'、'retail'）
+    // 用于团队动态等按模块归属过滤的场景
+    canSeeModule(): (modulePrefix: string) => boolean {
+      return (modulePrefix: string) => {
+        if (!this.isSubAccount || !this.permConfig) return true
+        return this.permConfig.menus.some(
+          k => k === modulePrefix || k.startsWith(modulePrefix + '-')
+        )
+      }
+    },
+
     // Check if a route path is accessible
     canAccessPath(): (path: string) => boolean {
       return (path: string) => {
-        if (!this.isSubAccount || !this.permConfig) return true
+        if (!this.isSubAccount) return true
+        // 全权限子账号（角色全选，如股东）：全部可见
+        if (!this.permConfig) return true
         if (path === '/dashboard' || path === '/' || path === '') return true
         const allowed = new Set(this.permConfig.menus)
+
+        // 统计类页面（数据统计/今日销售/今日支出）：配置过权限的子账号
+        // 必须勾选"报表总览"或"财务总览"才可见
+        if (
+          path === '/mobile/stats' || path.startsWith('/mobile/stats/') ||
+          path === '/mobile/sale/today' || path === '/mobile/expense/today'
+        ) {
+          return allowed.has('reports-overview') || allowed.has('finance-overview')
+        }
+
+        // 收银台：跟随零售订单权限
+        if (path === '/cashregister' || path.startsWith('/cashregister/')) {
+          return allowed.has('retail-order')
+        }
+
+        // Mobile paths: strip /mobile prefix and map to menuData child.path.
+        // Mobile framework routes (chat/contacts/dashboard/modules/apps/my/stats/activity/ai/agent/*/investment/*/brand/*/message)
+        // are non-data pages and stay accessible for all sub-accounts.
+        if (path.startsWith('/mobile/')) {
+          const rest = path.slice('/mobile'.length) // e.g. '/sale/out'
+          // 注意：/mobile/stats 已在函数开头处理（子账号需显式勾选报表/财务总览）
+          const MOBILE_FRAMEWORK = /^\/(chat|contacts|dashboard|workbench|modules|apps|my|profile|activity|ai|agent|investment|brand|message|meeting|task|sample)(\/|$)/
+          if (MOBILE_FRAMEWORK.test(rest)) return true
+          // Data pages: /mobile/sale/out → find menuData child whose path startsWith /sale/out
+          for (const menu of menuData) {
+            for (const child of menu.children) {
+              if (child.path && rest.startsWith('/' + child.path.replace(/^\//, ''))) {
+                return allowed.has(child.key)
+              }
+            }
+          }
+          // Unknown /mobile/* path — allow (framework page we haven't mapped)
+          return true
+        }
+
         for (const menu of menuData) {
           for (const child of menu.children) {
             if (child.path && path.startsWith('/' + child.path.replace(/^\//, ''))) {

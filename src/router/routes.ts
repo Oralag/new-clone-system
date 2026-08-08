@@ -44,6 +44,15 @@ const routes: RouteRecordRaw[] = [
       { path: 'sale/distributor-withdraw', name: 'DistributorWithdraw', component: () => import('@/views/miniprogram/Withdraw.vue'), meta: { title: '分销提现审批' } },
       { path: 'sale/refund', name: 'Refund', component: () => import('@/views/miniprogram/Refund.vue'), meta: { title: '退款管理' } },
 
+      // Mini Program
+      { path: 'sale/mini-orders', name: 'MiniOrders', component: () => import('@/views/sale/MiniOrders.vue'), meta: { title: '小程序订单' } },
+      { path: 'sale/mini-videos', name: 'MiniVideos', component: () => import('@/views/sale/MiniVideos.vue'), meta: { title: '小程序内容' } },
+      { path: 'sale/mini-qrcode', name: 'MiniQrcode', component: () => import('@/views/sale/MiniQrcode.vue'), meta: { title: '小程序码' } },
+      { path: 'sale/mini-service', name: 'MiniService', component: () => import('@/views/sale/MiniService.vue'), meta: { title: '小程序客服' } },
+      { path: 'sale/distributor', name: 'Distributor', component: () => import('@/views/miniprogram/Distributor.vue'), meta: { title: '分销商管理' } },
+      { path: 'sale/distributor-withdraw', name: 'DistributorWithdraw', component: () => import('@/views/miniprogram/Withdraw.vue'), meta: { title: '分销提现审批' } },
+      { path: 'sale/refund', name: 'Refund', component: () => import('@/views/miniprogram/Refund.vue'), meta: { title: '退款管理' } },
+
       // Retail
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
       { path: 'retail/store', name: 'RetailStore', component: () => import('@/views/retail/StoreManagement.vue'), meta: { title: '门店管理' } },
@@ -100,6 +109,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'finance/pay-receipt/new', name: 'FinancePayReceiptNew', component: () => import('@/views/finance/PayReceiptNew.vue'), meta: { title: '新增付款单' } },
       { path: 'finance/invoice', name: 'FinanceInvoice', component: () => import('@/views/finance/Invoice.vue'), meta: { title: '发票管理' } },
       { path: 'finance/statement', name: 'FinanceStatement', component: () => import('@/views/finance/Statement.vue'), meta: { title: '对账单' } },
+      { path: 'finance/statement/:id', name: 'FinanceStatementDetail', component: () => import('@/views/finance/StatementDetail.vue'), meta: { title: '对账单详情' } },
       { path: 'finance/expense', name: 'FinanceExpense', component: () => import('@/views/finance/Expense.vue'), meta: { title: '费用管理' } },
       { path: 'finance/fund', name: 'FinanceFund', component: () => import('@/views/finance/Fund.vue'), meta: { title: '资金账户' } },
       { path: 'finance/fund-flow', name: 'FinanceFundFlow', component: () => import('@/views/finance/FundFlow.vue'), meta: { title: '资金流水' } },
@@ -193,6 +203,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'stock', name: 'EcommerceStock', component: () => import('@/views/ecommerce/Stock.vue'), meta: { title: '库存同步' } },
       { path: 'offline', name: 'EcommerceOffline', component: () => import('@/views/ecommerce/Offline.vue'), meta: { title: '线下与私域' } },
       { path: 'agent', name: 'EcommerceAgent', component: () => import('@/views/ecommerce/Agent.vue'), meta: { title: '运营专员' } },
+      // EcommerceLayout 导航有此入口，必须注册（铁律：跳转必须注册路由）
+      { path: 'meituan', name: 'EcommerceMeituan', component: () => import('@/views/online/MeituanOrders.vue'), meta: { title: '美团订单' } },
     ],
   },
   // ── 移动协作模块（独立布局）────────────
@@ -210,12 +222,16 @@ const routes: RouteRecordRaw[] = [
       { path: 'activity', name: 'MobileActivity', component: () => import('@/views/mobile/MobileActivity.vue'), meta: { title: '工作动态' } },
       { path: 'ai', name: 'MobileAI', component: () => import('@/views/mobile/MobileAI.vue'), meta: { title: 'AI 管家' } },
       { path: 'sale/today', name: 'MobileTodaySale', component: () => import('@/views/mobile/MobileTodaySale.vue'), meta: { title: '今日销售' } },
+      { path: 'expense/today', name: 'MobileTodayExpense', component: () => import('@/views/mobile/MobileTodayExpense.vue'), meta: { title: '今日支出' } },
       { path: 'sale/overview', redirect: '/mobile/sale/today' },
       { path: 'meeting', redirect: '/mobile/agent/meeting' },
+      // MobileMeeting.vue 内"发起即时会议"跳转此路由，必须注册（铁律：跳转必须注册路由）
+      { path: 'meeting/instant', name: 'MobileMeetingInstant', component: () => import('@/views/mobile/MobileMeeting.vue'), meta: { title: '即时会议' } },
       { path: 'warehouse/scan', name: 'MobileWarehouseScan', component: () => import('@/views/mobile/MobileWarehouseScan.vue'), meta: { title: '扫码查库存' } },
       { path: 'stats', name: 'MobileStats', component: () => import('@/views/mobile/MobileStats.vue'), meta: { title: '数据统计' } },
       { path: 'modules', name: 'MobileModules', component: () => import('@/views/mobile/MobileModules.vue'), meta: { title: '选择模块' } },
       { path: 'my', name: 'MobileMy', component: () => import('@/views/mobile/MobileMy.vue'), meta: { title: '我的' } },
+      { path: 'perm-check', name: 'MobilePermCheck', component: () => import('@/views/mobile/MobilePermCheck.vue'), meta: { title: '权限诊断' } },
       // ── ERP 手机首页（工作台）──
       { path: 'dashboard', name: 'MobileDashboard', component: () => import('@/views/mobile/MobileWorkbench.vue'), meta: { title: '首页' } },
       // ── 旧版手机首页（仅模块页进入，保留返回按钮）──
@@ -225,12 +241,32 @@ const routes: RouteRecordRaw[] = [
         path: 'agent',
         component: () => import('@/layouts/AgentLayout.vue'),
         children: [
-          { path: '', name: 'MobileAgent', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
-          { path: 'meeting', name: 'MobileAgentMeeting', component: () => import('@/views/agent/MeetingRoom.vue'), meta: { title: '会议室' } },
-          { path: 'tasks', name: 'MobileAgentTasks', component: () => import('@/views/agent/TaskCenter.vue'), meta: { title: '任务中心' } },
-          { path: 'content', name: 'MobileAgentContent', component: () => import('@/views/agent/ContentDept.vue'), meta: { title: '内容部' } },
-          { path: 'creative', name: 'MobileAgentCreative', component: () => import('@/views/agent/CreativeDept.vue'), meta: { title: '创意部' } },
-          { path: 'brand', name: 'MobileAgentBrand', component: () => import('@/views/agent/BrandDept.vue'), meta: { title: '品牌部' } },
+          { path: '', name: 'MobileAgent', component: () => import('@/views/marketing/dashboard/Dashboard.vue'), meta: { title: '智能体工作台' } },
+          { path: 'meeting', name: 'MobileAgentMeeting', component: () => import('@/views/marketing/engage/MeetingRoom.vue'), meta: { title: '会议室' } },
+          { path: 'tasks', name: 'MobileAgentTasks', component: () => import('@/views/marketing/dashboard/TaskCenter.vue'), meta: { title: '任务中心' } },
+          // 与 PC 端 /agent 子路由保持镜像（首页 ap() 会把 /agent/ 映射为 /mobile/agent/）
+          { path: 'triggers', name: 'MobileAgentTriggers', component: () => import('@/views/marketing/automation/Triggers.vue'), meta: { title: '触发器' } },
+          { path: 'brand-settings', name: 'MobileAgentBrandSettings', component: () => import('@/views/marketing/brand/Brand.vue'), meta: { title: '品牌配置' } },
+          { path: 'trending', name: 'MobileAgentTrending', component: () => import('@/views/marketing/analytics/Trending.vue'), meta: { title: '热搜抓取' } },
+          { path: 'persona', name: 'MobileAgentPersona', component: () => import('@/views/marketing/create/Persona.vue'), meta: { title: 'AI分身' } },
+          { path: 'workflow', name: 'MobileAgentWorkflow', component: () => import('@/views/marketing/publish/PublishWorkflow.vue'), meta: { title: '一站式发布' } },
+          { path: 'studio', name: 'MobileAgentStudio', component: () => import('@/views/marketing/create/ContentStudio.vue'), meta: { title: '内容工作台' } },
+          { path: 'assets', name: 'MobileAgentAssets', component: () => import('@/views/marketing/brand/AssetLibrary.vue'), meta: { title: '素材库' } },
+          { path: 'bulletin', name: 'MobileAgentBulletin', component: () => import('@/views/marketing/dashboard/Bulletin.vue'), meta: { title: '作战公告板' } },
+          { path: 'creative-lab', name: 'MobileAgentCreativeLab', component: () => import('@/views/marketing/create/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
+          { path: 'publish', name: 'MobileAgentPublish', component: () => import('@/views/marketing/publish/Publish.vue'), meta: { title: '发布管理' } },
+          { path: 'marketing', name: 'MobileAgentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
+          { path: 'designer', name: 'MobileAgentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
+          { path: 'calendar', name: 'MobileAgentCalendar', component: () => import('@/views/content/Calendar.vue'), meta: { title: '内容日历' } },
+          { path: 'channels', name: 'MobileAgentChannels', component: () => import('@/views/content/Channels.vue'), meta: { title: '渠道管理' } },
+          // ── 已删除页面的重定向（手机端镜像）──
+          { path: 'content', redirect: '/mobile/agent/creative-lab' },
+          { path: 'creative', redirect: '/mobile/agent/creative-lab' },
+          { path: 'brand', redirect: '/mobile/agent/brand-settings' },
+          { path: 'copywriting', redirect: '/mobile/agent/creative-lab' },
+          { path: 'poster', redirect: '/mobile/agent/creative-lab' },
+          { path: 'video', redirect: '/mobile/agent/creative-lab' },
+          { path: 'history', redirect: '/mobile/agent' },
         ]
       },
       { path: 'investment', name: 'MobileInvestment', component: () => import('@/layouts/InvestmentLayout.vue'), meta: { title: '对外投资' } },
@@ -336,23 +372,44 @@ const routes: RouteRecordRaw[] = [
     path: '/agent',
     component: () => import('@/layouts/AgentLayout.vue'),
     children: [
-      { path: '', name: 'AgentDashboard', component: () => import('@/views/agent/Dashboard.vue'), meta: { title: '智能体工作台' } },
-      { path: 'meeting', name: 'AgentMeeting', component: () => import('@/views/agent/MeetingRoom.vue'), meta: { title: '会议室' } },
-      { path: 'tasks', name: 'AgentTasks', component: () => import('@/views/agent/TaskCenter.vue'), meta: { title: '任务中心' } },
-      { path: 'triggers', name: 'AgentTriggers', component: () => import('@/views/agent/Triggers.vue'), meta: { title: '触发器' } },
-      { path: 'content', name: 'AgentContent', component: () => import('@/views/agent/ContentDept.vue'), meta: { title: '内容部' } },
-      { path: 'creative', name: 'AgentCreative', component: () => import('@/views/agent/CreativeDept.vue'), meta: { title: '创意部' } },
-      { path: 'brand', name: 'AgentBrand', component: () => import('@/views/agent/BrandDept.vue'), meta: { title: '品牌部' } },
-      { path: 'brand-settings', name: 'AgentBrandSettings', component: () => import('@/views/agent/Brand.vue'), meta: { title: '品牌配置' } },
-      { path: 'trending', name: 'AgentTrending', component: () => import('@/views/agent/Trending.vue'), meta: { title: '热搜抓取' } },
-      { path: 'copywriting', name: 'AgentCopywriting', component: () => import('@/views/agent/Copywriting.vue'), meta: { title: '文案生成' } },
-      { path: 'poster', name: 'AgentPoster', component: () => import('@/views/agent/Poster.vue'), meta: { title: '图文海报' } },
-      { path: 'video', name: 'AgentVideo', component: () => import('@/views/agent/Video.vue'), meta: { title: '视频生成' } },
-      { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/agent/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
-      { path: 'publish', name: 'AgentPublish', component: () => import('@/views/agent/Publish.vue'), meta: { title: '发布管理' } },
-      { path: 'history', name: 'AgentHistory', component: () => import('@/views/agent/History.vue'), meta: { title: '历史记录' } },
+      { path: '', name: 'AgentDashboard', component: () => import('@/views/marketing/dashboard/Dashboard.vue'), meta: { title: '智能体工作台' } },
+      { path: 'meeting', name: 'AgentMeeting', component: () => import('@/views/marketing/engage/MeetingRoom.vue'), meta: { title: '会议室' } },
+      { path: 'tasks', name: 'AgentTasks', component: () => import('@/views/marketing/dashboard/TaskCenter.vue'), meta: { title: '任务中心' } },
+      { path: 'triggers', name: 'AgentTriggers', component: () => import('@/views/marketing/automation/Triggers.vue'), meta: { title: '触发器' } },
+      { path: 'brand-settings', name: 'AgentBrandSettings', component: () => import('@/views/marketing/brand/Brand.vue'), meta: { title: '品牌配置' } },
+      { path: 'trending', name: 'AgentTrending', component: () => import('@/views/marketing/analytics/Trending.vue'), meta: { title: '热搜抓取' } },
+      { path: 'persona', name: 'AgentPersona', component: () => import('@/views/marketing/create/Persona.vue'), meta: { title: 'AI分身' } },
+      { path: 'workflow', name: 'AgentWorkflow', component: () => import('@/views/marketing/publish/PublishWorkflow.vue'), meta: { title: '一站式发布' } },
+      { path: 'studio', name: 'AgentStudio', component: () => import('@/views/marketing/create/ContentStudio.vue'), meta: { title: '内容工作台' } },
+      { path: 'assets', name: 'AgentAssets', component: () => import('@/views/marketing/brand/AssetLibrary.vue'), meta: { title: '素材库' } },
+      { path: 'bulletin', name: 'AgentBulletin', component: () => import('@/views/marketing/dashboard/Bulletin.vue'), meta: { title: '作战公告板' } },
+      { path: 'creative-lab', name: 'AgentCreativeLab', component: () => import('@/views/marketing/create/CreativeLab.vue'), meta: { title: 'AI创意实验室' } },
+      { path: 'publish', name: 'AgentPublish', component: () => import('@/views/marketing/publish/Publish.vue'), meta: { title: '发布管理' } },
       { path: 'marketing', name: 'AgentMarketing', component: () => import('@/views/investment/Marketing.vue'), meta: { title: '营销顾问' } },
       { path: 'designer', name: 'AgentDesigner', component: () => import('@/views/investment/Designer.vue'), meta: { title: '平面设计师' } },
+      // Dashboard/ContentDept/BrandDept 内有跳转，必须注册（铁律：跳转必须注册路由）
+      { path: 'calendar', name: 'AgentCalendar', component: () => import('@/views/content/Calendar.vue'), meta: { title: '内容日历' } },
+      { path: 'channels', name: 'AgentChannels', component: () => import('@/views/content/Channels.vue'), meta: { title: '渠道管理' } },
+      // ── 已删除页面的重定向（原页面合并到新模块）──
+      { path: 'content', redirect: '/agent/creative-lab' },      // ContentDept → CreativeLab
+      { path: 'creative', redirect: '/agent/creative-lab' },     // CreativeDept → CreativeLab
+      { path: 'brand', redirect: '/agent/brand-settings' },      // BrandDept → Brand 配置
+      { path: 'copywriting', redirect: '/agent/creative-lab' },  // 文案 Agent → CreativeLab
+      { path: 'poster', redirect: '/agent/creative-lab' },       // 海报 Agent → CreativeLab
+      { path: 'video', redirect: '/agent/creative-lab' },        // 视频 Agent → CreativeLab
+      { path: 'history', redirect: '/agent' },                   // History → Dashboard
+    ],
+  },
+  // ── 内容中心（独立布局）────────────
+  {
+    path: '/content',
+    component: () => import('@/layouts/ContentLayout.vue'),
+    redirect: '/content/overview',
+    children: [
+      { path: 'overview', name: 'ContentOverview', component: () => import('@/views/content/Overview.vue'), meta: { title: '内容总览' } },
+      { path: 'channels', name: 'ContentChannels', component: () => import('@/views/content/Channels.vue'), meta: { title: '渠道管理' } },
+      { path: 'calendar', name: 'ContentCalendar', component: () => import('@/views/content/Calendar.vue'), meta: { title: '内容日历' } },
+      { path: 'agent', name: 'ContentAgent', component: () => import('@/views/content/Agent.vue'), meta: { title: '内容专员' } },
     ],
   },
   // 品牌主页 & 零售中心（独立布局，公开访问无需ERP登录）

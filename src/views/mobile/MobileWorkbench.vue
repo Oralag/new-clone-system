@@ -1,8 +1,8 @@
 <template>
   <div class="wb-page">
     <div class="wb-scroll">
-    <!-- 收银台入口 -->
-    <div class="wb-cashier-card" @click="go('/cashregister')">
+    <!-- 收银台入口（需要零售订单权限） -->
+    <div v-if="canUseCashier" class="wb-cashier-card" @click="go('/cashregister')">
       <div class="wb-cashier-left">
         <div class="wb-cashier-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
@@ -20,9 +20,9 @@
       </div>
     </div>
 
-    <!-- 快捷收款/支出 -->
-    <div class="wb-quick-row">
-      <div class="wb-quick-card" @click="openQuickReceive">
+    <!-- 快捷收款/支出（需要收款单/付款单权限） -->
+    <div v-if="canQuickReceive || canQuickPay" class="wb-quick-row">
+      <div v-if="canQuickReceive" class="wb-quick-card" @click="openQuickReceive">
         <div class="wb-quick-icon wb-icon-income">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
@@ -30,7 +30,7 @@
         </div>
         <div class="wb-quick-label">{{ t('mobileWorkbench.quickReceive') }}</div>
       </div>
-      <div class="wb-quick-card" @click="openQuickPay">
+      <div v-if="canQuickPay" class="wb-quick-card" @click="openQuickPay">
         <div class="wb-quick-icon wb-icon-expense">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
@@ -168,6 +168,33 @@
       </div>
     </Teleport>
 
+    <!-- 我的业绩（店员场景：有收银台权限才显示） -->
+    <div v-if="canUseCashier" class="wb-section wb-perf-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #2563EB"></span>
+        <span class="wb-section-title">我的业绩</span>
+        <span class="wb-perf-range">{{ perfTodayLabel }}</span>
+      </div>
+      <div class="wb-perf-grid">
+        <div class="wb-perf-card">
+          <div class="wb-perf-label">今日销售</div>
+          <div class="wb-perf-value">¥{{ fmt(myKpi.todaySale) }}</div>
+        </div>
+        <div class="wb-perf-card">
+          <div class="wb-perf-label">今日订单</div>
+          <div class="wb-perf-value">{{ myKpi.todayOrders }}<span class="wb-perf-unit">单</span></div>
+        </div>
+        <div class="wb-perf-card">
+          <div class="wb-perf-label">本月销售</div>
+          <div class="wb-perf-value">¥{{ fmt(myKpi.monthSale) }}</div>
+        </div>
+        <div class="wb-perf-card">
+          <div class="wb-perf-label">本月订单</div>
+          <div class="wb-perf-value">{{ myKpi.monthOrders }}<span class="wb-perf-unit">单</span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 团队动态 -->
     <div class="wb-section">
       <div class="wb-section-hd">
@@ -279,6 +306,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { usePermissionStore } from '@/stores/permission'
 import { ElMessageBox } from 'element-plus'
 import http from '@/api/http'
 import { getFundList } from '@/api/finance'
@@ -287,7 +315,20 @@ import { getSupplierList } from '@/api/procure'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const permStore = usePermissionStore()
 const { t } = useI18n()
+
+// ── 按角色权限过滤入口 ──
+const canUseCashier = computed(() => permStore.canAccessPath('/cashregister'))
+const canQuickReceive = computed(() => permStore.canAccessPath('/finance/collect-receipt'))
+const canQuickPay = computed(() => permStore.canAccessPath('/finance/pay-receipt'))
+
+// 动态条目按所属模块权限过滤：有该模块任一权限才可见（如：无任何财务权限的店员看不到财务类动态）
+const ERP_ACTIVITY_TYPES = new Set(['sale', 'retail', 'procure', 'warehouse', 'finance', 'goods', 'personnel', 'production', 'online', 'outsource', 'reports'])
+function canSeeActivity(a: any): boolean {
+  const type = (a?.action_type || '').split('_')[0]
+  return ERP_ACTIVITY_TYPES.has(type) ? permStore.canSeeModule(type) : true
+}
 
 function parseGoodsInfo(g: any) {
   if (Array.isArray(g)) return g
@@ -297,11 +338,18 @@ function parseGoodsInfo(g: any) {
 
 const kpi = ref({ todaySale: '0', todayOrders: 0, customerTotal: 0, stockWarn: 0 })
 
+// 我的业绩（店员场景：零售单为主，同门店/店员的销售出库按 admin_name 精确匹配）
+const myKpi = ref({ todaySale: 0, todayOrders: 0, monthSale: 0, monthOrders: 0 })
+const perfTodayLabel = computed(() => {
+  const d = new Date()
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+})
+
 const activities = ref<any[]>([])
 const showPicker = ref(false)
 
-// 所有可用模块
-const allModuleApps = computed(() => [
+// 所有可用模块（按角色权限过滤，见文件末尾 filter）
+const allModuleApps = computed(() => ([
   { name: t('mobileWorkbench.modules.salesOrder'), path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { name: t('mobileWorkbench.modules.sampleOrder'), path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
   { name: t('mobileWorkbench.modules.goodsInfo'), path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
@@ -311,6 +359,7 @@ const allModuleApps = computed(() => [
   { name: t('mobileWorkbench.modules.procureInhouse'), path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
   { name: t('mobileWorkbench.modules.financeOverview'), path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
   { name: t('mobileWorkbench.modules.receivable'), path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: t('mobileWorkbench.modules.otherExpense'), path: '/mobile/finance/other-expense', bg: 'rgba(239,68,68,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>' },
   { name: t('mobileWorkbench.modules.customerManage'), path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
   { name: t('mobileWorkbench.modules.brandManage'), path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
   { name: t('mobileWorkbench.modules.hrManage'), path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
@@ -319,7 +368,7 @@ const allModuleApps = computed(() => [
   { name: t('mobileWorkbench.modules.messageCenter'), path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
   { name: t('mobileWorkbench.modules.taskCenter'), path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { name: t('mobileWorkbench.modules.aiAssistant'), path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4l3 3"/></svg>' },
-])
+]).filter(app => permStore.canAccessPath(app.path)))
 
 function loadFavs() {
   try {
@@ -371,7 +420,7 @@ const weekday = computed(() => {
   return days[new Date().getDay()]
 })
 
-const quickApps = computed(() => [
+const quickApps = computed(() => ([
   { name: t('mobileWorkbench.modules.salesOrder'), path: '/mobile/sale/contract', bg: 'rgba(0,113,227,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { name: t('mobileWorkbench.modules.sampleOrder'), path: '/mobile/sale/sample', bg: 'rgba(236,72,153,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>' },
   { name: t('mobileWorkbench.modules.goodsInfo'), path: '/mobile/goods/info', bg: 'rgba(249,115,22,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' },
@@ -381,6 +430,7 @@ const quickApps = computed(() => [
   { name: t('mobileWorkbench.modules.procureInhouse'), path: '/mobile/procure/inhouse', bg: 'rgba(8,145,178,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
   { name: t('mobileWorkbench.modules.financeOverview'), path: '/mobile/finance/overview', bg: 'rgba(217,119,6,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' },
   { name: t('mobileWorkbench.modules.receivable'), path: '/mobile/finance/receivable', bg: 'rgba(220,38,38,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+  { name: t('mobileWorkbench.modules.otherExpense'), path: '/mobile/finance/other-expense', bg: 'rgba(239,68,68,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>' },
   { name: t('mobileWorkbench.modules.customerManage'), path: '/mobile/sale/client', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' },
   { name: t('mobileWorkbench.modules.brandManage'), path: '/mobile/goods/brand', bg: 'rgba(124,58,237,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
   { name: t('mobileWorkbench.modules.hrManage'), path: '/mobile/personnel/staff', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
@@ -389,7 +439,7 @@ const quickApps = computed(() => [
   { name: t('mobileWorkbench.modules.messageCenter'), path: '/mobile/message', bg: 'rgba(0,113,227,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
   { name: t('mobileWorkbench.modules.taskCenter'), path: '/mobile/task', bg: 'rgba(8,145,178,0.08)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="1.8"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
   { name: t('mobileWorkbench.modules.aiAssistant'), path: '/mobile/ai', bg: 'rgba(124,58,237,0.1)', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>' },
-])
+]).filter(app => permStore.canAccessPath(app.path)))
 
 function go(path: string) { router.push(path) }
 
@@ -503,6 +553,7 @@ function fmt(n: number) {
 
 // 加载快速收款/支出需要的基础数据
 async function loadQuickData() {
+  if (!canQuickReceive.value && !canQuickPay.value) return
   const [fundRes, custRes, supRes] = await Promise.allSettled([
     getFundList({ list_rows: 100 }),
     getSaleCustomerList({ list_rows: 200 }),
@@ -517,12 +568,14 @@ onMounted(async () => {
   loadQuickData()
   const todayStr = new Date().toISOString().slice(0, 10)
 
-  const [saleRes, retailRes, custRes, goodsRes, procureRes] = await Promise.allSettled([
+  const [saleRes, retailRes, custRes, goodsRes, procureRes, contractRes, purchaseRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
     http.get('/retail/order/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
     http.get('/goods/ShopGoods/index', { params: { list_rows: 2000, status: 1 } }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
+    http.get('/shop/ContractOrder/index', { params: { list_rows: 2000 } }),
+    http.get('/stock/PurchaseOrder/index', { params: { list_rows: 2000 } }),
   ])
 
   const getRows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
@@ -531,6 +584,8 @@ onMounted(async () => {
   const retailRows = getRows(retailRes)
   const goodsRows = getRows(goodsRes)
   const procureRows = getRows(procureRes)
+  const contractRows = getRows(contractRes)
+  const purchaseRows = getRows(purchaseRes)
 
   const todaySales = saleRows.filter((r: any) => Number(r.status) === 1 && (r.out_date || '').slice(0, 10) === todayStr)
   const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date || '').slice(0, 10) === todayStr)
@@ -538,6 +593,32 @@ onMounted(async () => {
   const totalSale = todaySales.reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0)
   const totalRetail = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
   kpi.value.todaySale = fmt(totalSale + totalRetail)
+
+  // ── 我的业绩：按 admin_id 精确到本人（零售单 + 销售单 + 采购单） ──
+  const monthPrefix = todayStr.slice(0, 7) // YYYY-MM
+  const myId = Number((authStore.userInfo as any)?.id || (authStore.userInfo as any)?.admin_id || 0)
+  const myName = authStore.userInfo?.name || ''
+  const isMine = (r: any) => (myId && Number(r.admin_id) === myId) || (myName && r.admin_name === myName)
+  const dateOf = (r: any) => (r.order_date || r.create_time || r.created_at || r.add_time || '').toString().slice(0, 10)
+  const isToday = (r: any) => dateOf(r).slice(0, 10) === todayStr
+  const isThisMonth = (r: any) => dateOf(r).slice(0, 7) === monthPrefix
+  const amtRetail = (r: any) => Number(r.pay_amount || r.total_amount || 0)
+  const amtOrder = (r: any) => Number(r.total_amount || r.after_discount || 0)
+  const sum = (rows: any[], fn: (r: any) => number) => rows.reduce((s, r) => s + fn(r), 0)
+
+  const myRetailToday = retailRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
+  const myRetailMonth = retailRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+  const myContractToday = contractRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
+  const myContractMonth = contractRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+  const myPurchaseToday = purchaseRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
+  const myPurchaseMonth = purchaseRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+
+  myKpi.value = {
+    todaySale: sum(myRetailToday, amtRetail) + sum(myContractToday, amtOrder),
+    todayOrders: myRetailToday.length + myContractToday.length + myPurchaseToday.length,
+    monthSale: sum(myRetailMonth, amtRetail) + sum(myContractMonth, amtOrder),
+    monthOrders: myRetailMonth.length + myContractMonth.length + myPurchaseMonth.length,
+  }
 
   if (custRes.status === 'fulfilled') {
     kpi.value.customerTotal = custRes.value?.data?.total ?? custRes.value?.total ?? 0
@@ -561,7 +642,8 @@ onMounted(async () => {
   // 工作动态
   try {
     const actRes = await http.get('/mobile/operation-logs', { params: { list_rows: 10 } })
-    activities.value = actRes?.data?.rows ?? actRes?.rows ?? []
+    const actRows = actRes?.data?.rows ?? actRes?.rows ?? []
+    activities.value = actRows.filter(canSeeActivity)
   } catch { /* 忽略 */ }
 })
 </script>
@@ -580,6 +662,57 @@ onMounted(async () => {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   min-height: 0;
+}
+
+/* ── 我的业绩 ── */
+.wb-perf-section {
+  background: transparent !important;
+  margin-bottom: 12px;
+}
+.wb-perf-section .wb-section-hd {
+  border-bottom: none;
+  padding: 8px 16px 8px;
+}
+.wb-perf-range {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.wb-perf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0 12px 4px;
+}
+.wb-perf-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.wb-perf-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+.wb-perf-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+.wb-perf-unit {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+  margin-left: 3px;
 }
 
 /* ── 快捷入口：一排三个 ── */

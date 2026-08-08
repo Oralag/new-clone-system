@@ -17,6 +17,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
   if (bytes[0] === 0x89 && bytes[1] === 0x50) contentType = 'image/png'
   else if (bytes[0] === 0x47 && bytes[1] === 0x49) contentType = 'image/gif'
   else if (bytes[0] === 0x52 && bytes[1] === 0x49) contentType = 'image/webp'
+  else if (
+    bytes.length > 11 &&
+    bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
+  ) contentType = 'video/mp4'
 
   return new Response(data, {
     headers: {

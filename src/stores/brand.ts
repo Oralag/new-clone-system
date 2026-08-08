@@ -141,17 +141,20 @@ function mergeWithDefault(list: BrandData[]): BrandData[] {
   if (!list.find(b => b.id === DEFAULT_ERP_BRAND.id)) {
     list.unshift(DEFAULT_ERP_BRAND)
   }
+  if (!list.find(b => b.id === DEFAULT_NOMADIC_BRAND.id)) {
+    list.push(DEFAULT_NOMADIC_BRAND)
+  }
   return list
 }
 
 function loadLocal(): { profiles: BrandData[]; activeId: string } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const profiles = raw ? mergeWithDefault(JSON.parse(raw)) : [DEFAULT_ERP_BRAND]
+    const profiles = raw ? mergeWithDefault(JSON.parse(raw)) : mergeWithDefault([])
     const activeId = localStorage.getItem(ACTIVE_KEY) || DEFAULT_ERP_BRAND.id
     return { profiles, activeId }
   } catch {
-    return { profiles: [DEFAULT_ERP_BRAND], activeId: DEFAULT_ERP_BRAND.id }
+    return { profiles: mergeWithDefault([]), activeId: DEFAULT_ERP_BRAND.id }
   }
 }
 

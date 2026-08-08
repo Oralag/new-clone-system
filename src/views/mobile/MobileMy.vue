@@ -94,17 +94,6 @@
           <span class="m-my-menu-label">{{ t('mobileMy.systemSettings') }}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2c8d5" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
-        <div class="m-my-menu-item" @click="handleTheme">
-          <div class="m-my-menu-icon" style="background:rgba(0,113,227,0.08)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </div>
-          <span class="m-my-menu-label">{{ t('mobileMy.switchTheme') }}</span>
-          <div class="m-my-theme-btns">
-            <span class="m-my-theme-btn" :class="{ active: appStore.theme === 'light' }" @click.stop="appStore.setTheme('light')">☀️</span>
-            <span class="m-my-theme-btn" :class="{ active: appStore.theme === 'dark' }" @click.stop="appStore.setTheme('dark')">🌙</span>
-            <span class="m-my-theme-btn" :class="{ active: appStore.theme === 'eye' }" @click.stop="appStore.setTheme('eye')">📖</span>
-          </div>
-        </div>
         <div class="m-my-menu-item" @click="copyLink">
           <div class="m-my-menu-icon" style="background:rgba(217,119,6,0.1)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -140,19 +129,15 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useAppStore } from '@/stores/app'
 import http from '@/api/http'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const appStore = useAppStore()
 const { t } = useI18n()
 
 const stats = ref({ customerCount: 0, receivable: '0', stockWarn: 0 })
 const myStats = ref({ todaySale: 0, todayOrders: 0, pendingCount: 0, receivable: 0 })
-
-function handleTheme() { /* 由内联按钮处理 */ }
 
 function copyLink() {
   const url = window.location.href
@@ -326,18 +311,6 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 .m-my-menu-label { flex: 1; font-size: 14px; font-weight: 600; color: #1d2129; }
-.m-my-theme-btns { display: flex; gap: 4px; }
-.m-my-theme-btn {
-  width: 26px; height: 26px;
-  background: #f5f5f7;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.m-my-theme-btn.active { border-color: #0071e3; background: #e8f0fe; }
-
 /* ── 底部 ── */
 .m-my-footer { text-align: center; padding: 20px 0 12px; }
 .m-my-version { font-size: 12px; font-weight: 600; color: #c2c8d5; margin-bottom: 3px; }

@@ -956,7 +956,7 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
           addSystemMessage('poster', '🎨 正在 AI 生成配图…')
           const resp = await fetch('/api/generate-media', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
             body: JSON.stringify({ type: 'image', prompt: cleanPrompt, ratio: '3:4' }),
           })
           const data = await resp.json() as any
@@ -994,7 +994,7 @@ async function executeAssignedTasks(topic: string, brandInfo: string, brandConte
           addSystemMessage('video', '🎬 正在提交即梦视频生成任务…')
           const resp = await fetch('/api/generate-media', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-erp-token': localStorage.getItem('erp_token') || '' },
             body: JSON.stringify({ type: 'video', prompt: cleanPrompt, ratio: '9:16' }),
           })
           const data = await resp.json() as any

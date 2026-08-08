@@ -16,6 +16,12 @@
     <el-table :data="list" v-loading="loading" border style="width:100%">
       <el-table-column :label="t('miniprogramDistributor.applicant')" prop="name" width="120" />
       <el-table-column :label="t('miniprogramDistributor.phone')" prop="phone" width="130" />
+      <el-table-column label="关联等级" width="130">
+        <template #default="{ row }">
+          <el-tag v-if="row.customer_level_name" type="warning" size="small">{{ row.customer_level_name }}</el-tag>
+          <span v-else style="color:#c0c4cc">—</span>
+        </template>
+      </el-table-column>
       <el-table-column :label="t('miniprogramDistributor.reason')" prop="apply_reason" min-width="160" show-overflow-tooltip />
       <el-table-column :label="t('miniprogramDistributor.status')" width="100">
         <template #default="{ row }">
@@ -29,9 +35,18 @@
           <span style="font-family:monospace;font-weight:600">{{ row.code || '—' }}</span>
         </template>
       </el-table-column>
-      <el-table-column :label="t('miniprogramDistributor.rate')" width="100">
+      <el-table-column :label="t('miniprogramDistributor.rate')" width="150">
         <template #default="{ row }">
-          <span v-if="row.status === 1">{{ row.commission_rate }}%</span>
+          <template v-if="row.status === 1">
+            <el-tooltip v-if="row.has_level_prices" content="该分销商已绑定的客户等级下配有商品单独价，下单走等级价，不再抽取佣金" placement="top">
+              <el-tag type="info" size="small" effect="plain">走等级价</el-tag>
+            </el-tooltip>
+            <el-tooltip v-else-if="row.customer_level_name" :content="`已关联「${row.customer_level_name}」但未配商品单独价，下单仍按 ${row.commission_rate}% 抽佣`" placement="top">
+              <span>{{ row.commission_rate }}%</span>
+              <el-tag type="warning" size="small" effect="plain" style="margin-left:4px">未配价</el-tag>
+            </el-tooltip>
+            <span v-else>{{ row.commission_rate }}%</span>
+          </template>
           <span v-else>—</span>
         </template>
       </el-table-column>
@@ -56,7 +71,7 @@
             <el-button size="small" type="danger" @click="handleReject(row)">{{ t('miniprogramDistributor.reject') }}</el-button>
           </template>
           <template v-else-if="row.status === 1">
-            <el-button size="small" @click="openEditRate(row)">{{ t('miniprogramDistributor.editRate') }}</el-button>
+            <el-button v-if="!row.customer_level_name" size="small" @click="openEditRate(row)">{{ t('miniprogramDistributor.editRate') }}</el-button>
             <el-button size="small" @click="openSettlement(row)">结算配置</el-button>
             <el-button size="small" @click="openGoodsDialog(row)">商品池</el-button>
             <el-button size="small" @click="openMaterialDialog(row)">素材库</el-button>
@@ -130,13 +145,27 @@
 
     <el-dialog v-model="settlementVisible" title="分销商结算与协议" width="560px">
       <el-form label-width="130px">
-        <el-form-item label="官方商品佣金"><el-input-number v-model="settlementForm.commission_rate" :min="0" :max="50" :precision="1"/> %</el-form-item>
-        <el-form-item label="自营商品平台费"><el-input-number v-model="settlementForm.platform_fee_rate" :min="0" :max="50" :precision="1"/> %</el-form-item>
+        <el-form-item label="官方商品佣金">
+          <el-input-number v-model="settlementForm.commission_rate" :min="0" :max="50" :precision="1" :disabled="wholesaleBound"/> %
+          <span v-if="wholesaleBound" style="margin-left:8px;color:#e6a23c;font-size:12px">走等级价，此项不生效</span>
+        </el-form-item>
+        <el-form-item label="自营商品平台费">
+          <el-input-number v-model="settlementForm.platform_fee_rate" :min="0" :max="50" :precision="1" :disabled="wholesaleBound"/> %
+          <span v-if="wholesaleBound" style="margin-left:8px;color:#e6a23c;font-size:12px">走等级价，此项不生效</span>
+        </el-form-item>
         <el-form-item label="售后结算周期"><el-input-number v-model="settlementForm.settlement_cycle_days" :min="0" :max="60"/> 天</el-form-item>
         <el-form-item label="协议类型"><el-radio-group v-model="settlementForm.agreement_type"><el-radio label="offline">线下协议</el-radio><el-radio label="online">线上协议</el-radio></el-radio-group></el-form-item>
         <el-form-item label="协议编号"><el-input v-model="settlementForm.agreement_no"/></el-form-item>
         <el-form-item label="二级商户号"><el-input v-model="settlementForm.sub_mchid" placeholder="平台收付通开通后填写"/></el-form-item>
         <el-form-item label="结算方式"><el-select v-model="settlementForm.settlement_mode"><el-option label="人工结算" value="manual"/><el-option label="微信自动分账（预留）" value="wechat_profit_sharing"/></el-select></el-form-item>
+        <el-form-item label="客户等级">
+          <el-select v-model="settlementForm.customer_level_name" clearable placeholder="不关联 · 走佣金" style="width:100%">
+            <el-option v-for="lv in wholesaleLevels" :key="lv.id" :label="lv.name" :value="lv.name"/>
+          </el-select>
+          <div style="color:#909399;font-size:12px;line-height:1.5;margin-top:4px">
+            关联客户等级后：如该等级已配商品单独价，下单走等级价（不再抽佣）；未配价则仍按上方佣金结算。
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer><el-button @click="settlementVisible=false">取消</el-button><el-button type="primary" :loading="acting" @click="saveSettlement">保存</el-button></template>
     </el-dialog>
@@ -237,10 +266,24 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="展示位置" width="120">
+          <template #default="{ row }">{{ placementLabel(row.placement) }}</template>
+        </el-table-column>
+        <el-table-column label="审核状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.review_status === 'approved' ? 'success' : row.review_status === 'rejected' ? 'danger' : 'warning'" size="small">
+              {{ row.review_status === 'approved' ? '已发布' : row.review_status === 'rejected' ? '未通过' : '待审核' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="goods_name" label="关联商品" min-width="120" show-overflow-tooltip />
         <el-table-column prop="content" label="内容" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="210" fixed="right">
           <template #default="{ row }">
+            <template v-if="row.review_status === 'pending'">
+              <el-button link type="success" size="small" @click="reviewMaterial(row, 'approved')">通过</el-button>
+              <el-button link type="warning" size="small" @click="reviewMaterial(row, 'rejected')">驳回</el-button>
+            </template>
             <el-button link size="small" @click="openMaterialForm(row)">编辑</el-button>
             <el-button link type="danger" size="small" @click="deleteMaterial(row)">删除</el-button>
           </template>
@@ -356,6 +399,7 @@ import { computed, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
+import { loadLevels, initCustomerLevels, isCustomerLevelReady, type LevelItem } from '@/utils/customerLevel'
 
 const { t } = useI18n()
 
@@ -581,6 +625,40 @@ function typeIcon(type: string) {
   return normalizedMaterialType(type) === 'video' ? '▶' : normalizedMaterialType(type) === 'poster' ? '▧' : '文'
 }
 
+function placementLabel(placement: string) {
+  return ({
+    home_banner: '首页轮播',
+    home_story: '首页品牌内容',
+    discover_video: '看看·视频',
+    discover_article: '看看·图文',
+    library: '素材库',
+  } as Record<string, string>)[placement || 'library'] || placement || '素材库'
+}
+
+async function reviewMaterial(row: any, status: 'approved' | 'rejected') {
+  let reviewNote = ''
+  if (status === 'rejected') {
+    try {
+      const result = await ElMessageBox.prompt('请填写驳回原因，经销商将在小程序中看到', '驳回素材', {
+        inputPlaceholder: '如：图片包含无授权内容',
+        inputValidator: value => !!String(value || '').trim() || '请填写驳回原因',
+      })
+      reviewNote = result.value
+    } catch { return }
+  } else {
+    try {
+      await ElMessageBox.confirm('审核通过后，该内容会展示在经销商专属商城，确定通过吗？', '审核素材', { type: 'warning' })
+    } catch { return }
+  }
+  await http.post('/distributor/materials/review', {
+    id: row.id,
+    review_status: status,
+    review_note: reviewNote,
+  })
+  ElMessage.success(status === 'approved' ? '素材已发布' : '素材已驳回')
+  await loadMaterials()
+}
+
 function categoryLabel(category: string) {
   return materialCategories.find(item => item.value === (category || 'product'))?.label || '商品推广'
 }
@@ -767,6 +845,14 @@ const productAssetTitle = ref('')
 const productAssetUrls = ref<string[]>([])
 const settlementVisible = ref(false)
 const settlementForm = ref<any>({})
+const wholesaleLevels = ref<LevelItem[]>([])
+const wholesaleBound = computed(() => !!settlementForm.value?.customer_level_name)
+
+async function ensureLevelsLoaded() {
+  if (!isCustomerLevelReady()) await initCustomerLevels()
+  // 排除默认"分销商"等级，只留真正的批发/客户等级
+  wholesaleLevels.value = loadLevels().filter(lv => lv.name !== '分销商')
+}
 
 function firstImage(row: any) {
   const value = row.images
@@ -807,15 +893,23 @@ function openSettlement(row: any) {
     agreement_url: row.agreement_url || '', sub_mchid: row.sub_mchid || '',
     merchant_onboarding_status: row.merchant_onboarding_status || 'not_started',
     settlement_mode: row.settlement_mode || 'manual',
+    customer_level_name: row.customer_level_name || '',
   }
+  ensureLevelsLoaded()
   settlementVisible.value = true
 }
 async function saveSettlement() {
   acting.value = true
   try {
-    await http.post('/distributor/rate', { id: settlementForm.value.id, commission_rate: settlementForm.value.commission_rate })
+    await http.post('/distributor/edit', { id: settlementForm.value.id, commission_rate: settlementForm.value.commission_rate })
     await http.post('/distributor/settlement-config', settlementForm.value)
+    await http.post('/distributor/bind-customer-level', {
+      id: settlementForm.value.id,
+      level_name: settlementForm.value.customer_level_name || '',
+    })
     ElMessage.success('结算配置已保存'); settlementVisible.value = false; loadList()
+  } catch (e: any) {
+    ElMessage.error(e?.message ?? '保存失败')
   } finally { acting.value = false }
 }
 

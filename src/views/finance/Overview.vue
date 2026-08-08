@@ -493,10 +493,9 @@ import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, app
 import { getPayReceiptSupplierLabel } from '@/utils/supplierLabel'
 import { applySaleReturnsToCollectReceiptRows, applySaleReturnsToReceivableRows, buildSaleReturnSettlementRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
 import { buildExpensePayableRows } from '@/utils/expensePayable'
-import { buildProcureFeePaidByOrder, getProcureFeeNeedPayAmount, isProcureExtraFeePayment } from '@/utils/procureFeeFinance'
+import { buildSupplierPayableRows, buildContractFeePayableRows, buildRetailFeePayableRows } from '@/utils/payableCalc'
+import { buildContractReceivableItems, deductSaleReturnsByCustomer } from '@/utils/receivableCalc'
 import { fmtDt } from '@/utils/date'
-import { isEffectiveSaleContract } from '@/utils/saleContractStatus'
-import { calcSaleContractReceivable } from '@/utils/saleContractAmount'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -1128,76 +1127,11 @@ async function loadAllData() {
     const rawPayList = payRes.data?.rows ?? payRes.data?.list ?? []
     collectList.value = rawCollectList
     payList.value = rawPayList
-    // 应收账款：与 Receivable.vue 完全相同的 order_sn 匹配逻辑（排除线上电商平台现收现结客户）
-    const ONLINE_CUSTOMER_IDS_REC = new Set([63, 10, 12, 7, 8, 11])
-    const auditedContractsForRec = (contractRes.data?.rows ?? contractRes.data?.list ?? [])
-      .filter((r: any) => isEffectiveSaleContract(r) && !ONLINE_CUSTOMER_IDS_REC.has(Number(r.customer_id)))
-    const snToIdRec = new Map<string, number>()
-    for (const c of auditedContractsForRec) {
-      if (c.order_sn) snToIdRec.set(String(c.order_sn), c.id)
-      if (c.order_no)  snToIdRec.set(String(c.order_no),  c.id)
-    }
-    const contractDirectPaidRec = new Map<number, number>()
-    const custUnmatchedPaidRec = new Map<number, number>()
-    for (const r of rawCollectList) {
-      if (String(r.remark || '').startsWith('[other]')) continue
-      const amount = Number(r.amount || 0)
-      const rSn = String(r.order_sn || '').trim()
-      const custId = Number(r.customer_id || 0)
-      if (rSn && snToIdRec.has(rSn)) {
-        const cid = snToIdRec.get(rSn)!
-        contractDirectPaidRec.set(cid, (contractDirectPaidRec.get(cid) ?? 0) + amount)
-      } else if (custId > 0) {
-        custUnmatchedPaidRec.set(custId, (custUnmatchedPaidRec.get(custId) ?? 0) + amount)
-      }
-    }
-    const byCustomerRec = new Map<number, any[]>()
-    for (const r of auditedContractsForRec) {
-      const custId = Number(r.customer_id || 0)
-      if (custId > 0 && custUnmatchedPaidRec.has(custId)) {
-        if (!byCustomerRec.has(custId)) byCustomerRec.set(custId, [])
-        byCustomerRec.get(custId)!.push(r)
-      }
-    }
-    for (const contracts of byCustomerRec.values()) {
-      contracts.sort((a: any, b: any) =>
-        new Date(a.order_date || a.created_at).getTime() - new Date(b.order_date || b.created_at).getTime()
-      )
-    }
-    const calcAmtRec = (c: any): number => {
-      return calcSaleContractReceivable(c)
-    }
-    const contractFifoPaidRec = new Map<number, number>()
-    for (const [custId, contracts] of byCustomerRec) {
-      let remaining = custUnmatchedPaidRec.get(custId) ?? 0
-      for (const c of contracts) {
-        const total = calcAmtRec(c)
-        const directPaid = contractDirectPaidRec.get(c.id) ?? 0
-        const leftover = Math.max(0, total - directPaid)
-        const applied = Math.min(remaining, leftover)
-        if (applied > 0) contractFifoPaidRec.set(c.id, applied)
-        remaining = Math.max(0, remaining - applied)
-        if (remaining <= 0) break
-      }
-    }
-    const contractPaidRec = new Map<number, number>()
-    for (const id of new Set([...contractDirectPaidRec.keys(), ...contractFifoPaidRec.keys()])) {
-      contractPaidRec.set(id, (contractDirectPaidRec.get(id) ?? 0) + (contractFifoPaidRec.get(id) ?? 0))
-    }
-    const rawReceivableList = auditedContractsForRec.map((r: any) => {
-      const receiptPaidRec = contractPaidRec.get(r.id)
-      // 与 Contract.vue getReceivedAmount 一致：收款单有记录优先，否则用合同自身的 receive_amount
-      const paid = receiptPaidRec !== undefined ? receiptPaidRec : Number(r.receive_amount || 0)
-      const total = calcAmtRec(r)
-      return {
-        ...r,
-        total_amount: total,
-        paid_amount: paid,
-        un_pay_amount: Math.max(0, total - paid),
-        order_sn: r.order_sn || r.order_no || '',
-        out_date: r.order_date || r.created_at,
-      }
-    }).filter((r: any) => r.un_pay_amount > 0)
+    // 应收账款：统一口径，走 utils/receivableCalc.ts（与 Receivable.vue / FundFlow.vue 共用）
+    const rawReceivableList = buildContractReceivableItems(
+      contractRes.data?.rows ?? contractRes.data?.list ?? [],
+      rawCollectList,
+    ).filter((r: any) => r.un_pay_amount > 0)
     procureReturnFinanceList.value = normalizeProcureReturnFinanceRows(returnRes.data?.rows ?? [], fundNameMap)
     const normalizedSaleReturns = normalizeSaleReturnFinanceRows(saleReturnRes.data?.rows ?? [])
 
@@ -1249,136 +1183,23 @@ async function loadAllData() {
     // 拿不到账户时保留上一次已经显示出来的，绝不用空列表把它清掉
     if (nextFundList.length || !fundList.value.length) fundList.value = nextFundList
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
-    // 按供应商聚合采购订单计算应付（只算已审核 status===1 的单子）
-    // 订单本体已付金额直接用后端 o.pay_amount；附加费用已付从付款单匹配
-    const procureFeePaidById = buildProcureFeePaidByOrder(rawPayList)
-    const supplierPayMap = new Map<string, any>()
-    for (const o of (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? [])) {
-      if (Number(o.status) !== 1) continue
-      const key = o.supplier_id ? `id:${o.supplier_id}` : `name:${String(o.supplier_name || '').trim()}`
-      if (!supplierPayMap.has(key)) {
-        supplierPayMap.set(key, { supplier_id: o.supplier_id || 0, supplier_name: o.supplier_name || '—', order_amount: 0, paid_amount: 0, un_pay_amount: 0 })
-      }
-      const s = supplierPayMap.get(key)!
-      const orderAmt = Number(o.after_discount ?? o.total_amount ?? 0)
-      const paidAmt = Number(o.pay_amount || 0)
-      const feeNeedPay = getProcureFeeNeedPayAmount(o)
-      const feePaid = procureFeePaidById[o.id] || 0
-      const feeUnpaid = Math.max(0, feeNeedPay - feePaid)
-      const unpaid = orderAmt - paidAmt
-      if (unpaid <= 0 && feeUnpaid <= 0) continue
-      s.order_amount += orderAmt + feeNeedPay
-      s.paid_amount += paidAmt + feePaid
-      s.un_pay_amount += unpaid + feeUnpaid
-    }
-    // 聚合合同附加费用（对方承担、有收款方的）按 supplier_name，计算已付/未付
-    const auditedContracts: any[] = contractRes.data?.rows ?? contractRes.data?.list ?? []
-    const saleFeePaidMap: Record<string, number> = {}
-    for (const r of rawPayList) {
-      const m = String(r.remark || '').match(/销售订单附加费用\s*#(\d+):(.+?)(?:\s|\[|$)/)
-      if (m) {
-        const key = `${Number(m[1])}:${m[2].trim()}`
-        saleFeePaidMap[key] = (saleFeePaidMap[key] || 0) + Number(r.amount || 0)
-      }
-    }
-    const feeMap = new Map<string, { order_amount: number; paid_amount: number; orders: any[] }>()
-    for (const c of auditedContracts) {
-      let feeItems: any[] = []
-      try {
-        const raw = c.fee_items
-        if (typeof raw === 'string' && raw && raw !== '[]') feeItems = JSON.parse(raw)
-        else if (Array.isArray(raw)) feeItems = raw
-      } catch { feeItems = [] }
-      if (!feeItems.length) {
-        try {
-          const fiMatch = String(c.remark || '').match(/\[FI:([^\]]+)\]/)
-          if (fiMatch) feeItems = JSON.parse(decodeURIComponent(atob(fiMatch[1])))
-        } catch { /* ignore */ }
-      }
-      for (const f of feeItems) {
-        if (f.bearer === 'buyer') continue
-        const amt = Number(f.amount || 0)
-        if (!amt) continue
-        const feeName = String(f.name || '费用').trim()
-        const paid = saleFeePaidMap[`${c.id}:${feeName}`] || 0
-        const unpaid = amt - paid
-        if (unpaid <= 0.001) continue
-        const supplierName = String(f.supplier_name || '').trim() || `合同附加-${feeName}`
-        if (!feeMap.has(supplierName)) feeMap.set(supplierName, { order_amount: 0, paid_amount: 0, orders: [] })
-        const entry = feeMap.get(supplierName)!
-        entry.order_amount += amt
-        entry.paid_amount += paid
-        entry.orders.push({
-          order_id: c.id,
-          order_no: c.order_sn || c.order_no || '',
-          order_amount: amt,
-          paid_amount: paid,
-          un_pay_amount: unpaid,
-          due_date: fmtDt(c.sign_date || c.order_date || c.created_at),
-          source_name: `合同附加-${feeName}`,
-        })
-      }
-    }
-    const contractFeeRows = Array.from(feeMap.entries())
-      .map(([supplierName, entry]) => ({
-        supplier_id: 0,
-        supplier_name: supplierName,
-        contact_name: '',
-        contact_mobile: '',
-        order_amount: entry.order_amount,
-        paid_amount: entry.paid_amount,
-        un_pay_amount: entry.order_amount - entry.paid_amount,
-        prepay: 0,
-        orders: entry.orders,
-        __payable_source: 'contract_fee',
-        source_name: '合同附加费',
-      }))
-      .filter((r) => r.un_pay_amount > 0.001)
-
-    // 同 Payable.vue：扣减"未链接到具体采购单"的手动付款（多订单路径）
-    {
-      const auditedOrders = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((o: any) => Number(o.status) === 1)
-      const orderSnSet = new Set(auditedOrders.map((o: any) => String(o.order_sn || '').trim()).filter(Boolean))
-      const orderNoSet = new Set(auditedOrders.map((o: any) => String(o.order_no || '').trim()).filter(Boolean))
-      const manualPays = rawPayList.filter((r: any) => !/审核自动生成/.test(String(r.remark || '')))
-      const unlinkedPaid: Record<string, number> = {}
-      for (const r of manualPays) {
-        if (String(r.contact_type || '') !== 'supplier') continue
-        const amt = Number(r.amount || 0)
-        if (!amt) continue
-        const sn = String(r.order_sn || '').trim()
-        if (sn && (orderSnSet.has(sn) || orderNoSet.has(sn))) continue
-        const name = String(r.contact_name || '').trim()
-        if (name) unlinkedPaid[name] = (unlinkedPaid[name] || 0) + amt
-      }
-      for (const s of supplierPayMap.values()) {
-        const extra = unlinkedPaid[s.supplier_name] || 0
-        if (extra > 0) {
-          const deduct = Math.min(extra, s.un_pay_amount)
-          s.paid_amount += deduct
-          s.un_pay_amount -= deduct
-        }
-      }
-    }
-    payableList.value = [
-      ...applyProcureReturnsToPayableRows(Array.from(supplierPayMap.values()), procureReturnFinanceList.value),
+    // 应付账款：统一口径，走 utils/payableCalc.ts（与 Payable.vue / FundFlow.vue 共用）
+    const supplierPayableRows = buildSupplierPayableRows(
+      purchaseRes.data?.rows ?? purchaseRes.data?.list ?? [],
+      rawPayList,
+      supplierRes.data?.rows ?? supplierRes.data?.list ?? [],
+    ).filter((s: any) => s.un_pay_amount > 0)
+    const contractFeeRows = buildContractFeePayableRows(contractRes.data?.rows ?? contractRes.data?.list ?? [], rawPayList)
+    const retailFeeRows = buildRetailFeePayableRows(retailRes.data?.rows ?? retailRes.data?.list ?? [], rawPayList)
+    // 与 Payable.vue 相同：采购退货抵扣作用于全部应付行
+    payableList.value = applyProcureReturnsToPayableRows([
+      ...supplierPayableRows,
       ...buildExpensePayableRows(expenseRes.data?.rows ?? expenseRes.data?.list ?? []),
       ...contractFeeRows,
-    ]
-    const returnByCustomerName = new Map<string, number>()
-    for (const sr of normalizedSaleReturns) {
-      const key = sr.customer_name
-      if (key) returnByCustomerName.set(key, (returnByCustomerName.get(key) ?? 0) + sr.return_amount)
-    }
-    const returnRemainder = new Map(returnByCustomerName)
-    receivableList.value = rawReceivableList.map((r: any) => {
-      const key = String(r.customer_name || '').trim()
-      const rem = returnRemainder.get(key) ?? 0
-      if (rem <= 0) return r
-      const deduct = Math.min(rem, Number(r.un_pay_amount || 0))
-      returnRemainder.set(key, rem - deduct)
-      return { ...r, un_pay_amount: Math.max(0, Number(r.un_pay_amount || 0) - deduct) }
-    }).filter((r: any) => r.un_pay_amount > 0)
+      ...retailFeeRows,
+    ], procureReturnFinanceList.value)
+    receivableList.value = deductSaleReturnsByCustomer(rawReceivableList, normalizedSaleReturns)
+      .filter((r: any) => r.un_pay_amount > 0)
     adjustedCollectList.value = applySaleReturnsToCollectReceiptRows(collectList.value, normalizedSaleReturns, rawReceivableList)
     purchasePayList.value = (purchaseRes.data?.rows ?? purchaseRes.data?.list ?? []).filter((r: any) => Number(r.status) === 1)
     const auditedContractSns = new Set<string>()

@@ -112,6 +112,13 @@
                 {{ getSourceName(customerSourceMap[row.id] || row.source_id || row.source) }}
               </template>
             </el-table-column>
+            <el-table-column :label="$t('sale.client.colPartnerType')" width="100">
+              <template #default="{ row }">
+                <el-tag v-if="Number(row.linked_supplier_id || 0)" size="small" type="warning">
+                  {{ $t('sale.client.partnerBoth') }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column :label="$t('sale.client.colBalance')" width="120" align="right">
               <template #default="{ row }">
                 <span :style="{ color: getBalance(row.id) > 0 ? '#0071e3' : '#c0c4cc', fontWeight: '600' }">
@@ -220,6 +227,16 @@
                 <el-option :label="$t('sale.client.sourceOther')" :value="6" />
                 <el-option :label="$t('sale.client.sourcePrepay')" value="prepay" />
               </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <!-- 购销双向单位：这个客户同时也是我们的供应商，关联后对账单能出借贷双栏 -->
+            <el-form-item :label="$t('sale.client.formLinkedSupplier')">
+              <el-select v-model="formData.linked_supplier_id" filterable clearable
+                  :placeholder="$t('sale.client.linkedSupplierPlaceholder')" style="width:100%">
+                <el-option v-for="s in supplierOptions" :key="s.id" :label="s.name" :value="s.id" />
+              </el-select>
+              <div class="form-tip">{{ $t('sale.client.linkedSupplierTip') }}</div>
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -596,7 +613,18 @@ const formRef = ref()
 let originalCustomerName = ''
 const formData = reactive<any>({
   id: 0, nickname: '', mobile: '', cate_id: null, level_id: null, source: null, source_id: null, address: '', remark: '',
+  linked_supplier_id: null,
 })
+const supplierOptions = ref<any[]>([])
+
+async function loadSupplierOptions() {
+  try {
+    const res = await http.get('/procure/supplier/index', { params: { list_rows: 500 } })
+    const rows = res.data?.rows ?? []
+    // 按 name 去重（同 CLAUDE.md 下拉去重规则）
+    supplierOptions.value = rows.filter((s: any, i: number) => rows.findIndex((x: any) => x.name === s.name) === i)
+  } catch { /* ignore */ }
+}
 
 function openForm(row?: any) {
   originalCustomerName = row?.nickname || row?.name || ''
@@ -611,8 +639,12 @@ function openForm(row?: any) {
     source_id: null as any,
     address: '',
     remark: '',
+    linked_supplier_id: null as any,
     ...(row ?? {}),
   }
+  // 后端 0 表示未关联，下拉要显示成空
+  nextData.linked_supplier_id = Number(row?.linked_supplier_id || 0) || null
+  if (!supplierOptions.value.length) loadSupplierOptions()
   nextData.cate_id = row ? (cateMap.value[row.id] ?? null) : null
   nextData.level_id = row ? (customerLevelMap.value[row.id] ?? null) : null
   nextData.source_id = row ? (customerSourceMap.value[row.id] ?? null) : null
@@ -668,6 +700,7 @@ async function handleSubmit() {
       mobile: formData.mobile,
       address: formData.address,
       remark: formData.remark,
+      linked_supplier_id: Number(formData.linked_supplier_id || 0),
     }
     if (formData.id) payload.id = formData.id
     let customerId = formData.id
@@ -1207,6 +1240,7 @@ onMounted(() => {
 .fi-value.orange { color: #ea580c; }
 .finance-actions { display: flex; gap: 8px; }
 .create-time-note { font-size: 11px; color: #c0c4cc; margin-top: 10px; text-align: right; }
+.form-tip { font-size: 12px; color: var(--el-text-color-secondary); line-height: 1.5; margin-top: 4px; }
 
 @media (max-width: 767px) {
   .list-layout { flex-direction: column !important; height: auto !important; }

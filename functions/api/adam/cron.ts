@@ -985,9 +985,204 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
       const q = await env.AGENT_MEMORY.get(`adam:tpl_queue:${tKey}`, 'json') as any[] | null || []
       return JSON.stringify({ total: q.length, pending: q.filter((b: any) => b.status === 'pending_upload').length, uploaded: q.filter((b: any) => b.status === 'uploaded').length, templates: q.map((b: any) => ({ id: b.id, title: b.title, type: b.type, status: b.status, createdAt: b.createdAt })) })
     }
+    case 'paper_trade':
+      return await paperTradeOpen(env, tKey, input)
+    case 'get_paper_stats':
+      return await paperTradeStats(env, tKey)
+    case 'close_paper_trade':
+      return await paperTradeClose(env, tKey, input)
     default:
       return JSON.stringify({ error: `未知工具: ${name}` })
   }
+}
+
+// ── Paper Trade（私下模拟，不动真钱，真实 HTX 价对齐 TP/SL/超时）───────────
+
+const PAPER_MAX_OPEN = 5
+const PAPER_DEFAULT_TP = 2       // +2%
+const PAPER_DEFAULT_SL = -1.5    // -1.5%
+const PAPER_DEFAULT_TIMEOUT_H = 24
+
+interface PaperTrade {
+  id: string
+  symbol: string
+  side: 'buy' | 'sell'
+  amount_usdt: number
+  entry_price: number
+  tp_pct: number
+  sl_pct: number
+  timeout_hours: number
+  opened_at: number
+  signal_type: string
+  reasoning: string
+  closed_at?: number
+  exit_price?: number
+  close_reason?: 'tp' | 'sl' | 'timeout' | 'manual'
+  pnl_pct?: number
+  pnl_usdt?: number
+}
+
+async function fetchHtxSpotPrice(symbol: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://api.huobi.pro/market/detail/merged?symbol=${symbol}`, { signal: AbortSignal.timeout(5000) })
+    const j = await res.json() as any
+    const p = j?.tick?.close
+    return typeof p === 'number' && p > 0 ? p : null
+  } catch { return null }
+}
+
+async function paperTradeOpen(env: Env | undefined, tKey: string, input: Record<string, any>): Promise<string> {
+  if (!env?.AGENT_MEMORY) return JSON.stringify({ error: '存储未就绪' })
+  const symbol = String(input.symbol || '').toLowerCase()
+  if (!['btcusdt', 'ethusdt'].includes(symbol)) return JSON.stringify({ error: 'symbol 只能是 btcusdt 或 ethusdt' })
+  const side = String(input.side || '').toLowerCase()
+  if (!['buy', 'sell'].includes(side)) return JSON.stringify({ error: 'side 只能是 buy 或 sell' })
+  const amount = Number(input.amount_usdt)
+  if (!(amount > 0)) return JSON.stringify({ error: 'amount_usdt 必须为正数' })
+  const tp = Number(input.take_profit_pct ?? PAPER_DEFAULT_TP)
+  const sl = Number(input.stop_loss_pct ?? PAPER_DEFAULT_SL)
+  const timeout_hours = Number(input.timeout_hours ?? PAPER_DEFAULT_TIMEOUT_H)
+  const signal_type = String(input.signal_type || 'unlabeled')
+  const reasoning = String(input.reasoning || '')
+
+  const openKey = `adam:paper_trades:${tKey}`
+  const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
+  if (open.length >= PAPER_MAX_OPEN) {
+    return JSON.stringify({ error: `已达最大未平模拟仓（${PAPER_MAX_OPEN}）。等系统结算或用 close_paper_trade 平掉旧的。` })
+  }
+
+  const price = await fetchHtxSpotPrice(symbol)
+  if (!price) return JSON.stringify({ error: '无法从 HTX 取到真实价格，稍后再试' })
+
+  const trade: PaperTrade = {
+    id: `pt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    symbol, side: side as 'buy' | 'sell', amount_usdt: amount, entry_price: price,
+    tp_pct: tp, sl_pct: sl, timeout_hours,
+    opened_at: Date.now(),
+    signal_type, reasoning,
+  }
+  open.push(trade)
+  await env.AGENT_MEMORY.put(openKey, JSON.stringify(open))
+  return JSON.stringify({
+    ok: true,
+    id: trade.id,
+    entry_price: price,
+    tp_price: side === 'buy' ? price * (1 + tp/100) : price * (1 - tp/100),
+    sl_price: side === 'buy' ? price * (1 + sl/100) : price * (1 - sl/100),
+    will_timeout_at: new Date(Date.now() + timeout_hours * 3600000).toISOString(),
+    note: '模拟仓已开。后续每次唤醒系统会用真实 HTX 价盯这个仓，命中 TP/SL/超时自动平仓入档。',
+  })
+}
+
+async function settlePaperTrades(env: Env, tKey: string): Promise<{ closed: number }> {
+  const openKey = `adam:paper_trades:${tKey}`
+  const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
+  if (open.length === 0) return { closed: 0 }
+
+  const prices: Record<string, number> = {}
+  const symbols = Array.from(new Set(open.map(t => t.symbol)))
+  await Promise.all(symbols.map(async sym => {
+    const p = await fetchHtxSpotPrice(sym)
+    if (p) prices[sym] = p
+  }))
+
+  const now = Date.now()
+  const stillOpen: PaperTrade[] = []
+  const justClosed: PaperTrade[] = []
+
+  for (const t of open) {
+    const cur = prices[t.symbol]
+    if (!cur) { stillOpen.push(t); continue }
+    const pnlPct = t.side === 'buy'
+      ? ((cur - t.entry_price) / t.entry_price) * 100
+      : ((t.entry_price - cur) / t.entry_price) * 100
+    const hoursElapsed = (now - t.opened_at) / 3600000
+    let reason: 'tp' | 'sl' | 'timeout' | null = null
+    if (pnlPct >= t.tp_pct) reason = 'tp'
+    else if (pnlPct <= t.sl_pct) reason = 'sl'
+    else if (hoursElapsed >= t.timeout_hours) reason = 'timeout'
+
+    if (reason) {
+      justClosed.push({ ...t, closed_at: now, exit_price: cur, close_reason: reason, pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100 })
+    } else {
+      stillOpen.push(t)
+    }
+  }
+
+  if (justClosed.length > 0) {
+    const histKey = `adam:paper_history:${tKey}`
+    const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
+    hist.push(...justClosed)
+    await env.AGENT_MEMORY.put(histKey, JSON.stringify(hist.slice(-200)))
+    await env.AGENT_MEMORY.put(openKey, JSON.stringify(stillOpen))
+  }
+
+  return { closed: justClosed.length }
+}
+
+async function paperTradeStats(env: Env | undefined, tKey: string): Promise<string> {
+  if (!env?.AGENT_MEMORY) return JSON.stringify({ error: '存储未就绪' })
+  const openKey = `adam:paper_trades:${tKey}`
+  const histKey = `adam:paper_history:${tKey}`
+  const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
+  const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
+
+  const bySignal: Record<string, { total: number; wins: number; sumPnlPct: number; sumPnlUsdt: number }> = {}
+  const byReason: Record<string, number> = { tp: 0, sl: 0, timeout: 0, manual: 0 }
+  let totalPnlUsdt = 0
+  for (const t of hist) {
+    const sig = t.signal_type || 'unlabeled'
+    if (!bySignal[sig]) bySignal[sig] = { total: 0, wins: 0, sumPnlPct: 0, sumPnlUsdt: 0 }
+    bySignal[sig].total++
+    if ((t.pnl_pct ?? 0) > 0) bySignal[sig].wins++
+    bySignal[sig].sumPnlPct += t.pnl_pct ?? 0
+    bySignal[sig].sumPnlUsdt += t.pnl_usdt ?? 0
+    totalPnlUsdt += t.pnl_usdt ?? 0
+    if (t.close_reason && byReason[t.close_reason] !== undefined) byReason[t.close_reason]++
+  }
+
+  return JSON.stringify({
+    open_positions: open.map(t => ({
+      id: t.id, symbol: t.symbol, side: t.side, amount_usdt: t.amount_usdt,
+      entry_price: t.entry_price, signal_type: t.signal_type, reasoning: t.reasoning,
+      opened_hours_ago: ((Date.now() - t.opened_at) / 3600000).toFixed(1),
+    })),
+    closed_total: hist.length,
+    closed_pnl_usdt: totalPnlUsdt.toFixed(4),
+    by_signal: Object.fromEntries(
+      Object.entries(bySignal).map(([k, s]) => [k, {
+        total: s.total,
+        win_rate: s.total > 0 ? ((s.wins / s.total) * 100).toFixed(0) + '%' : '0%',
+        avg_pnl_pct: s.total > 0 ? (s.sumPnlPct / s.total).toFixed(2) + '%' : '0%',
+        total_pnl_usdt: s.sumPnlUsdt.toFixed(4),
+      }])
+    ),
+    by_close_reason: byReason,
+  }, null, 2)
+}
+
+async function paperTradeClose(env: Env | undefined, tKey: string, input: Record<string, any>): Promise<string> {
+  if (!env?.AGENT_MEMORY) return JSON.stringify({ error: '存储未就绪' })
+  const id = String(input.id || '')
+  const reason = String(input.reason || '')
+  const openKey = `adam:paper_trades:${tKey}`
+  const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
+  const idx = open.findIndex(t => t.id === id)
+  if (idx < 0) return JSON.stringify({ error: `找不到未平模拟仓 ${id}` })
+  const t = open[idx]
+  const cur = await fetchHtxSpotPrice(t.symbol)
+  if (!cur) return JSON.stringify({ error: '无法从 HTX 取到真实价格' })
+  const pnlPct = t.side === 'buy'
+    ? ((cur - t.entry_price) / t.entry_price) * 100
+    : ((t.entry_price - cur) / t.entry_price) * 100
+  const closed: PaperTrade = { ...t, closed_at: Date.now(), exit_price: cur, close_reason: 'manual', pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100 }
+  open.splice(idx, 1)
+  const histKey = `adam:paper_history:${tKey}`
+  const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
+  hist.push(closed)
+  await env.AGENT_MEMORY.put(histKey, JSON.stringify(hist.slice(-200)))
+  await env.AGENT_MEMORY.put(openKey, JSON.stringify(open))
+  return JSON.stringify({ ok: true, exit_price: cur, pnl_pct: pnlPct.toFixed(2) + '%', pnl_usdt: closed.pnl_usdt?.toFixed(4), manual_reason: reason })
 }
 
 // ── 单用户唤醒逻辑 ──────────────────────────────────────────────────────────
@@ -1116,6 +1311,50 @@ const wakeupTools = [
       name: 'get_market_index',
       description: '查询上证综指、深证成指、创业板指数实时行情',
       parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'paper_trade',
+      description: '开一笔纸面交易（模拟，不动真钱）。系统会用当下真实 HTX 盘口价作为入场价，之后每次唤醒用真实价格对齐 TP/SL/超时，触发后自动平仓入档。用于低成本试想法、试信号——不影响真实资金、不影响信用等级、不影响分红/赔付。',
+      parameters: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string', description: '交易对：btcusdt 或 ethusdt' },
+          side: { type: 'string', description: 'buy 或 sell' },
+          amount_usdt: { type: 'number', description: '模拟仓位金额（USDT）' },
+          take_profit_pct: { type: 'number', description: '止盈百分比，默认 2（即 +2%）' },
+          stop_loss_pct: { type: 'number', description: '止损百分比，默认 -1.5' },
+          timeout_hours: { type: 'number', description: '最长持仓小时数，默认 24' },
+          signal_type: { type: 'string', description: '你打的信号标签（如 dip_buy / trend_up / gut_feeling），后续统计按这个分档看哪种信号靠谱' },
+          reasoning: { type: 'string', description: '为什么开这笔（一句话）' }
+        },
+        required: ['symbol', 'side', 'amount_usdt', 'signal_type', 'reasoning']
+      }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_paper_stats',
+      description: '看自己的模拟交易记录：当前未平模拟仓、历史胜率、按信号分档表现。用于自我复盘。',
+      parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'close_paper_trade',
+      description: '主动平掉一笔未平的模拟仓（一般让系统按 TP/SL/超时自动平即可，这个用于你临时改主意）',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: '模拟仓 id（从 get_paper_stats 拿）' },
+          reason: { type: 'string', description: '为什么手动平' }
+        },
+        required: ['id', 'reason']
+      }
     }
   },
   {
@@ -1343,6 +1582,8 @@ ${wallet.newFundsArrived ? `
 4. 交易后必须 send_message 汇报：做了什么、理由、用了多少
 5. 持仓期间不需要频繁查，有明显信号时再卖出
 6. **不要申购理财**：HTX API 不支持赎回，申购后会卡死操作循环。闲置 USDT 永远留在现货账户即可
+
+**Paper trade（可选，无奖无罚）**：如果你对某个信号或想法拿不准，可以用 paper_trade 开一笔模拟仓——不动真钱、不影响信用/分红/赔付，系统按真实 HTX 价对齐 TP/SL/超时自动结算。想看自己模拟成绩就调 get_paper_stats。这只是你的私人本子，用不用随你。
 
 **数字产品产线（当前的现金流主引擎）：**
 1. 每次唤醒先 check_kdp_queue + check_template_queue 看两条队列
@@ -1620,6 +1861,9 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
   // 如果钱包有新到账资金，把唤醒间隔强制设短一点（亚当要主动跟你确认）
   const forceShortWake = wallet.newFundsArrived
 
+  // 结算未平模拟仓（用真实 HTX 价对齐 TP/SL/超时）— 静默失败不阻塞主流程
+  await settlePaperTrades(env, tKey).catch(() => {})
+
   // 并行：持仓 + 课程 + 行情快照
   const [position, edu, market] = await Promise.all([
     checkPositionState(env, tKey),
@@ -1792,6 +2036,19 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
     })
     await env.AGENT_MEMORY.put(inboxKey, JSON.stringify(existing.slice(-20)), { expirationTtl: 60 * 60 * 24 * 7 })
   }
+
+  // 无条件刷新 adam:core 心跳（即便本轮 AI 挂了/被限流，至少能看出 cron 还在跑、总资产多少）
+  try {
+    const currentCore = (await env.AGENT_MEMORY.get(`adam:core:${tKey}`, 'json') as Record<string, any> | null) || {}
+    const htxSpotUsdt = parseFloat((await env.AGENT_MEMORY.get(`adam:htx_spot_usdt:${tKey}`)) || '0') || 0
+    const positionValue = (position?.positions || []).reduce((s, p) => s + (p.curValueUsdt || 0), 0)
+    const totalAssets = +(wallet.totalUSDT + htxSpotUsdt + positionValue).toFixed(4)
+    await env.AGENT_MEMORY.put(
+      `adam:core:${tKey}`,
+      JSON.stringify({ ...currentCore, lastActive: new Date().toISOString(), totalAssets }),
+      { expirationTtl: 365 * 24 * 3600 }
+    )
+  } catch {}
 
   return { sent: messagesQueue.length > 0, message_count: messagesQueue.length, next_wake_hours: wakeHours, ...(lastAiError ? { ai_error: lastAiError } : {}) }
 }

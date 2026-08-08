@@ -68,7 +68,31 @@ const aspectRatio = ref(props.ratio ?? 16/9)
 
 function setRatio(r: number) {
   aspectRatio.value = r
-  cropper?.setAspectRatio(r === 0 ? NaN : r)
+  if (!cropper) return
+  cropper.setAspectRatio(r === 0 ? NaN : r)
+  maximizeCropBox()
+}
+
+function maximizeCropBox() {
+  if (!cropper) return
+  const canvas = cropper.getCanvasData()
+  const r = aspectRatio.value
+  if (r === 0) {
+    cropper.setCropBoxData({ left: canvas.left, top: canvas.top, width: canvas.width, height: canvas.height })
+    return
+  }
+  let w = canvas.width
+  let h = w / r
+  if (h > canvas.height) {
+    h = canvas.height
+    w = h * r
+  }
+  cropper.setCropBoxData({
+    left: canvas.left + (canvas.width - w) / 2,
+    top: canvas.top + (canvas.height - h) / 2,
+    width: w,
+    height: h,
+  })
 }
 
 function zoomBy(ratio: number) {
@@ -96,9 +120,12 @@ function initCropper() {
     aspectRatio: aspectRatio.value === 0 ? NaN : aspectRatio.value,
     viewMode: 1,
     dragMode: 'move',
-    autoCropArea: 0.85,
+    autoCropArea: 1,
     responsive: true,
     background: true,
+    ready() {
+      maximizeCropBox()
+    },
   })
 }
 

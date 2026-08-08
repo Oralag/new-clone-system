@@ -50,20 +50,21 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { menuData } from '@/layouts/components/menuData'
+import { usePermissionStore } from '@/stores/permission'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const { t } = useI18n()
+const permStore = usePermissionStore()
 const searchKeyword = ref('')
 const pressedKey = ref<string | null>(null)
 
-const appSections = menuData.filter(s => s.key !== 'dashboard')
+const appSections = computed(() => permStore.filteredMenuData.filter(s => s.key !== 'dashboard'))
 
 const filteredSections = computed(() => {
   const kw = searchKeyword.value.trim()
-  if (!kw) return appSections
-  return appSections
+  if (!kw) return appSections.value
+  return appSections.value
     .map(s => ({
       ...s,
       children: s.children.filter((c: any) => t(c.title).toLocaleLowerCase().includes(kw.toLocaleLowerCase())),

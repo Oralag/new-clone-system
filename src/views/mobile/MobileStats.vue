@@ -9,7 +9,7 @@
         <div class="ms-kpi-value">¥{{ todayStats.saleAmt }}</div>
         <div class="ms-kpi-sub">{{ t('mobileStats.todayOrders', { count: todayStats.orderCount }) }}</div>
       </div>
-      <div class="ms-kpi-card" @click="router.push('/finance/fund-flow?type=expense&date=today')">
+      <div class="ms-kpi-card" @click="router.push('/mobile/expense/today')">
         <div class="ms-kpi-label">{{ t('mobileStats.todayExpense') }}</div>
         <div class="ms-kpi-value">¥{{ todayExpense }}</div>
         <div class="ms-kpi-sub">{{ t('mobileStats.paymentAndExpense') }}</div>

@@ -190,7 +190,6 @@ import { getSupplierList, createSupplier } from '@/api/procure'
 import { getStaffList, createStaff } from '@/api/personnel'
 import http from '@/api/http'
 import { applySaleReturnsToCollectReceiptRows, normalizeSaleReturnFinanceRows } from '@/utils/saleReturnFinance'
-import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
 const { t } = useI18n()
@@ -424,18 +423,11 @@ async function handleSave() {
 
 async function handleDelete(id: number) {
   await ElMessageBox.confirm(t('finance.collectReceipt.confirmDeleteMsg'), t('finance.collectReceipt.confirmDeleteTitle'), { type: 'warning' })
-  const row = allRows.value.find(r => r.id === id)
   await deleteCollectReceipt(id)
-  // 回退资金账户余额
-  if (row && Number(row.amount || 0) > 0) {
-    try {
-      await adjustFundBalance({
-        fundId: row.fund_id,
-        fundName: row.fund_name || row.account_name,
-        delta: -Number(row.amount),
-      })
-    } catch { /* 回退失败不阻塞删除结果 */ }
-  }
+  // ⚠️ 不要在这里再调 adjustFundBalance 回退余额！
+  // 后端 /finance/CollectReceipt/del 已经做了 `balance = balance - amount`（index.js:2526-2528），
+  // 前端再扣一次会导致资金账户被扣两遍。
+  // 2026-08-04 事故：删一张 ¥3,950 的收款单，公司收入账号被扣了 ¥7,900。
   ElMessage.success(t('finance.collectReceipt.msgDeleteSuccess'))
   await loadAll()
 }
