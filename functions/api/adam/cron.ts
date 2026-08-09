@@ -703,12 +703,39 @@ async function executeTool(name: string, input: Record<string, any>, env: Env, t
         if (!instActive(inst, 'bureau')) return JSON.stringify({ error: '投资局未激活，无法下单' })
       }
 
-      // === 信用等级限额（C=1 / B=3 / B+=5 / A=10 / S=20）===
+      // === 信用等级限额（C=1.5 / B=3 / B+=5 / A=10 / S=20）===
       if (tKey && env?.AGENT_MEMORY && side === 'buy') {
         const adamCore = (await env.AGENT_MEMORY.get(`adam:core:${tKey}`, 'json') as any) || { creditLevel: 'C' }
         const cLevel = adamCore.creditLevel || 'C'
         const maxByLevel = LEVEL_TRADE_LIMITS[cLevel] ?? 1
         if (amountUsdt > maxByLevel) return JSON.stringify({ error: `${cLevel} 级单笔最大 ${maxByLevel} USDT，请求 ${amountUsdt} 超额` })
+      }
+
+      // === 模拟盘准入：买入必须报信号，未验证的信号只能小仓试手 ===
+      // 卖出不受任何约束——止损和平仓的路必须永远是通的
+      if (tKey && env?.AGENT_MEMORY && side === 'buy') {
+        const sig = String(input.signal_type || '')
+        if (!(sig in PAPER_SIGNAL_TYPES)) {
+          return JSON.stringify({
+            error: `真钱买入必须报 signal_type，且只能从枚举里选：${Object.keys(PAPER_SIGNAL_TYPES).join(' / ')}`,
+            note: '这条单会按信号归档，用来决定这个信号将来能不能放大仓位。随手贴标签等于污染你自己的评判依据。',
+          })
+        }
+        if (sig === 'gut_feeling') {
+          return JSON.stringify({
+            error: 'gut_feeling 不能用于真钱买入。直觉赢了也不可复制，无法成为放大仓位的依据。',
+            note: '想试直觉就用 paper_trade，那边不限。真钱买入请给出能说清的信号。',
+          })
+        }
+        const perf = await getSignalPerformance(env, tKey, sig)
+        if (!perf.passed && amountUsdt > REAL_TRADE_GATE.UNPROVEN_MAX_USDT) {
+          return JSON.stringify({
+            error: `信号 ${sig} 尚未通过模拟盘验证，单笔上限 ${REAL_TRADE_GATE.UNPROVEN_MAX_USDT} USDT，请求 ${amountUsdt} 超额`,
+            why: perf.reason,
+            current: { samples: perf.samples, avg_alpha_pct: perf.avgAlpha?.toFixed(2) ?? 'n/a', beat_market_rate: perf.beatRate?.toFixed(0) ?? 'n/a' },
+            how_to_unlock: `用 paper_trade 累积这个信号的样本：${REAL_TRADE_GATE.MIN_SAMPLES} 笔已结算 + 平均超额 > 0 + 跑赢率 > ${REAL_TRADE_GATE.MIN_BEAT_RATE}%，之后就能用到等级上限。`,
+          })
+        }
       }
 
       try {
@@ -1003,6 +1030,17 @@ const PAPER_DEFAULT_TP = 2       // +2%
 const PAPER_DEFAULT_SL = -1.5    // -1.5%
 const PAPER_DEFAULT_TIMEOUT_H = 24
 
+// 信号标签白名单：统计按这个分档，自由文本会让分档失去意义
+const PAPER_SIGNAL_TYPES = {
+  dip_btc: 'BTC 24h 明显下跌 + 放量，低吸',
+  dip_eth: 'ETH 24h 明显下跌 + 放量，低吸',
+  trend_up: '上涨动能延续，趋势追踪',
+  breakout: '突破近期高点/关键位',
+  mean_revert: '短时偏离过大，赌回归均值',
+  sub_agent: '依据 dispatch_sub_agents 的研究结论',
+  gut_feeling: '说不出具体依据的直觉（会被单独统计）',
+} as const
+
 interface PaperTrade {
   id: string
   symbol: string
@@ -1015,11 +1053,16 @@ interface PaperTrade {
   opened_at: number
   signal_type: string
   reasoning: string
+  btc_at_open?: number      // 开仓时的 BTC 价，用作大盘基准
   closed_at?: number
   exit_price?: number
   close_reason?: 'tp' | 'sl' | 'timeout' | 'manual'
   pnl_pct?: number
   pnl_usdt?: number
+  market_pct?: number       // 同期大盘（BTC）涨跌幅
+  alpha_pct?: number        // pnl_pct - market_pct，超额收益
+  hold_pnl_pct?: number     // 影子仓：不设 TP/SL 一直持到 timeout 的收益
+  hold_settled?: boolean    // 影子仓是否已回填
 }
 
 async function fetchHtxSpotPrice(symbol: string): Promise<number | null> {
@@ -1042,8 +1085,26 @@ async function paperTradeOpen(env: Env | undefined, tKey: string, input: Record<
   const tp = Number(input.take_profit_pct ?? PAPER_DEFAULT_TP)
   const sl = Number(input.stop_loss_pct ?? PAPER_DEFAULT_SL)
   const timeout_hours = Number(input.timeout_hours ?? PAPER_DEFAULT_TIMEOUT_H)
-  const signal_type = String(input.signal_type || 'unlabeled')
-  const reasoning = String(input.reasoning || '')
+
+  const signal_type = String(input.signal_type || '')
+  if (!(signal_type in PAPER_SIGNAL_TYPES)) {
+    return JSON.stringify({
+      error: `signal_type 必须是以下之一：${Object.keys(PAPER_SIGNAL_TYPES).join(' / ')}`,
+      options: PAPER_SIGNAL_TYPES,
+      note: '标签是统计分档的依据，随手填会让几周后的胜率表变成噪声。真说不出依据就用 gut_feeling。',
+    })
+  }
+
+  const reasoning = String(input.reasoning || '').trim()
+  if (reasoning.length < 8) {
+    return JSON.stringify({ error: 'reasoning 太短，写清楚你看到了什么才开这一笔' })
+  }
+  // gut_feeling 本就没有量化依据，其余信号必须给出具体数字（涨跌幅、量比、价位…）
+  if (signal_type !== 'gut_feeling' && !/\d/.test(reasoning)) {
+    return JSON.stringify({
+      error: `signal_type=${signal_type} 的 reasoning 必须包含具体数字依据（如 "24h-3.1% · 量比1.6x" 或 "跌破 63000 支撑"）。拿不出数字就用 gut_feeling 标签，别给它套一个量化名字。`,
+    })
+  }
 
   const openKey = `adam:paper_trades:${tKey}`
   const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
@@ -1053,6 +1114,8 @@ async function paperTradeOpen(env: Env | undefined, tKey: string, input: Record<
 
   const price = await fetchHtxSpotPrice(symbol)
   if (!price) return JSON.stringify({ error: '无法从 HTX 取到真实价格，稍后再试' })
+  // 大盘基准：BTC 单直接复用自己的价，ETH 单额外取一次
+  const btcAtOpen = symbol === 'btcusdt' ? price : await fetchHtxSpotPrice('btcusdt')
 
   const trade: PaperTrade = {
     id: `pt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -1060,6 +1123,7 @@ async function paperTradeOpen(env: Env | undefined, tKey: string, input: Record<
     tp_pct: tp, sl_pct: sl, timeout_hours,
     opened_at: Date.now(),
     signal_type, reasoning,
+    ...(btcAtOpen ? { btc_at_open: btcAtOpen } : {}),
   }
   open.push(trade)
   await env.AGENT_MEMORY.put(openKey, JSON.stringify(open))
@@ -1074,13 +1138,63 @@ async function paperTradeOpen(env: Env | undefined, tKey: string, input: Record<
   })
 }
 
+// 取某个历史时刻的价格（1h K 线，找最接近的一根收盘价）。影子仓回填用，
+// 因为唤醒有间隔，timeout 时点往往已经过去几小时，现价不能代表当时的价。
+// 1h K 线只回溯 200 根（约 8.3 天）。超出范围时最近的一根可能差出好几天，
+// 那种价格拿来当"当时的价"是错的，宁可不填。
+const KLINE_MAX_DRIFT_S = 2 * 3600
+
+async function fetchHtxPriceAt(symbol: string, ts: number): Promise<number | null> {
+  try {
+    const res = await fetch(`https://api.huobi.pro/market/history/kline?symbol=${symbol}&period=60min&size=200`, { signal: AbortSignal.timeout(5000) })
+    const j = await res.json() as any
+    const bars = Array.isArray(j?.data) ? j.data : []
+    if (bars.length === 0) return null
+    const target = Math.floor(ts / 1000)
+    let best: any = null
+    for (const b of bars) {
+      if (typeof b?.id !== 'number' || typeof b?.close !== 'number') continue
+      if (!best || Math.abs(b.id - target) < Math.abs(best.id - target)) best = b
+    }
+    if (!best || Math.abs(best.id - target) > KLINE_MAX_DRIFT_S) return null
+    return best.close
+  } catch { return null }
+}
+
+// 影子仓回填：提前被 TP/SL/手动平掉的单，继续跟到原定 timeout，
+// 算出"不设止盈止损、一直拿着"能有多少，用来验证他的择时到底加不加分。
+async function settleShadowHolds(env: Env, tKey: string): Promise<number> {
+  const histKey = `adam:paper_history:${tKey}`
+  const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
+  const now = Date.now()
+  const pending = hist.filter(t => t.hold_settled === false && t.opened_at + t.timeout_hours * 3600000 <= now)
+  if (pending.length === 0) return 0
+
+  let filled = 0, dropped = 0
+  for (const t of pending) {
+    const at = t.opened_at + t.timeout_hours * 3600000
+    // K 线只回溯 200 根（约 8.3 天），过了就再也补不上，标记结案免得每次唤醒都白跑
+    if (Date.now() - at > 190 * 3600000) { t.hold_settled = true; dropped++; continue }
+    const p = await fetchHtxPriceAt(t.symbol, at)
+    if (!p) continue
+    t.hold_pnl_pct = t.side === 'buy'
+      ? ((p - t.entry_price) / t.entry_price) * 100
+      : ((t.entry_price - p) / t.entry_price) * 100
+    t.hold_settled = true
+    filled++
+  }
+  if (filled + dropped > 0) await env.AGENT_MEMORY.put(histKey, JSON.stringify(hist))
+  return filled
+}
+
 async function settlePaperTrades(env: Env, tKey: string): Promise<{ closed: number }> {
   const openKey = `adam:paper_trades:${tKey}`
   const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
-  if (open.length === 0) return { closed: 0 }
+  // 未平仓为空时仍要跑影子仓回填——之前平掉的单可能刚到期
+  if (open.length === 0) { await settleShadowHolds(env, tKey).catch(() => {}); return { closed: 0 } }
 
   const prices: Record<string, number> = {}
-  const symbols = Array.from(new Set(open.map(t => t.symbol)))
+  const symbols = Array.from(new Set([...open.map(t => t.symbol), 'btcusdt']))
   await Promise.all(symbols.map(async sym => {
     const p = await fetchHtxSpotPrice(sym)
     if (p) prices[sym] = p
@@ -1103,7 +1217,8 @@ async function settlePaperTrades(env: Env, tKey: string): Promise<{ closed: numb
     else if (hoursElapsed >= t.timeout_hours) reason = 'timeout'
 
     if (reason) {
-      justClosed.push({ ...t, closed_at: now, exit_price: cur, close_reason: reason, pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100 })
+      justClosed.push({ ...t, closed_at: now, exit_price: cur, close_reason: reason, pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100,
+        ...paperBenchmark(t, pnlPct, prices['btcusdt'], reason) })
     } else {
       stillOpen.push(t)
     }
@@ -1117,7 +1232,77 @@ async function settlePaperTrades(env: Env, tKey: string): Promise<{ closed: numb
     await env.AGENT_MEMORY.put(openKey, JSON.stringify(stillOpen))
   }
 
+  await settleShadowHolds(env, tKey).catch(() => {})
   return { closed: justClosed.length }
+}
+
+// 平仓时计算两个对照：同期大盘涨跌（β）与超额收益（alpha）；
+// 并标记影子仓是否还需要后续回填（超时平仓的单，持有收益就等于实际收益）
+function paperBenchmark(t: PaperTrade, pnlPct: number, btcNow: number | undefined, reason: 'tp' | 'sl' | 'timeout' | 'manual'): Partial<PaperTrade> {
+  const out: Partial<PaperTrade> = {}
+  if (t.btc_at_open && btcNow) {
+    const marketPct = ((btcNow - t.btc_at_open) / t.btc_at_open) * 100
+    out.market_pct = marketPct
+    out.alpha_pct = pnlPct - marketPct
+  }
+  if (reason === 'timeout') {
+    out.hold_pnl_pct = pnlPct
+    out.hold_settled = true
+  } else {
+    out.hold_settled = false
+  }
+  return out
+}
+
+// ── 真钱准入：用模拟盘成绩约束真实下单 ──────────────────────────────────────
+// 设计原则：卖出永远放行（不能把他锁在套牢的仓位里）；买入必须报信号；
+// 未经模拟盘验证的信号只能小仓试手，想动用等级上限必须先拿出样本。
+const REAL_TRADE_GATE = {
+  MIN_SAMPLES: 20,      // 少于这个数，胜率没有统计意义
+  MIN_ALPHA_PCT: 0,     // 扣掉大盘后必须有正贡献
+  MIN_BEAT_RATE: 55,    // 跑赢大盘的比例
+  MIN_TIMING_EDGE: 0,   // 止盈止损不能减分
+  UNPROVEN_MAX_USDT: 1.5, // 未验证信号的单笔上限（= C 级额度，所以 C 级期间不额外收紧）
+}
+
+interface SignalPerf {
+  samples: number
+  avgAlpha: number | null
+  beatRate: number | null
+  timingEdge: number | null
+  passed: boolean
+  reason: string
+}
+
+async function getSignalPerformance(env: Env, tKey: string, signal: string): Promise<SignalPerf> {
+  const hist = (await env.AGENT_MEMORY.get(`adam:paper_history:${tKey}`, 'json') as PaperTrade[] | null) || []
+  const rows = hist.filter(t => t.signal_type === signal)
+  const alphas = rows.filter(t => typeof t.alpha_pct === 'number').map(t => t.alpha_pct as number)
+  const timing = rows.filter(t => t.hold_settled && typeof t.hold_pnl_pct === 'number' && typeof t.pnl_pct === 'number' && t.close_reason !== 'timeout')
+
+  const avgAlpha = alphas.length > 0 ? alphas.reduce((a, b) => a + b, 0) / alphas.length : null
+  const beatRate = alphas.length > 0 ? (alphas.filter(a => a > 0).length / alphas.length) * 100 : null
+  const timingEdge = timing.length > 0
+    ? timing.reduce((s, t) => s + ((t.pnl_pct as number) - (t.hold_pnl_pct as number)), 0) / timing.length
+    : null
+
+  const perf: SignalPerf = { samples: rows.length, avgAlpha, beatRate, timingEdge, passed: false, reason: '' }
+
+  if (rows.length < REAL_TRADE_GATE.MIN_SAMPLES) {
+    perf.reason = `模拟盘样本只有 ${rows.length} 笔，不足 ${REAL_TRADE_GATE.MIN_SAMPLES} 笔，这个信号还没被验证过`
+  } else if (avgAlpha === null || beatRate === null) {
+    perf.reason = '样本够了但缺大盘基准数据（都是加基准之前开的旧单），无法判断是不是行情给的'
+  } else if (avgAlpha <= REAL_TRADE_GATE.MIN_ALPHA_PCT) {
+    perf.reason = `扣掉大盘后平均 ${avgAlpha.toFixed(2)}%，你没有跑出超额收益`
+  } else if (beatRate < REAL_TRADE_GATE.MIN_BEAT_RATE) {
+    perf.reason = `跑赢大盘的比例只有 ${beatRate.toFixed(0)}%，低于 ${REAL_TRADE_GATE.MIN_BEAT_RATE}%`
+  } else if (timingEdge !== null && timingEdge < REAL_TRADE_GATE.MIN_TIMING_EDGE) {
+    perf.reason = `你的止盈止损比死拿着还差 ${timingEdge.toFixed(2)}%`
+  } else {
+    perf.passed = true
+    perf.reason = `已验证：${rows.length} 笔样本，超额 ${avgAlpha.toFixed(2)}%，跑赢率 ${beatRate.toFixed(0)}%`
+  }
+  return perf
 }
 
 async function paperTradeStats(env: Env | undefined, tKey: string): Promise<string> {
@@ -1127,18 +1312,32 @@ async function paperTradeStats(env: Env | undefined, tKey: string): Promise<stri
   const open = (await env.AGENT_MEMORY.get(openKey, 'json') as PaperTrade[] | null) || []
   const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
 
-  const bySignal: Record<string, { total: number; wins: number; sumPnlPct: number; sumPnlUsdt: number }> = {}
+  const bySignal: Record<string, { total: number; wins: number; sumPnlPct: number; sumPnlUsdt: number; alphaN: number; sumAlpha: number; alphaWins: number }> = {}
   const byReason: Record<string, number> = { tp: 0, sl: 0, timeout: 0, manual: 0 }
   let totalPnlUsdt = 0
+  // 择时对照：只统计影子仓已回填的单（提前平的那些才有比较意义）
+  let holdN = 0, sumActual = 0, sumHold = 0, timingWins = 0
   for (const t of hist) {
     const sig = t.signal_type || 'unlabeled'
-    if (!bySignal[sig]) bySignal[sig] = { total: 0, wins: 0, sumPnlPct: 0, sumPnlUsdt: 0 }
-    bySignal[sig].total++
-    if ((t.pnl_pct ?? 0) > 0) bySignal[sig].wins++
-    bySignal[sig].sumPnlPct += t.pnl_pct ?? 0
-    bySignal[sig].sumPnlUsdt += t.pnl_usdt ?? 0
+    if (!bySignal[sig]) bySignal[sig] = { total: 0, wins: 0, sumPnlPct: 0, sumPnlUsdt: 0, alphaN: 0, sumAlpha: 0, alphaWins: 0 }
+    const s = bySignal[sig]
+    s.total++
+    if ((t.pnl_pct ?? 0) > 0) s.wins++
+    s.sumPnlPct += t.pnl_pct ?? 0
+    s.sumPnlUsdt += t.pnl_usdt ?? 0
+    if (typeof t.alpha_pct === 'number') {
+      s.alphaN++
+      s.sumAlpha += t.alpha_pct
+      if (t.alpha_pct > 0) s.alphaWins++
+    }
     totalPnlUsdt += t.pnl_usdt ?? 0
     if (t.close_reason && byReason[t.close_reason] !== undefined) byReason[t.close_reason]++
+    if (t.hold_settled && typeof t.hold_pnl_pct === 'number' && typeof t.pnl_pct === 'number' && t.close_reason !== 'timeout') {
+      holdN++
+      sumActual += t.pnl_pct
+      sumHold += t.hold_pnl_pct
+      if (t.pnl_pct > t.hold_pnl_pct) timingWins++
+    }
   }
 
   return JSON.stringify({
@@ -1155,9 +1354,21 @@ async function paperTradeStats(env: Env | undefined, tKey: string): Promise<stri
         win_rate: s.total > 0 ? ((s.wins / s.total) * 100).toFixed(0) + '%' : '0%',
         avg_pnl_pct: s.total > 0 ? (s.sumPnlPct / s.total).toFixed(2) + '%' : '0%',
         total_pnl_usdt: s.sumPnlUsdt.toFixed(4),
+        // 扣掉大盘涨跌后你自己贡献了多少
+        avg_alpha_pct: s.alphaN > 0 ? (s.sumAlpha / s.alphaN).toFixed(2) + '%' : 'n/a',
+        beat_market_rate: s.alphaN > 0 ? ((s.alphaWins / s.alphaN) * 100).toFixed(0) + '%' : 'n/a',
       }])
     ),
     by_close_reason: byReason,
+    timing_vs_hold: holdN > 0 ? {
+      samples: holdN,
+      avg_actual_pct: (sumActual / holdN).toFixed(2) + '%',
+      avg_if_held_pct: (sumHold / holdN).toFixed(2) + '%',
+      timing_edge_pct: ((sumActual - sumHold) / holdN).toFixed(2) + '%',
+      better_than_holding_rate: ((timingWins / holdN) * 100).toFixed(0) + '%',
+      note: '只统计提前被 TP/SL/手动平掉的单。edge 为负说明你的止盈止损在减分，不如拿到超时。',
+    } : { samples: 0, note: '还没有提前平仓且已回填的样本' },
+    how_to_read: 'avg_pnl_pct 里混着大盘涨跌，别单看它。avg_alpha_pct 才是你自己的贡献；timing_edge_pct 判断止盈止损设定有没有用。',
   }, null, 2)
 }
 
@@ -1175,7 +1386,9 @@ async function paperTradeClose(env: Env | undefined, tKey: string, input: Record
   const pnlPct = t.side === 'buy'
     ? ((cur - t.entry_price) / t.entry_price) * 100
     : ((t.entry_price - cur) / t.entry_price) * 100
-  const closed: PaperTrade = { ...t, closed_at: Date.now(), exit_price: cur, close_reason: 'manual', pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100 }
+  const btcNow = t.symbol === 'btcusdt' ? cur : (await fetchHtxSpotPrice('btcusdt')) ?? undefined
+  const closed: PaperTrade = { ...t, closed_at: Date.now(), exit_price: cur, close_reason: 'manual', pnl_pct: pnlPct, pnl_usdt: t.amount_usdt * pnlPct / 100,
+    ...paperBenchmark(t, pnlPct, btcNow, 'manual') }
   open.splice(idx, 1)
   const histKey = `adam:paper_history:${tKey}`
   const hist = (await env.AGENT_MEMORY.get(histKey, 'json') as PaperTrade[] | null) || []
@@ -1270,13 +1483,18 @@ const wakeupTools = [
     type: 'function' as const,
     function: {
       name: 'htx_place_order',
-      description: '在 HTX 现货市场下市价单（买入或卖出），无需审批，立即执行。只支持 btcusdt 和 ethusdt，单笔最大 20 USDT。下单后必须调用 send_message 汇报。',
+      description: '在 HTX 现货市场下市价单（买入或卖出），无需审批，立即执行。只支持 btcusdt 和 ethusdt。卖出无额外限制。买入必须报 signal_type，且未经模拟盘验证的信号单笔上限 1.5 USDT。下单后必须调用 send_message 汇报。',
       parameters: {
         type: 'object',
         properties: {
           symbol: { type: 'string', description: '交易对，只能是 btcusdt 或 ethusdt' },
           side: { type: 'string', description: 'buy（买入）或 sell（卖出）' },
-          amount_usdt: { type: 'number', description: '金额（USDT），买入时是花费的USDT，卖出时是等值USDT，范围 1-20' }
+          amount_usdt: { type: 'number', description: '金额（USDT），买入时是花费的USDT，卖出时是等值USDT。上限取决于信用等级和该信号是否已通过模拟盘验证' },
+          signal_type: {
+            type: 'string',
+            enum: Object.keys(PAPER_SIGNAL_TYPES).filter(k => k !== 'gut_feeling'),
+            description: '买入时必填，卖出时忽略。必须如实反映你的真实依据——这条单会按信号归档，决定该信号将来能不能放大仓位。gut_feeling 不允许用于真钱买入。'
+          }
         },
         required: ['symbol', 'side', 'amount_usdt']
       }
@@ -1327,8 +1545,12 @@ const wakeupTools = [
           take_profit_pct: { type: 'number', description: '止盈百分比，默认 2（即 +2%）' },
           stop_loss_pct: { type: 'number', description: '止损百分比，默认 -1.5' },
           timeout_hours: { type: 'number', description: '最长持仓小时数，默认 24' },
-          signal_type: { type: 'string', description: '你打的信号标签（如 dip_buy / trend_up / gut_feeling），后续统计按这个分档看哪种信号靠谱' },
-          reasoning: { type: 'string', description: '为什么开这笔（一句话）' }
+          signal_type: {
+            type: 'string',
+            enum: Object.keys(PAPER_SIGNAL_TYPES),
+            description: `信号标签，只能从枚举里选。含义：${Object.entries(PAPER_SIGNAL_TYPES).map(([k, v]) => `${k}=${v}`).join('；')}。统计按这个分档看哪种信号靠谱，所以标签必须如实反映你的真实依据——拿不出数字依据就选 gut_feeling，别给直觉套一个量化名字。`
+          },
+          reasoning: { type: 'string', description: '为什么开这笔。除 gut_feeling 外必须写出具体数字依据（涨跌幅/量比/关键价位），如 "BTC 24h-3.1% · 量比1.6x · 跌破63000"。写"测试工具"这类会被拒绝。' }
         },
         required: ['symbol', 'side', 'amount_usdt', 'signal_type', 'reasoning']
       }
@@ -1468,6 +1690,7 @@ ${Object.entries(market.winRateBySignal).map(([sig, s]) => {
 **关键提醒**：
 - 不再有系统替你下单。买/卖完全是你的决定
 - 你的等级是 ${creditLevel}，单笔最大 ${LEVEL_TRADE_LIMITS[creditLevel] ?? 1} USDT
+- 真钱买入还有第二道闸：必须报 signal_type，且该信号未在模拟盘验证过时，单笔封顶 ${REAL_TRADE_GATE.UNPROVEN_MAX_USDT} USDT。想解锁到等级上限，就用 paper_trade 把那个信号跑到 ${REAL_TRADE_GATE.MIN_SAMPLES} 笔已结算、平均超额收益为正、跑赢大盘率超过 ${REAL_TRADE_GATE.MIN_BEAT_RATE}%。这不是不信任你，是要求你用可复制的依据说话——赢一次靠运气，赢二十次才叫信号。卖出永远不受限，止损的路任何时候都是通的
 - 跌势中的 falling_knife 信号要慎重，不是"逢跌就买"
 - 浮亏超过 -3% 的持仓，明确说明为什么不止损（如果选择继续持有）
 - 卖出后系统会自动计算 P&L / 写反思 / 走分红或赔付，你不用手动算
@@ -1578,12 +1801,18 @@ ${wallet.newFundsArrived ? `
 **HTX 完整自主流程（无需审批）：**
 1. 先调用 htx_get_balances 查现货余额
 2. 现货有 USDT 后，调用 get_crypto_price 或 dispatch_sub_agents 分析行情
-3. 有把握时调用 htx_place_order 买入 BTC 或 ETH（单笔最大 20 USDT）
+3. 有把握时调用 htx_place_order 买入 BTC 或 ETH（买入必须带 signal_type；未经模拟盘验证的信号单笔上限 ${REAL_TRADE_GATE.UNPROVEN_MAX_USDT} USDT，卖出不受限制）
 4. 交易后必须 send_message 汇报：做了什么、理由、用了多少
 5. 持仓期间不需要频繁查，有明显信号时再卖出
 6. **不要申购理财**：HTX API 不支持赎回，申购后会卡死操作循环。闲置 USDT 永远留在现货账户即可
 
 **Paper trade（可选，无奖无罚）**：如果你对某个信号或想法拿不准，可以用 paper_trade 开一笔模拟仓——不动真钱、不影响信用/分红/赔付，系统按真实 HTX 价对齐 TP/SL/超时自动结算。想看自己模拟成绩就调 get_paper_stats。这只是你的私人本子，用不用随你。
+
+**但这本子几周后要拿来决定哪些信号能上真钱，所以记账必须诚实：**
+- signal_type 只能从枚举里选，且必须如实反映你真实的判断依据。给直觉套一个 trend_up 的名字，等于往统计里灌假数据，最后骗到的是你自己
+- 除 gut_feeling 外，reasoning 必须写出具体数字（涨跌幅、量比、关键价位）。写不出来说明你其实没有依据——那就老实用 gut_feeling
+- 没有想法的时候不必开仓。为了"有动作"而开的仓，会稀释你真正有把握那些单的统计意义
+- get_paper_stats 里 avg_pnl_pct 混着大盘涨跌，看 avg_alpha_pct（扣掉大盘后你自己的贡献）和 timing_edge_pct（你的止盈止损比死拿着强多少）才有意义
 
 **数字产品产线（当前的现金流主引擎）：**
 1. 每次唤醒先 check_kdp_queue + check_template_queue 看两条队列

@@ -38,9 +38,10 @@
           // 版本已更新：强制重载所有资源（绕过缓存）
           localStorage.setItem('_build_ver', VER);
           sessionStorage.clear();
-          // 加随机参数绕过 HTTP 缓存
+          // 加随机参数绕过 HTTP 缓存；hash 必须原样带上，
+          // 否则别人第一次打开分享出去的 #/brand/wholesale 会被甩回首页
           var url = location.href.split('?')[0].split('#')[0];
-          location.replace(url + '?v=' + VER);
+          location.replace(url + '?v=' + VER + (location.hash || ''));
         } else if (!stored) {
           localStorage.setItem('_build_ver', VER);
         }

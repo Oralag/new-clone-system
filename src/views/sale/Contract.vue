@@ -1865,14 +1865,14 @@ const filteredContractApi = async (params: any) => {
   const allFoldedIds = new Set(foldedGroups.value.flatMap(g => [...g.ids]))
   const s = searchForm.start_date
   const e = searchForm.end_date
-  let filtered = (s || e)
-    ? allRows.filter((row: any) => {
-        const date = getContractRowDate(row)
-        if (s && date < s) return false
-        if (e && date > e) return false
-        return true
-      })
-    : allRows
+  const matchesDate = (row: any) => {
+    if (!s && !e) return true
+    const date = getContractRowDate(row)
+    if (s && date < s) return false
+    if (e && date > e) return false
+    return true
+  }
+  let filtered = (s || e) ? allRows.filter(matchesDate) : allRows
   const gn = (searchForm.goods_name || '').trim()
   if (gn) {
     const kw = gn.toLowerCase()
@@ -1917,7 +1917,8 @@ const filteredContractApi = async (params: any) => {
     let rows = allRows
       .filter((r: any) => g.ids.has(r.id))
       .sort((a: any, b: any) => getContractRowDate(b).localeCompare(getContractRowDate(a)) || Number(b.id || 0) - Number(a.id || 0))
-    if (gn) rows = rows.filter(matchesGoods)  // 商品关键词穿透
+    if (gn) rows = rows.filter(matchesGoods)   // 商品关键词穿透
+    if (s || e) rows = rows.filter(matchesDate) // 日期区间穿透
     if (!rows.length) return null              // 组内无匹配则整组不显示
     const dates = rows.map((r: any) => getContractRowDate(r)).filter(Boolean).sort()
     const minDate = dates[0] || ''

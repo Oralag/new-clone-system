@@ -103,7 +103,14 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
 }
 
 export const useShopStore = defineStore('shop', () => {
-  const shopMode = ref<'retail' | 'wholesale' | null>(null)
+  // 从 localStorage 恢复上次的身份：不恢复的话，分享出去的链接刷新一次就掉回 null（=零售样式）
+  const savedMode = (() => {
+    try {
+      const m = localStorage.getItem('brand_shop_mode')
+      return m === 'wholesale' || m === 'retail' ? m : null
+    } catch { return null }
+  })()
+  const shopMode = ref<'retail' | 'wholesale' | null>(savedMode)
   const cart = ref<ShopCartItem[]>([])
   const products = ref<ShopProduct[]>([])
   // 全量（含只在门店卖、未上架商城的），products 按 channel 从这里筛

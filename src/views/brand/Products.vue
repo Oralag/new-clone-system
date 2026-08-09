@@ -8,13 +8,16 @@
             门店外卖商品池 · 共 {{ shopStore.products.length }} 款 · 在商品管理里用「门店外卖」开关增减
           </template>
           <template v-else>
-            {{ shopStore.isWholesale ? '批发采购模式 · 选好产品后可批量下载资料' : '发现适合您的完美装备' }}
+            <template v-if="shopStore.isWholesale">
+              批发采购模式 · {{ downloadUnlocked ? '勾选产品后可批量下载资料' : '申请通过后可批量下载产品资料' }}
+            </template>
+            <template v-else>发现适合您的完美装备</template>
           </template>
         </p>
       </div>
-      <!-- 外人访客：申请下载入口 -->
+      <!-- 申请下载入口：没解锁前都要显示（批发页也要），解锁后才出选择框 -->
       <button
-        v-if="shopStore.shopMode === null && !downloadUnlocked"
+        v-if="!downloadUnlocked && !brandEdit.editMode && !isDeliveryView"
         class="bp-apply-btn"
         @click="applyDialogVisible = true"
       >
@@ -89,16 +92,21 @@
       </div>
     </div>
 
-    <!-- 产品网格（编辑模式下支持拖拽） -->
+    <!-- 产品网格（批发按 精选/休闲/文创 分段；编辑模式下支持拖拽） -->
+    <template v-if="!isWholesaleView || viewMode === 'grid'">
+    <section v-for="sec in cardSections" :key="sec.key" class="bp-gsec">
+      <header v-if="sec.title" class="bp-gsec-head">
+        <h3>{{ sec.title }}</h3>
+        <span>{{ sec.sub }}</span>
+      </header>
     <div
-      v-show="!isWholesaleView || viewMode === 'grid'"
       class="bp-grid"
       :class="{ 'bp-grid-ws': isWholesaleView }"
       @dragover.prevent
       @drop="onDrop"
     >
       <div
-        v-for="product in filteredProducts"
+        v-for="product in sec.rows"
         :key="product.id"
         class="bp-card"
         :class="{
@@ -113,7 +121,8 @@
         @click="!brandEdit.editMode && goDetail(product.id)"
       >
         <div class="bp-card-img-wrap">
-          <img :src="product.image || 'https://picsum.photos/seed/placeholder/800/600'" :alt="product.name" class="bp-card-img" referrerpolicy="no-referrer" />
+          <!-- 800px 原图每张约 400KB，首屏 14 张就 4.8MB —— 交给浏览器按需加载 -->
+          <img :src="product.image || 'https://picsum.photos/seed/placeholder/800/600'" :alt="product.name" class="bp-card-img" referrerpolicy="no-referrer" loading="lazy" decoding="async" />
           <!-- 拖拽手柄（编辑模式） -->
           <div v-if="brandEdit.editMode" class="bp-drag-handle" title="拖拽排序">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -123,7 +132,7 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <!-- 采购商模式：勾选框 -->
-          <div v-if="shopStore.isWholesale && !brandEdit.editMode" class="bp-select-check" @click.stop="toggleSelect(product.id)">
+          <div v-if="shopStore.isWholesale && downloadUnlocked && !brandEdit.editMode" class="bp-select-check" @click.stop="toggleSelect(product.id)">
             <svg v-if="selectedIds.includes(product.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <!-- 标签角标 -->
@@ -145,11 +154,25 @@
           </div>
           <template v-if="!brandEdit.editMode">
             <div class="bp-btn-row">
-              <button class="bp-add-btn" @click.stop="addToCart(product)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61H19.4a2 2 0 001.98-1.71l1.62-9.3H6"/></svg>
+              <!-- 加过之后就地变步进器，不跳走；数量和金额看顶栏采购单 -->
+              <div v-if="cartQty(product) > 0" class="bp-step" @click.stop>
+                <button class="bp-step-btn" @click.stop="stepQty(product, -1)" aria-label="减少">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <span class="bp-step-qty">{{ cartQty(product) }}</span>
+                <button class="bp-step-btn" @click.stop="stepQty(product, 1)" aria-label="增加">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+              <!-- 供货价还没填的（休闲快消）不能进采购单，否则按 ¥0 计入合计 -->
+              <button v-else-if="tierPrice(product) === null" class="bp-add-btn bp-add-btn-off" disabled>
+                供货价待定
+              </button>
+              <button v-else class="bp-add-btn" @click.stop="addToCart(product)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 加入采购单
               </button>
-              <button class="bp-dl-btn" :disabled="downloading" @click.stop="downloadOne(product)" title="下载产品资料">
+              <button v-if="downloadUnlocked" class="bp-dl-btn" :disabled="downloading" @click.stop="downloadOne(product)" title="下载产品资料">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </button>
             </div>
@@ -181,122 +204,83 @@
         </div>
       </div>
     </div>
+    </section>
+    </template>
 
-    <!-- 批发商：全部产品 × 拿货价对比表（两套规则分开列） -->
+    <!-- 批发商：全部产品 × 拿货价对比表（三套规则分开列，手机上换成卡片不横滑） -->
     <template v-if="isWholesaleView && viewMode === 'table'">
-      <section v-if="agentRows.length" class="bp-table-wrap">
+      <section v-for="sec in priceSections" :key="sec.key" class="bp-table-wrap">
         <header class="bp-table-head">
-          <h3>乳制品 · 食品</h3>
-          <span>代理拿货价 · 可混批</span>
+          <h3>{{ sec.title }}</h3>
+          <span>{{ sec.sub }}</span>
         </header>
+        <!-- 桌面：横向对比表 -->
         <div class="bp-table-scroll">
           <table class="bp-table">
             <thead>
               <tr>
                 <th class="bp-th-goods">产品</th>
                 <th class="bp-th-spec">规格</th>
-                <th v-for="(t, i) in AGENT_TIERS" :key="t.key" class="bp-th-tier" :class="{ active: activeTierIdx === i }">
+                <th v-for="(t, i) in sec.tiers" :key="t.key" class="bp-th-tier" :class="{ active: activeTierIdx === i }">
                   <span class="bp-th-tier-name">{{ t.name }}</span>
-                  <span class="bp-th-tier-meta">{{ t.profit }}</span>
+                  <span class="bp-th-tier-meta">{{ tierMeta(sec.key, t) }}</span>
                 </th>
-                <th class="bp-th-retail">零售价</th>
+                <th class="bp-th-retail">
+                  <span class="bp-th-retail-name">{{ sec.retailName }}</span>
+                  <span class="bp-th-retail-meta">{{ sec.retailMeta }}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="product in agentRows" :key="product.id" @click="goDetail(product.id)">
+              <tr v-for="product in sec.rows" :key="product.id" @click="goDetail(product.id)">
                 <td class="bp-td-goods">
-                  <img :src="product.image" :alt="product.name" class="bp-td-img" referrerpolicy="no-referrer" />
+                  <img :src="product.image" :alt="product.name" class="bp-td-img" referrerpolicy="no-referrer" loading="lazy" decoding="async" />
                   <span class="bp-td-name">{{ product.name }}</span>
                 </td>
                 <td class="bp-td-spec">{{ product.spec || '—' }}{{ product.unit ? ' / ' + product.unit : '' }}</td>
-                <td v-for="(t, i) in AGENT_TIERS" :key="t.key" class="bp-td-tier" :class="{ active: activeTierIdx === i }">
+                <td v-for="(t, i) in sec.tiers" :key="t.key" class="bp-td-tier" :class="{ active: activeTierIdx === i }">
                   {{ fmt(tierPrice(product, i)) }}
                 </td>
                 <td class="bp-td-retail">{{ fmt(product.price) }}</td>
               </tr>
             </tbody>
-            <tfoot>
+            <tfoot v-if="sec.showFoot">
               <tr>
                 <td class="bp-tf-label" colspan="2">起批门槛</td>
-                <td v-for="(t, i) in AGENT_TIERS" :key="t.key" class="bp-tf-tier" :class="{ active: activeTierIdx === i }">{{ t.threshold }}</td>
+                <td v-for="(t, i) in sec.tiers" :key="t.key" class="bp-tf-tier" :class="{ active: activeTierIdx === i }">{{ t.threshold }}</td>
                 <td></td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <p class="bp-table-note">拿货价 = 零售价 × 档位系数（初级 70% / 二级 65% / 一级 60%），零售价调整后自动同步。单位：元</p>
-      </section>
-
-      <section v-if="craftRows.length" class="bp-table-wrap">
-        <header class="bp-table-head">
-          <h3>文创周边</h3>
-          <span>按零售价累计满额打折</span>
-        </header>
-        <div class="bp-table-scroll">
-          <table class="bp-table">
-            <thead>
-              <tr>
-                <th class="bp-th-goods">产品</th>
-                <th class="bp-th-spec">规格</th>
-                <th v-for="(t, i) in CRAFT_TIERS" :key="t.key" class="bp-th-tier" :class="{ active: activeTierIdx === i }">
-                  <span class="bp-th-tier-name">{{ t.name }}</span>
-                  <span class="bp-th-tier-meta">{{ t.profit }}</span>
-                </th>
-                <th class="bp-th-retail">零售价</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="product in craftRows" :key="product.id" @click="goDetail(product.id)">
-                <td class="bp-td-goods">
-                  <img :src="product.image" :alt="product.name" class="bp-td-img" referrerpolicy="no-referrer" />
-                  <span class="bp-td-name">{{ product.name }}</span>
-                </td>
-                <td class="bp-td-spec">{{ product.spec || '—' }}{{ product.unit ? ' / ' + product.unit : '' }}</td>
-                <td v-for="(t, i) in CRAFT_TIERS" :key="t.key" class="bp-td-tier" :class="{ active: activeTierIdx === i }">
-                  {{ fmt(tierPrice(product, i)) }}
-                </td>
-                <td class="bp-td-retail">{{ fmt(product.price) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="bp-table-note">文创周边按整单零售价累计算：满 ¥3,000 打 6 折，满 ¥10,000 打 5 折。单位：元</p>
-      </section>
-
-      <section v-if="fmcgRows.length" class="bp-table-wrap">
-        <header class="bp-table-head">
-          <h3>休闲快消</h3>
-          <span>线下专供供货价</span>
-        </header>
-        <div class="bp-table-scroll">
-          <table class="bp-table">
-            <thead>
-              <tr>
-                <th class="bp-th-goods">产品</th>
-                <th class="bp-th-spec">规格</th>
-                <th v-for="(t, i) in FMCG_TIERS" :key="t.key" class="bp-th-tier" :class="{ active: activeTierIdx === i }">
-                  <span class="bp-th-tier-name">{{ t.name }}</span>
-                  <span class="bp-th-tier-meta">{{ t.threshold }} 起批</span>
-                </th>
-                <th class="bp-th-retail">建议零售价</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="product in fmcgRows" :key="product.id" @click="goDetail(product.id)">
-                <td class="bp-td-goods">
-                  <img :src="product.image" :alt="product.name" class="bp-td-img" referrerpolicy="no-referrer" />
-                  <span class="bp-td-name">{{ product.name }}</span>
-                </td>
-                <td class="bp-td-spec">{{ product.spec || '—' }}{{ product.unit ? ' / ' + product.unit : '' }}</td>
-                <td v-for="(t, i) in FMCG_TIERS" :key="t.key" class="bp-td-tier" :class="{ active: activeTierIdx === i }">
-                  {{ fmt(tierPrice(product, i)) }}
-                </td>
-                <td class="bp-td-retail">{{ fmt(product.price) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="bp-table-note">休闲快消是固定供货价，不按零售价折算 —— 在编辑模式里逐个商品填「二级/一级供货价」，没填的显示「待定」。二级 ¥899 起批 / 一级 ¥3,800 起批。单位：元</p>
+        <!-- 手机：一屏卡片，图放大、产品名单独一行、三档并排 -->
+        <ul class="bp-plist">
+          <li v-for="product in sec.rows" :key="product.id" class="bp-pcard" @click="goDetail(product.id)">
+            <div class="bp-pcard-top">
+              <img :src="product.image" :alt="product.name" class="bp-pcard-img" referrerpolicy="no-referrer" loading="lazy" decoding="async" />
+              <div class="bp-pcard-info">
+                <span class="bp-pcard-name">{{ product.name }}</span>
+                <span class="bp-pcard-meta">
+                  <template v-if="product.spec">{{ product.spec }}{{ product.unit ? ' / ' + product.unit : '' }} · </template>{{ sec.retailName }} {{ fmt(product.price) }}
+                </span>
+              </div>
+            </div>
+            <div class="bp-pcard-tiers" :style="{ gridTemplateColumns: `repeat(${sec.tiers.length}, 1fr)` }">
+              <div
+                v-for="(t, i) in sec.tiers"
+                :key="t.key"
+                class="bp-pcard-tier"
+                :class="{ active: activeTierIdx === i }"
+                @click.stop="activeTierIdx = i"
+              >
+                <span class="bp-pcard-tier-name">{{ t.name }}</span>
+                <span class="bp-pcard-tier-price">{{ fmt(tierPrice(product, i)) }}</span>
+                <span class="bp-pcard-tier-sub">{{ tierSub(sec.key, t) }}</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <p class="bp-table-note">{{ sec.note }}</p>
       </section>
     </template>
 
@@ -414,12 +398,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useBrandEditStore } from '@/stores/brandEdit'
 import { useRouter, useRoute } from 'vue-router'
 import type { ShopProduct } from '@/stores/shopStore'
 import { useImageUpload } from '@/composables/useImageUpload'
+import {
+  AGENT_TIERS, CRAFT_TIERS, FMCG_TIERS, TIER_SETS, schemeOf, fmt,
+  tierOf as tierOfAt, tierPrice as tierPriceAt,
+} from '@/utils/wholesaleTiers'
+import type { Scheme, Tier } from '@/utils/wholesaleTiers'
 const { triggerUpload } = useImageUpload()
 function upload(setter: (v: string) => void) { triggerUpload(setter) }
 
@@ -434,54 +423,14 @@ const selectedIds = ref<string[]>([])
 const downloading = ref(false)
 
 // ── 批发商：拿货价体系 ───────────────────────────────────────────────────
-// 三套规则，按商品的品牌分类（__brand__.category）走各自的档位。要调只改这一处。
-//   精选（乳制品/食品）—— 拿货价 = 零售价 × 系数，零售价一改自动跟着对
-//   周边（文创）      —— 按整单零售价累计满额打折
-//   休闲（快消）      —— 固定供货价，逐个商品填（__brand__.supplyPrices），不按零售价折算
-type Scheme = 'agent' | 'craft' | 'fmcg'
-interface Tier { key: string; name: string; rate: number; profit: string; threshold: string; short: string }
-
-const AGENT_TIERS: Tier[] = [
-  { key: 'a1', name: '初级代理', rate: 0.70, profit: '利润率 30%', threshold: '¥3,900', short: '初级' },
-  { key: 'a2', name: '二级代理', rate: 0.65, profit: '利润率 35%', threshold: '¥18,000', short: '二级' },
-  { key: 'a3', name: '一级代理', rate: 0.60, profit: '利润率 40%', threshold: '¥38,000', short: '一级' },
-]
-const CRAFT_TIERS: Tier[] = [
-  { key: 'c1', name: '满 ¥3,000', rate: 0.60, profit: '6 折', threshold: '¥3,000', short: '满3000·6折' },
-  { key: 'c2', name: '满 ¥10,000', rate: 0.50, profit: '5 折', threshold: '¥10,000', short: '满1万·5折' },
-]
-const FMCG_TIERS: Tier[] = [
-  { key: 't2', name: '二级供货价', rate: 0, profit: '线下专供', threshold: '¥899', short: '二级供货' },
-  { key: 't1', name: '一级供货价', rate: 0, profit: '线下专供', threshold: '¥3,800', short: '一级供货' },
-]
-const TIER_SETS: Record<Scheme, Tier[]> = { agent: AGENT_TIERS, craft: CRAFT_TIERS, fmcg: FMCG_TIERS }
-
+// 档位定义搬到 utils/wholesaleTiers.ts，顶栏采购单汇总也要用同一套门槛，不能各留一份
 const viewMode = ref<'grid' | 'table'>('grid')
 const activeTierIdx = ref(0)
 const isWholesaleView = computed(() => shopStore.isWholesale)
 
-function schemeOf(product: ShopProduct): Scheme {
-  // 品牌分类优先，没填就用 ERP 商品分类兜底
-  const cat = product.category || product.erpCategory || ''
-  if (cat.includes('周边')) return 'craft'
-  if (cat.includes('休闲')) return 'fmcg'
-  return 'agent'
-}
-function tierOf(product: ShopProduct, idx = activeTierIdx.value): Tier {
-  const list = TIER_SETS[schemeOf(product)]
-  return list[Math.min(idx, list.length - 1)]
-}
-/** 返回 null 表示这个商品该档位还没定价（休闲快消品没填供货价） */
-function tierPrice(product: ShopProduct, idx = activeTierIdx.value): number | null {
-  const tier = tierOf(product, idx)
-  if (schemeOf(product) === 'fmcg') {
-    const v = product.supplyPrices?.[tier.key as 't1' | 't2']
-    return v && v > 0 ? v : null
-  }
-  // 商品单独填了批发价 = 谈好的固定价，所有档位都用它
-  if (product.wholesalePrice > 0) return product.wholesalePrice
-  return Math.round(product.price * tier.rate * 100) / 100
-}
+// 包一层，把当前选中的档位当默认参数塞进去，模板里照旧 tierPrice(product) 调
+function tierOf(product: ShopProduct, idx = activeTierIdx.value): Tier { return tierOfAt(product, idx) }
+function tierPrice(product: ShopProduct, idx = activeTierIdx.value): number | null { return tierPriceAt(product, idx) }
 
 // 档位条按当前筛选出来的商品显示对应那套；混着显示时以代理档为准
 const barTiers = computed<Tier[]>(() => {
@@ -495,9 +444,52 @@ const agentRows = computed(() => filteredProducts.value.filter(p => schemeOf(p) 
 const craftRows = computed(() => filteredProducts.value.filter(p => schemeOf(p) === 'craft'))
 const fmcgRows = computed(() => filteredProducts.value.filter(p => schemeOf(p) === 'fmcg'))
 
-function fmt(n: number | null): string {
-  return n === null ? '待定' : '¥' + (Math.round(n * 100) / 100)
+// 三块的配置集中一份，价目表和产品卡片共用，省得模板里重复三遍
+const priceSections = computed(() => [
+  {
+    key: 'agent', title: '乳制品 · 食品', sub: '代理拿货价 · 可混批',
+    tiers: AGENT_TIERS, rows: agentRows.value,
+    retailName: '建议零售价', retailMeta: '终端售价', showFoot: true,
+    note: '拿货价 = 零售价 × 档位系数（初级 70% / 二级 65% / 一级 60%），零售价调整后自动同步。单位：元',
+  },
+  {
+    key: 'fmcg', title: '休闲快消', sub: '线下专供供货价',
+    tiers: FMCG_TIERS, rows: fmcgRows.value,
+    retailName: '建议零售价', retailMeta: '终端售价', showFoot: false,
+    note: '休闲快消是固定供货价，不按零售价折算 —— 在编辑模式里逐个商品填「二级/一级供货价」，没填的显示「待定」。二级 ¥899 起批 / 一级 ¥3,800 起批。单位：元',
+  },
+  {
+    key: 'craft', title: '文创周边', sub: '按零售价累计满额打折',
+    tiers: CRAFT_TIERS, rows: craftRows.value,
+    retailName: '建议零售价', retailMeta: '折扣基数', showFoot: false,
+    note: '文创周边按整单零售价累计算：满 ¥3,000 打 6 折，满 ¥10,000 打 5 折。单位：元',
+  },
+].filter(s => s.rows.length))
+
+// 档位表头的副标题：代理档显示利润率，休闲档显示起批门槛
+function tierMeta(sectionKey: string, t: Tier): string {
+  return sectionKey === 'fmcg' ? `${t.threshold} 起批` : t.profit
 }
+// 手机卡片里没有 tfoot 那行门槛，门槛直接挂在档位下面；文创的档名本身就是门槛，改显折扣
+function tierSub(sectionKey: string, t: Tier): string {
+  return sectionKey === 'craft' ? t.profit : `起批 ${t.threshold}`
+}
+
+// 产品卡片也按 精选 → 休闲 → 文创 分段，顺序固定不跟着商品排序走
+const GRID_SECTIONS: { key: Scheme; title: string; sub: string }[] = [
+  { key: 'agent', title: '精选 · 乳制品食品', sub: '代理拿货价 · 可混批' },
+  { key: 'fmcg', title: '休闲快消', sub: '线下专供供货价' },
+  { key: 'craft', title: '文创周边', sub: '满额折扣' },
+]
+// 零售页和编辑模式仍然是一整块：编辑模式要靠整体顺序拖拽排序，分段会把 sort 算乱
+const cardSections = computed(() => {
+  if (!isWholesaleView.value || brandEdit.editMode) {
+    return [{ key: 'all', title: '', sub: '', rows: filteredProducts.value }]
+  }
+  return GRID_SECTIONS
+    .map(s => ({ ...s, rows: filteredProducts.value.filter(p => schemeOf(p) === s.key) }))
+    .filter(s => s.rows.length)
+})
 
 // ── 外人申请下载：留资表单 + 本地解锁 ──────────────────────────────────
 const DOWNLOAD_UNLOCK_KEY = 'brand_download_unlocked_v1'
@@ -593,7 +585,8 @@ const FIXED_CATS = computed(() => {
     seen.add(name)
     cats.push({ label: name, tag: name })
   }
-  cats.push({ label: '会员专属', tag: '__member__' })
+  // 会员是零售侧的概念，批发页不出这个分类
+  if (!shopStore.isWholesale) cats.push({ label: '会员专属', tag: '__member__' })
   return cats
 })
 
@@ -602,6 +595,11 @@ const TAG_OPTIONS = [
   { value: 'hot', label: '热销' },
   { value: 'sale', label: '特惠' },
 ]
+
+// 切到批发模式时会员专属分类会消失，选中态得跟着退回「全部」，否则卡在一个看不见的筛选上
+watch(() => shopStore.isWholesale, (ws) => {
+  if (ws && selectedTag.value === '__member__') selectedTag.value = 'all'
+}, { immediate: true })
 
 const filteredProducts = computed(() => {
   const keyword = router.currentRoute.value.query.q as string
@@ -642,7 +640,24 @@ function addToCart(product: ShopProduct) {
       ? { ...product, wholesalePrice: tierPrice(product, activeTierIdx.value) ?? 0 }
       : product
   )
-  router.push('/brand/cart')
+  // 不跳转：加完就地变成步进器，汇总看顶栏采购单
+}
+
+// 这件商品当前在采购单里的数量，0 = 还没加
+function cartQty(product: ShopProduct): number {
+  const ws = shopStore.isWholesale
+  return shopStore.cart.find(i => i.id === product.id && i.isWholesale === ws)?.quantity || 0
+}
+
+// 批发一次加减一个起订量；减到不够一个起订量就整条移出（updateQuantity 会卡在起订量上下不来）
+function stepQty(product: ShopProduct, dir: 1 | -1) {
+  const ws = shopStore.isWholesale
+  const step = ws ? Math.max(1, product.minOrderQuantity) : 1
+  if (dir < 0 && cartQty(product) - step < step) {
+    shopStore.removeFromCart(product.id, ws)
+    return
+  }
+  shopStore.updateQuantity(product.id, ws, dir * step)
 }
 
 function toggleSelect(id: string) {
@@ -885,6 +900,8 @@ async function downloadSelected() {
 .bp-btn-row { display: flex; gap: 8px; }
 .bp-add-btn { flex: 1; padding: 9px; border-radius: 12px; background: #1d1d1f; color: #fff; font-size: 12px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; }
 .bp-add-btn:hover { background: #0071e3; }
+.bp-add-btn-off { background: #f5f5f7; color: rgba(29,29,31,0.35); cursor: not-allowed; }
+.bp-add-btn-off:hover { background: #f5f5f7; }
 .bp-dl-btn { width: 36px; border-radius: 12px; background: #f5f5f7; color: rgba(29,29,31,0.5); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; flex-shrink: 0; }
 .bp-dl-btn:hover:not(:disabled) { background: #f59e0b; color: #1d1d1f; }
 .bp-dl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -941,7 +958,7 @@ async function downloadSelected() {
 .bp-ws-spec { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.35); flex-shrink: 0; }
 .bp-ws-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
 .bp-ws-price { font-size: 19px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.02em; }
-.bp-ws-retail { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.35); text-decoration: line-through; }
+.bp-ws-retail { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.4); }
 
 .bp-ws-tier-tag { font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245,158,11,0.12); padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
 
@@ -967,12 +984,45 @@ async function downloadSelected() {
 .bp-td-spec { text-align: left; font-size: 12px; color: rgba(29,29,31,0.45); font-weight: 600; }
 .bp-td-tier { font-weight: 700; color: rgba(29,29,31,0.5); font-variant-numeric: tabular-nums; }
 .bp-td-tier.active { color: #1d1d1f; font-weight: 800; background: rgba(245,158,11,0.07); }
-.bp-td-retail { color: rgba(29,29,31,0.35); font-weight: 600; text-decoration: line-through; font-variant-numeric: tabular-nums; }
+/* 零售价是给批发商看的终端售价参考，不是失效价，不能划掉 */
+.bp-th-retail, .bp-td-retail { border-left: 1px solid rgba(0,0,0,0.07); background: #fcfcfd; }
+.bp-th-retail-name { display: block; font-size: 12px; font-weight: 800; color: rgba(29,29,31,0.65); }
+.bp-th-retail-meta { display: block; margin-top: 2px; font-size: 10px; font-weight: 600; color: rgba(29,29,31,0.32); }
+.bp-td-retail { color: rgba(29,29,31,0.55); font-weight: 700; font-variant-numeric: tabular-nums; }
 .bp-table tfoot td { border-bottom: none; padding: 14px; font-size: 12px; font-weight: 700; background: #fafafa; }
 .bp-tf-label { text-align: left; color: rgba(29,29,31,0.45); }
 .bp-tf-tier { color: rgba(29,29,31,0.55); font-variant-numeric: tabular-nums; }
 .bp-tf-tier.active { color: #1d1d1f; }
 .bp-table-note { padding: 14px 16px 16px; font-size: 11px; color: rgba(29,29,31,0.35); line-height: 1.6; }
+
+/* ── 价目表手机版：卡片列表（桌面隐藏，手机替掉表格，不横滑） ─────────── */
+.bp-plist { display: none; }
+.bp-pcard { list-style: none; padding: 12px 14px; border-top: 1px solid rgba(0,0,0,0.05); cursor: pointer; }
+.bp-pcard:first-child { border-top: none; }
+.bp-pcard-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bp-pcard-img { width: 56px; height: 56px; border-radius: 12px; object-fit: contain; background: #f5f5f7; flex-shrink: 0; }
+.bp-pcard-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bp-pcard-name { font-size: 14px; font-weight: 800; color: #1d1d1f; line-height: 1.3; }
+.bp-pcard-meta { font-size: 11px; font-weight: 600; color: rgba(29,29,31,0.4); }
+.bp-pcard-tiers { display: grid; gap: 6px; }
+.bp-pcard-tier { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; background: #f7f7f9; border: 1.5px solid transparent; }
+.bp-pcard-tier.active { background: rgba(245,158,11,0.09); border-color: rgba(245,158,11,0.5); }
+.bp-pcard-tier-name { font-size: 10.5px; font-weight: 700; color: rgba(29,29,31,0.45); }
+.bp-pcard-tier-price { font-size: 16px; font-weight: 800; color: rgba(29,29,31,0.6); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.bp-pcard-tier.active .bp-pcard-tier-price { color: #1d1d1f; }
+.bp-pcard-tier-sub { font-size: 9.5px; font-weight: 600; color: rgba(29,29,31,0.3); }
+
+/* ── 产品卡片分段（精选 / 休闲 / 文创） ───────────────────────────────── */
+.bp-gsec { margin-bottom: 32px; }
+.bp-gsec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.bp-gsec-head h3 { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.bp-gsec-head span { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.4); }
+
+/* ── 采购单步进器（加过之后原地显示数量） ─────────────────────────────── */
+.bp-step { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 3px; border-radius: 12px; background: #1d1d1f; }
+.bp-step-btn { width: 28px; height: 26px; border: none; border-radius: 9px; background: rgba(255,255,255,0.14); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.bp-step-btn:hover { background: rgba(255,255,255,0.28); }
+.bp-step-qty { flex: 1; text-align: center; font-size: 13px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 1s linear infinite; }
@@ -1002,17 +1052,15 @@ async function downloadSelected() {
   .bp-view-switch { width: 100%; }
   .bp-view-btn { flex: 1; justify-content: center; }
   .bp-table-wrap { border-radius: 16px; }
-  .bp-table th, .bp-table td { padding: 10px 8px; }
-  .bp-td-img { width: 34px; height: 34px; }
-  /* 手机上产品名+规格会把价格列整个挤出屏幕，规格隐掉、产品列吸左，横滑看价格 */
-  .bp-th-spec, .bp-td-spec { display: none; }
-  .bp-table { min-width: 460px; }
-  .bp-th-goods, .bp-td-goods { position: sticky; left: 0; z-index: 2; background: #fff; }
-  .bp-table tbody tr:hover .bp-td-goods { background: #fafafa; }
-  .bp-th-goods, .bp-td-goods, .bp-tf-label { box-shadow: 1px 0 0 rgba(0,0,0,0.06); }
-  .bp-td-name { font-size: 12px; white-space: normal; line-height: 1.3; }
-  .bp-td-goods { max-width: 132px; }
-  .bp-tf-label { position: sticky; left: 0; z-index: 2; background: #fafafa; }
+  /* 手机上 6 列表格塞不进 390px，整张表换成卡片列表，一屏看完不横滑 */
+  .bp-table-scroll { display: none; }
+  .bp-plist { display: block; }
+  .bp-table-head { padding: 16px 14px 10px; }
+  .bp-table-note { padding: 12px 14px 14px; }
+  .bp-gsec { margin-bottom: 24px; }
+  .bp-gsec-head { margin-bottom: 10px; }
+  .bp-gsec-head h3 { font-size: 15px; }
+  .bp-gsec-head span { font-size: 11px; }
 }
 
 .bp-toast {
