@@ -238,3 +238,5 @@ npm run deploy
 - [2026-07-18] 手机端店员登录看到全部功能 → 手机端首页 `MobileWorkbench.vue` 的功能入口曾是写死列表，未接权限。**铁律：手机端任何新增功能入口/tab，必须用 `permStore.canAccessPath(path)` 过滤**；权限唯一入口是 `src/stores/permission.ts` 的 `canAccessPath`（收银台→`retail-order`，统计页→`reports-overview`/`finance-overview`），禁止在页面里自行判断权限
 
 - [2026-07-11] 全站业务逻辑审计发现应收/应付计算在 4 处页面各自实现、口径漂移（FundFlow 未收款漏 status=4 合同/线上客户排除/退货扣减；Overview 应付漏零售附加费、附加费已付含"审核自动生成"；SupplierList 欠款用 total_amount 且不含附加费）→ **铁律：应收计算唯一入口 `src/utils/receivableCalc.ts`（buildContractReceivableItems + deductSaleReturnsByCustomer），应付计算唯一入口 `src/utils/payableCalc.ts`（buildSupplierPayableRows + buildContractFeePayableRows + buildRetailFeePayableRows）。任何页面需要应收/应付数字必须调用这两个 utils，禁止在页面内复制实现；口径要改就改 utils，所有页面自动同步。**
+
+- [2026-08-09] 销售合同列表日期筛选后，编组行（核对历史）仍整组显示且日期区间是全历史 → **凡是给列表加的筛选条件（日期区间/状态/关键词），必须同时穿透到编组行内部**：`Contract.vue` 的 `filteredContractApi` 里 `groupRows` 从 `allRows` 取成员，必须对每个筛选条件都过滤一遍（已有 `matchesGoods`，现补 `matchesDate`），组内无匹配则 `return null` 整组隐藏。新增筛选条件时同步补穿透，禁止只改主列表的 `filtered`
