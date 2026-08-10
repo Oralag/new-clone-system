@@ -240,3 +240,11 @@ npm run deploy
 - [2026-07-11] 全站业务逻辑审计发现应收/应付计算在 4 处页面各自实现、口径漂移（FundFlow 未收款漏 status=4 合同/线上客户排除/退货扣减；Overview 应付漏零售附加费、附加费已付含"审核自动生成"；SupplierList 欠款用 total_amount 且不含附加费）→ **铁律：应收计算唯一入口 `src/utils/receivableCalc.ts`（buildContractReceivableItems + deductSaleReturnsByCustomer），应付计算唯一入口 `src/utils/payableCalc.ts`（buildSupplierPayableRows + buildContractFeePayableRows + buildRetailFeePayableRows）。任何页面需要应收/应付数字必须调用这两个 utils，禁止在页面内复制实现；口径要改就改 utils，所有页面自动同步。**
 
 - [2026-08-09] 销售合同列表日期筛选后，编组行（核对历史）仍整组显示且日期区间是全历史 → **凡是给列表加的筛选条件（日期区间/状态/关键词），必须同时穿透到编组行内部**：`Contract.vue` 的 `filteredContractApi` 里 `groupRows` 从 `allRows` 取成员，必须对每个筛选条件都过滤一遍（已有 `matchesGoods`，现补 `matchesDate`），组内无匹配则 `return null` 整组隐藏。新增筛选条件时同步补穿透，禁止只改主列表的 `filtered`
+
+- [2026-08-10] 品牌页商品图加载慢，排查中连续三次方案落空 → **记录约束和事实，别再重复踩**：
+  - **用户不买域名、不花钱**。任何需要自定义域名（zone）的方案直接排除 —— 账号下 `zones` 为空，`*.pages.dev` 用不了 `/cdn-cgi/image/` 图片缩放（返回 404）
+  - **Cloudflare Pages Functions 不支持 Images 绑定**（`env.IMAGES`）。Pages 只支持 KV/R2/D1/AI/Queues/Vectorize/Hyperdrive/Analytics/Service 这几类；`wrangler.toml` 里写 `[images]` 会直接报 `Configuration file for Pages projects does not support "images"` 导致部署失败
+  - **诊断顺序**：量图片慢先做同域对照（静态资源 vs Worker 路径），别一上来就怪 Worker/KV。实测 Worker 读 KV 服务端只花 0.43s，纯 CDN 静态图也要 0.27s，Worker 不是瓶颈
+  - **真正的原因是图存得太肥**：商品原图 800×800 存了 430KB（0.67 字节/像素，正常应 0.15–0.25）。转成同分辨率 WebP 只要 54KB，小 8 倍且画质无损 —— 优化方向是换格式，不是缩尺寸（手机 2 倍屏 270px 格子本来就需要 540px+ 的图）
+  - **lazy loading 对这个页面基本无效**：整页只有约 3 屏高，Chrome 预加载范围本来就覆盖得到，加了 `loading="lazy"` 首屏该下的还是全下
+  - `functions/media/[[path]].js` 读取器已支持 `.webp` 后缀，KV 里放一份 `.webp` 就能直接用，不需要改 Worker
