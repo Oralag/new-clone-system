@@ -248,3 +248,7 @@ npm run deploy
   - **真正的原因是图存得太肥**：商品原图 800×800 存了 430KB（0.67 字节/像素，正常应 0.15–0.25）。转成同分辨率 WebP 只要 54KB，小 8 倍且画质无损 —— 优化方向是换格式，不是缩尺寸（手机 2 倍屏 270px 格子本来就需要 540px+ 的图）
   - **lazy loading 对这个页面基本无效**：整页只有约 3 屏高，Chrome 预加载范围本来就覆盖得到，加了 `loading="lazy"` 首屏该下的还是全下
   - `functions/media/[[path]].js` 读取器已支持 `.webp` 后缀，KV 里放一份 `.webp` 就能直接用，不需要改 Worker
+
+- [2026-08-10] 品牌页图片提速只改了 Products.vue，用户点开 `/#/brand/wholesale` 发现"还是慢"→ **改图片/样式类的通用优化，必须先把同类页面全查一遍再动手，不能只改用户当时打开的那一个**。品牌前台一共 4 个组件会渲染商品图：`Products.vue`(商品列表) / `Index.vue`(`/#/brand/wholesale` 和 `/#/brand` 都是它) / `ProductDetail.vue`(详情页，13 张详情图最肥) / `Cart|Checkout|Story|Wholesale.vue`。查漏命令：`grep -c "<img" src/views/brand/*.vue` 对比 `grep -c webpUrl`
+- [2026-08-10] 小程序代码有两份，差点改错 → **线上小程序是 `/Users/oralagborjigin/WeChatProjects/minicode-1/`（33 个页面、有 appid key、有分销/会员/附近门店）**；`/Users/oralagborjigin/nomad-erp-miniapp/` 是 6 月的旧脚手架副本（只有 10 个页面），已废弃，别动。改前先 `ls pages/ | wc -l` 确认
+- [2026-08-10] 小程序图片走 WebP 的三个前提，缺一不可：① `<image>` 必须写 `webp="{{true}}"`（WebView 渲染模式默认不解析 WebP，Skyline 才原生支持）；② 错误回调是 `binderror`，**`binerror` 是拼错的、根本不会触发**（旧代码 5 处都写错了）；③ URL 改写走 `utils/media.wxs` + `utils/imgFallback.js` 的 `imgErr` 映射表，WebP 缺失时自动退回原图，绝不能一失败就把图清空
