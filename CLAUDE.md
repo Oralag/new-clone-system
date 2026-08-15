@@ -254,3 +254,9 @@ npm run deploy
 - [2026-08-10] 小程序图片走 WebP 的三个前提，缺一不可：① `<image>` 必须写 `webp="{{true}}"`（WebView 渲染模式默认不解析 WebP，Skyline 才原生支持）；② 错误回调是 `binderror`，**`binerror` 是拼错的、根本不会触发**（旧代码 5 处都写错了）；③ URL 改写走 `utils/media.wxs` + `utils/imgFallback.js` 的 `imgErr` 映射表，WebP 缺失时自动退回原图，绝不能一失败就把图清空
 
 - [2026-08-14] 在 `dist/` 目录里跑 `wrangler pages deploy`，导致 Functions 全部没上传，`/adminapi/*` 被 SPA 兜底返回 index.html，商品列表空、登录挂 → **部署必须在项目根目录 `/Users/oralagborjigin/new-clone-system` 执行**：`cd /Users/oralagborjigin/new-clone-system && CLOUDFLARE_API_TOKEN=xxx npx wrangler pages deploy dist --project-name digital-nomad --commit-dirty=true`。wrangler 是从**当前工作目录**找 `functions/` 的，cwd 错了就静默丢掉整个后端。部署输出里必须看到 `Compiled Worker successfully` 和 `Uploading Functions bundle` 两行，没有就是 Functions 没上去，立刻重发。
+
+- [2026-08-15] 财务总览「账户余额」在用户机器上永久空白，Claude 连续四次误判（还在加载→时好时坏→接口失败加重试→Service Worker），全靠把失败原因打到屏幕上才定位 → 真因：`/adminapi/*` 响应**没有任何 `Cache-Control` 头**，浏览器按启发式规则把 Functions 掉线期间的一次 404 存进磁盘缓存并永久复用，表现为「同一地址在某台机器上永远 404、别处永远 200」。规则：
+  - **只有一台机器复现的接口问题，先怀疑本地 HTTP 缓存**，不要从后端/并发/权限开始猜；服务端 curl 正常 + 无 SW + 域名路径都对 ⇒ 几乎必然是浏览器缓存
+  - 关键数据的 GET 用 `fetch(url + "&_t=" + Date.now(), { cache: "no-store" })` 绕开缓存
+  - **排查跨机器差异，不要继续推理，把失败原因渲染到界面上**（HTTP 状态 + 实际请求 URL + `navigator.serviceWorker.controller`），用户截一张图就能定位，比十轮猜测快
+  - 空状态禁止和失败状态共用一套文案：`暂无数据` 和 `加载失败：原因` 必须分开，否则故障被伪装成"没数据"
