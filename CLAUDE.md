@@ -260,3 +260,8 @@ npm run deploy
   - 关键数据的 GET 用 `fetch(url + "&_t=" + Date.now(), { cache: "no-store" })` 绕开缓存
   - **排查跨机器差异，不要继续推理，把失败原因渲染到界面上**（HTTP 状态 + 实际请求 URL + `navigator.serviceWorker.controller`），用户截一张图就能定位，比十轮猜测快
   - 空状态禁止和失败状态共用一套文案：`暂无数据` 和 `加载失败：原因` 必须分开，否则故障被伪装成"没数据"
+
+- [2026-08-17] 同一个缓存问题复发：单据表单的「付款账户」下拉加载不出来 → 上次只在 `Overview.vue` 一个页面用 `fetch(no-store)` 绕过去，**病根（`/adminapi/*` 不发 `Cache-Control`）没治**，所以全站 20 多个页面的账户下拉照样中招。**只治当前那一个页面 = 没治**，同类问题必须找共同入口。正确修法（已实施）：
+  - 治本：`functions/adminapi/[[path]].js` 的 `corsHeaders()` 统一加 `Cache-Control: no-store, no-cache, must-revalidate` + `Pragma: no-cache`。所有响应都经过这个函数（含代理分支的 `newHeaders.set`），一处生效全站生效。adminapi 全是带鉴权的动态数据，本来就一条都不该缓存
+  - 治标：**服务端新加的 no-store 救不了已经躺在用户磁盘缓存里的旧条目** —— 浏览器认为它还新鲜，压根不会再发请求。必须换 URL 才绕得过去，所以 `getFundList` 加了 `_t: Date.now()`
+  - 注意缓存按**完整 URL**分条：`list_rows=100` 和 `list_rows=200` 是两条独立缓存，修一个不等于修全部
