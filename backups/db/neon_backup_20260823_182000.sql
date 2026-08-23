@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict yrGLdZHYMiNTRzIk72tlUKV7Udax25sbdjidWe9XoTvlkuu1zRShrnq0qCK93Hm
+\restrict ghUupaE6Zsto7JdTaCqPTv4PbJ4vakYVOUok3EiU1LBGIcyJPwT7uCEGdk1Vq1q
 
--- Dumped from database version 17.10 (2947584)
--- Dumped by pg_dump version 17.10 (Ubuntu 17.10-1.pgdg24.04+1)
+-- Dumped from database version 17.11 (df1f1a3)
+-- Dumped by pg_dump version 17.11 (Ubuntu 17.11-1.pgdg24.04+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -605,6 +605,45 @@ ALTER SEQUENCE public.depts_id_seq OWNED BY public.depts.id;
 
 
 --
+-- Name: distributor_bank_cards; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_bank_cards (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    bank_name character varying(50) DEFAULT ''::character varying NOT NULL,
+    card_no character varying(30) DEFAULT ''::character varying NOT NULL,
+    holder_name character varying(50) DEFAULT ''::character varying NOT NULL,
+    is_default boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.distributor_bank_cards OWNER TO neondb_owner;
+
+--
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.distributor_bank_cards_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.distributor_bank_cards_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.distributor_bank_cards_id_seq OWNED BY public.distributor_bank_cards.id;
+
+
+--
 -- Name: distributor_goods; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -644,6 +683,19 @@ ALTER SEQUENCE public.distributor_goods_id_seq OWNER TO neondb_owner;
 
 ALTER SEQUENCE public.distributor_goods_id_seq OWNED BY public.distributor_goods.id;
 
+
+--
+-- Name: distributor_hidden_goods; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_hidden_goods (
+    distributor_id integer NOT NULL,
+    goods_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.distributor_hidden_goods OWNER TO neondb_owner;
 
 --
 -- Name: distributor_materials; Type: TABLE; Schema: public; Owner: neondb_owner
@@ -696,6 +748,109 @@ ALTER SEQUENCE public.distributor_materials_id_seq OWNED BY public.distributor_m
 
 
 --
+-- Name: distributor_product_submissions; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_product_submissions (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    title character varying(160) DEFAULT ''::character varying NOT NULL,
+    category character varying(80) DEFAULT ''::character varying,
+    images jsonb DEFAULT '[]'::jsonb,
+    detail_images jsonb DEFAULT '[]'::jsonb,
+    description text DEFAULT ''::text,
+    spec character varying(160) DEFAULT ''::character varying,
+    unit_name character varying(40) DEFAULT '件'::character varying,
+    suggested_price numeric(12,2) DEFAULT 0,
+    stock_qty numeric(12,3) DEFAULT 0,
+    freight_template character varying(120) DEFAULT ''::character varying,
+    qualification_urls jsonb DEFAULT '[]'::jsonb,
+    platform_fee_rate numeric(5,2),
+    review_status character varying(20) DEFAULT 'pending'::character varying,
+    review_note text DEFAULT ''::text,
+    reviewed_by integer DEFAULT 0,
+    reviewed_at timestamp with time zone,
+    goods_id integer DEFAULT 0,
+    machine_review_status character varying(20) DEFAULT 'pending'::character varying,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    deleted_at timestamp with time zone,
+    short_title character varying(80) DEFAULT ''::character varying,
+    ship_origin character varying(120) DEFAULT ''::character varying,
+    shipping_fee character varying(120) DEFAULT ''::character varying,
+    delivery_time character varying(120) DEFAULT ''::character varying
+);
+
+
+ALTER TABLE public.distributor_product_submissions OWNER TO neondb_owner;
+
+--
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.distributor_product_submissions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.distributor_product_submissions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.distributor_product_submissions_id_seq OWNED BY public.distributor_product_submissions.id;
+
+
+--
+-- Name: distributor_withdraws; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.distributor_withdraws (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    amount numeric(10,2) DEFAULT 0 NOT NULL,
+    bank_card_id integer DEFAULT 0 NOT NULL,
+    bank_name character varying(50) DEFAULT ''::character varying,
+    card_no_snapshot character varying(30) DEFAULT ''::character varying,
+    holder_name_snapshot character varying(50) DEFAULT ''::character varying,
+    status integer DEFAULT 0,
+    reject_reason text DEFAULT ''::text,
+    transfer_no character varying(60) DEFAULT ''::character varying,
+    created_at timestamp with time zone DEFAULT now(),
+    handled_at timestamp with time zone
+);
+
+
+ALTER TABLE public.distributor_withdraws OWNER TO neondb_owner;
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.distributor_withdraws_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.distributor_withdraws_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.distributor_withdraws_id_seq OWNED BY public.distributor_withdraws.id;
+
+
+--
 -- Name: distributors; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -710,7 +865,17 @@ CREATE TABLE public.distributors (
     apply_reason text DEFAULT ''::text,
     note text DEFAULT ''::text,
     created_at timestamp without time zone DEFAULT now(),
-    approved_at timestamp without time zone
+    approved_at timestamp without time zone,
+    platform_fee_rate numeric(5,2) DEFAULT 10,
+    settlement_cycle_days integer DEFAULT 7,
+    agreement_type character varying(20) DEFAULT 'offline'::character varying,
+    agreement_no character varying(80) DEFAULT ''::character varying,
+    agreement_url text DEFAULT ''::text,
+    agreement_start date,
+    agreement_end date,
+    sub_mchid character varying(40) DEFAULT ''::character varying,
+    merchant_onboarding_status character varying(30) DEFAULT 'not_started'::character varying,
+    settlement_mode character varying(30) DEFAULT 'manual'::character varying
 );
 
 
@@ -1011,10 +1176,28 @@ CREATE TABLE public.finance_statements (
     start_date date,
     end_date date,
     remark text DEFAULT ''::text,
-    status integer DEFAULT 1,
+    status integer DEFAULT 0,
     created_at timestamp without time zone DEFAULT now(),
     deleted_at timestamp without time zone,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    supplier_id integer DEFAULT 0,
+    supplier_name character varying(200) DEFAULT ''::character varying,
+    partner_type character varying(20) DEFAULT 'customer'::character varying,
+    opening_recv numeric(12,2) DEFAULT 0,
+    opening_pay numeric(12,2) DEFAULT 0,
+    opening_balance numeric(12,2) DEFAULT 0,
+    recv_amount numeric(12,2) DEFAULT 0,
+    pay_amount numeric(12,2) DEFAULT 0,
+    collected_amount numeric(12,2) DEFAULT 0,
+    paid_amount numeric(12,2) DEFAULT 0,
+    closing_recv numeric(12,2) DEFAULT 0,
+    closing_pay numeric(12,2) DEFAULT 0,
+    net_amount numeric(12,2) DEFAULT 0,
+    settle_mode character varying(20) DEFAULT 'full'::character varying,
+    detail jsonb DEFAULT '[]'::jsonb,
+    confirm_time timestamp without time zone,
+    confirm_remark text DEFAULT ''::text,
+    admin_name character varying(100) DEFAULT ''::character varying
 );
 
 
@@ -1086,7 +1269,10 @@ CREATE TABLE public.goods (
     can_outsource integer DEFAULT 1,
     multi_unit boolean DEFAULT false,
     multi_spec boolean DEFAULT false,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    owner_type character varying(20) DEFAULT 'official'::character varying,
+    owner_distributor_id integer DEFAULT 0,
+    platform_fee_rate numeric(5,2)
 );
 
 
@@ -1485,7 +1671,13 @@ CREATE TABLE public.mini_order_items (
     goods_name character varying(128) NOT NULL,
     spec character varying(64) DEFAULT ''::character varying,
     price numeric(10,2) NOT NULL,
-    qty integer DEFAULT 1 NOT NULL
+    qty integer DEFAULT 1 NOT NULL,
+    seller_type character varying(20) DEFAULT 'official'::character varying,
+    seller_distributor_id integer DEFAULT 0,
+    promotion_rate_snapshot numeric(5,2) DEFAULT 0,
+    platform_fee_rate_snapshot numeric(5,2) DEFAULT 0,
+    platform_fee_amount numeric(12,2) DEFAULT 0,
+    seller_receivable_amount numeric(12,2) DEFAULT 0
 );
 
 
@@ -1547,7 +1739,13 @@ CREATE TABLE public.mini_orders (
     commission_retry_count integer DEFAULT 0,
     commission_last_error text DEFAULT ''::text,
     coupon_id integer DEFAULT 0,
-    coupon_deduct numeric(8,2) DEFAULT 0
+    coupon_deduct numeric(8,2) DEFAULT 0,
+    payment_expires_at timestamp without time zone,
+    cancel_reason character varying(120) DEFAULT ''::character varying,
+    price_adjusted_from numeric(10,2),
+    price_adjustment_note character varying(255) DEFAULT ''::character varying,
+    price_adjusted_at timestamp without time zone,
+    price_change_requested boolean DEFAULT false
 );
 
 
@@ -1775,6 +1973,85 @@ ALTER SEQUENCE public.mini_search_log_id_seq OWNED BY public.mini_search_log.id;
 
 
 --
+-- Name: mini_service_messages; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.mini_service_messages (
+    id bigint NOT NULL,
+    session_id bigint NOT NULL,
+    role character varying(20) NOT NULL,
+    source character varying(20) DEFAULT 'nova'::character varying,
+    content text NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.mini_service_messages OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.mini_service_messages_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.mini_service_messages_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.mini_service_messages_id_seq OWNED BY public.mini_service_messages.id;
+
+
+--
+-- Name: mini_service_sessions; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.mini_service_sessions (
+    id bigint NOT NULL,
+    user_id integer,
+    client_key character varying(80) DEFAULT ''::character varying NOT NULL,
+    product_id integer DEFAULT 0,
+    product_name character varying(200) DEFAULT ''::character varying,
+    product_snapshot jsonb DEFAULT '{}'::jsonb,
+    status character varying(20) DEFAULT 'ai'::character varying,
+    human_requested_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    expires_at timestamp without time zone DEFAULT (now() + '180 days'::interval)
+);
+
+
+ALTER TABLE public.mini_service_sessions OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.mini_service_sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.mini_service_sessions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
+--
+
+ALTER SEQUENCE public.mini_service_sessions_id_seq OWNED BY public.mini_service_sessions.id;
+
+
+--
 -- Name: mini_user_coupons; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -1786,7 +2063,8 @@ CREATE TABLE public.mini_user_coupons (
     expire_at timestamp without time zone NOT NULL,
     used_at timestamp without time zone,
     order_id integer,
-    claimed_at timestamp without time zone DEFAULT now()
+    claimed_at timestamp without time zone DEFAULT now(),
+    coupon_type character varying(20)
 );
 
 
@@ -1949,7 +2227,11 @@ CREATE TABLE public.mini_videos (
     view_count integer DEFAULT 0,
     sort integer DEFAULT 0,
     status smallint DEFAULT 1,
-    created_at timestamp without time zone DEFAULT now()
+    created_at timestamp without time zone DEFAULT now(),
+    content_type character varying(20) DEFAULT 'video'::character varying NOT NULL,
+    content text DEFAULT ''::text,
+    images jsonb DEFAULT '[]'::jsonb NOT NULL,
+    source_url text DEFAULT ''::text
 );
 
 
@@ -2072,7 +2354,9 @@ CREATE TABLE public.pay_receipt (
     created_at timestamp without time zone DEFAULT now(),
     deleted_at timestamp without time zone,
     category character varying(50) DEFAULT ''::character varying,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    admin_id integer DEFAULT 0,
+    admin_name character varying(100) DEFAULT ''::character varying
 );
 
 
@@ -2696,7 +2980,8 @@ CREATE TABLE public.sale_customers (
     create_time timestamp without time zone DEFAULT now(),
     update_time timestamp without time zone DEFAULT now(),
     deleted_at timestamp without time zone,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    linked_supplier_id integer DEFAULT 0
 );
 
 
@@ -3818,6 +4103,45 @@ CREATE SEQUENCE trial.depts_id_seq
 ALTER SEQUENCE trial.depts_id_seq OWNER TO neondb_owner;
 
 --
+-- Name: distributor_bank_cards; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_bank_cards (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    bank_name character varying(50) DEFAULT ''::character varying NOT NULL,
+    card_no character varying(30) DEFAULT ''::character varying NOT NULL,
+    holder_name character varying(50) DEFAULT ''::character varying NOT NULL,
+    is_default boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE trial.distributor_bank_cards OWNER TO neondb_owner;
+
+--
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.distributor_bank_cards_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.distributor_bank_cards_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.distributor_bank_cards_id_seq OWNED BY trial.distributor_bank_cards.id;
+
+
+--
 -- Name: distributor_goods; Type: TABLE; Schema: trial; Owner: neondb_owner
 --
 
@@ -3857,6 +4181,19 @@ ALTER SEQUENCE trial.distributor_goods_id_seq OWNER TO neondb_owner;
 
 ALTER SEQUENCE trial.distributor_goods_id_seq OWNED BY trial.distributor_goods.id;
 
+
+--
+-- Name: distributor_hidden_goods; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_hidden_goods (
+    distributor_id integer NOT NULL,
+    goods_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE trial.distributor_hidden_goods OWNER TO neondb_owner;
 
 --
 -- Name: distributor_materials; Type: TABLE; Schema: trial; Owner: neondb_owner
@@ -3906,6 +4243,109 @@ ALTER SEQUENCE trial.distributor_materials_id_seq OWNER TO neondb_owner;
 --
 
 ALTER SEQUENCE trial.distributor_materials_id_seq OWNED BY trial.distributor_materials.id;
+
+
+--
+-- Name: distributor_product_submissions; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_product_submissions (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    title character varying(160) DEFAULT ''::character varying NOT NULL,
+    category character varying(80) DEFAULT ''::character varying,
+    images jsonb DEFAULT '[]'::jsonb,
+    detail_images jsonb DEFAULT '[]'::jsonb,
+    description text DEFAULT ''::text,
+    spec character varying(160) DEFAULT ''::character varying,
+    unit_name character varying(40) DEFAULT '件'::character varying,
+    suggested_price numeric(12,2) DEFAULT 0,
+    stock_qty numeric(12,3) DEFAULT 0,
+    freight_template character varying(120) DEFAULT ''::character varying,
+    qualification_urls jsonb DEFAULT '[]'::jsonb,
+    platform_fee_rate numeric(5,2),
+    review_status character varying(20) DEFAULT 'pending'::character varying,
+    review_note text DEFAULT ''::text,
+    reviewed_by integer DEFAULT 0,
+    reviewed_at timestamp with time zone,
+    goods_id integer DEFAULT 0,
+    machine_review_status character varying(20) DEFAULT 'pending'::character varying,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    deleted_at timestamp with time zone,
+    short_title character varying(80) DEFAULT ''::character varying,
+    ship_origin character varying(120) DEFAULT ''::character varying,
+    shipping_fee character varying(120) DEFAULT ''::character varying,
+    delivery_time character varying(120) DEFAULT ''::character varying
+);
+
+
+ALTER TABLE trial.distributor_product_submissions OWNER TO neondb_owner;
+
+--
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.distributor_product_submissions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.distributor_product_submissions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.distributor_product_submissions_id_seq OWNED BY trial.distributor_product_submissions.id;
+
+
+--
+-- Name: distributor_withdraws; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.distributor_withdraws (
+    id integer NOT NULL,
+    distributor_id integer NOT NULL,
+    amount numeric(10,2) DEFAULT 0 NOT NULL,
+    bank_card_id integer DEFAULT 0 NOT NULL,
+    bank_name character varying(50) DEFAULT ''::character varying,
+    card_no_snapshot character varying(30) DEFAULT ''::character varying,
+    holder_name_snapshot character varying(50) DEFAULT ''::character varying,
+    status integer DEFAULT 0,
+    reject_reason text DEFAULT ''::text,
+    transfer_no character varying(60) DEFAULT ''::character varying,
+    created_at timestamp with time zone DEFAULT now(),
+    handled_at timestamp with time zone
+);
+
+
+ALTER TABLE trial.distributor_withdraws OWNER TO neondb_owner;
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.distributor_withdraws_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.distributor_withdraws_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.distributor_withdraws_id_seq OWNED BY trial.distributor_withdraws.id;
 
 
 --
@@ -4168,10 +4608,28 @@ CREATE TABLE trial.finance_statements (
     start_date date,
     end_date date,
     remark text DEFAULT ''::text,
-    status integer DEFAULT 1,
+    status integer DEFAULT 0,
     created_at timestamp without time zone DEFAULT now(),
     deleted_at timestamp without time zone,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    supplier_id integer DEFAULT 0,
+    supplier_name character varying(200) DEFAULT ''::character varying,
+    partner_type character varying(20) DEFAULT 'customer'::character varying,
+    opening_recv numeric(12,2) DEFAULT 0,
+    opening_pay numeric(12,2) DEFAULT 0,
+    opening_balance numeric(12,2) DEFAULT 0,
+    recv_amount numeric(12,2) DEFAULT 0,
+    pay_amount numeric(12,2) DEFAULT 0,
+    collected_amount numeric(12,2) DEFAULT 0,
+    paid_amount numeric(12,2) DEFAULT 0,
+    closing_recv numeric(12,2) DEFAULT 0,
+    closing_pay numeric(12,2) DEFAULT 0,
+    net_amount numeric(12,2) DEFAULT 0,
+    settle_mode character varying(20) DEFAULT 'full'::character varying,
+    detail jsonb DEFAULT '[]'::jsonb,
+    confirm_time timestamp without time zone,
+    confirm_remark text DEFAULT ''::text,
+    admin_name character varying(100) DEFAULT ''::character varying
 );
 
 
@@ -4235,7 +4693,10 @@ CREATE TABLE trial.goods (
     can_outsource integer DEFAULT 1,
     multi_unit boolean DEFAULT false,
     multi_spec boolean DEFAULT false,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    owner_type character varying(20) DEFAULT 'official'::character varying,
+    owner_distributor_id integer DEFAULT 0,
+    platform_fee_rate numeric(5,2)
 );
 
 
@@ -4509,7 +4970,13 @@ CREATE TABLE trial.mini_order_items (
     goods_name character varying(128) NOT NULL,
     spec character varying(64) DEFAULT ''::character varying,
     price numeric(10,2) NOT NULL,
-    qty integer DEFAULT 1 NOT NULL
+    qty integer DEFAULT 1 NOT NULL,
+    seller_type character varying(20) DEFAULT 'official'::character varying,
+    seller_distributor_id integer DEFAULT 0,
+    promotion_rate_snapshot numeric(5,2) DEFAULT 0,
+    platform_fee_rate_snapshot numeric(5,2) DEFAULT 0,
+    platform_fee_amount numeric(12,2) DEFAULT 0,
+    seller_receivable_amount numeric(12,2) DEFAULT 0
 );
 
 
@@ -4559,7 +5026,13 @@ CREATE TABLE trial.mini_orders (
     delivery_type integer DEFAULT 0,
     store_id integer DEFAULT 0,
     store_name character varying(100) DEFAULT ''::character varying,
-    store_address text DEFAULT ''::text
+    store_address text DEFAULT ''::text,
+    payment_expires_at timestamp without time zone,
+    cancel_reason character varying(120) DEFAULT ''::character varying,
+    price_adjusted_from numeric(10,2),
+    price_adjustment_note character varying(255) DEFAULT ''::character varying,
+    price_adjusted_at timestamp without time zone,
+    price_change_requested boolean DEFAULT false
 );
 
 
@@ -4739,6 +5212,85 @@ CREATE SEQUENCE trial.mini_search_log_id_seq
 ALTER SEQUENCE trial.mini_search_log_id_seq OWNER TO neondb_owner;
 
 --
+-- Name: mini_service_messages; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.mini_service_messages (
+    id bigint NOT NULL,
+    session_id bigint NOT NULL,
+    role character varying(20) NOT NULL,
+    source character varying(20) DEFAULT 'nova'::character varying,
+    content text NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE trial.mini_service_messages OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.mini_service_messages_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.mini_service_messages_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.mini_service_messages_id_seq OWNED BY trial.mini_service_messages.id;
+
+
+--
+-- Name: mini_service_sessions; Type: TABLE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE TABLE trial.mini_service_sessions (
+    id bigint NOT NULL,
+    user_id integer,
+    client_key character varying(80) DEFAULT ''::character varying NOT NULL,
+    product_id integer DEFAULT 0,
+    product_name character varying(200) DEFAULT ''::character varying,
+    product_snapshot jsonb DEFAULT '{}'::jsonb,
+    status character varying(20) DEFAULT 'ai'::character varying,
+    human_requested_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now(),
+    updated_at timestamp without time zone DEFAULT now(),
+    expires_at timestamp without time zone DEFAULT (now() + '180 days'::interval)
+);
+
+
+ALTER TABLE trial.mini_service_sessions OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE; Schema: trial; Owner: neondb_owner
+--
+
+CREATE SEQUENCE trial.mini_service_sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE trial.mini_service_sessions_id_seq OWNER TO neondb_owner;
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: trial; Owner: neondb_owner
+--
+
+ALTER SEQUENCE trial.mini_service_sessions_id_seq OWNED BY trial.mini_service_sessions.id;
+
+
+--
 -- Name: mini_user_coupons; Type: TABLE; Schema: trial; Owner: neondb_owner
 --
 
@@ -4750,7 +5302,8 @@ CREATE TABLE trial.mini_user_coupons (
     expire_at timestamp without time zone NOT NULL,
     used_at timestamp without time zone,
     order_id integer,
-    claimed_at timestamp without time zone DEFAULT now()
+    claimed_at timestamp without time zone DEFAULT now(),
+    coupon_type character varying(20)
 );
 
 
@@ -4881,7 +5434,11 @@ CREATE TABLE trial.mini_videos (
     view_count integer DEFAULT 0,
     sort integer DEFAULT 0,
     status smallint DEFAULT 1,
-    created_at timestamp without time zone DEFAULT now()
+    created_at timestamp without time zone DEFAULT now(),
+    content_type character varying(20) DEFAULT 'video'::character varying NOT NULL,
+    content text DEFAULT ''::text,
+    images jsonb DEFAULT '[]'::jsonb NOT NULL,
+    source_url text DEFAULT ''::text
 );
 
 
@@ -5494,7 +6051,8 @@ CREATE TABLE trial.sale_customers (
     create_time timestamp without time zone DEFAULT now(),
     update_time timestamp without time zone DEFAULT now(),
     deleted_at timestamp without time zone,
-    shop_id integer DEFAULT 1 NOT NULL
+    shop_id integer DEFAULT 1 NOT NULL,
+    linked_supplier_id integer DEFAULT 0
 );
 
 
@@ -6249,6 +6807,13 @@ ALTER TABLE ONLY public.depts ALTER COLUMN id SET DEFAULT nextval('public.depts_
 
 
 --
+-- Name: distributor_bank_cards id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_bank_cards ALTER COLUMN id SET DEFAULT nextval('public.distributor_bank_cards_id_seq'::regclass);
+
+
+--
 -- Name: distributor_goods id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
@@ -6260,6 +6825,20 @@ ALTER TABLE ONLY public.distributor_goods ALTER COLUMN id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.distributor_materials ALTER COLUMN id SET DEFAULT nextval('public.distributor_materials_id_seq'::regclass);
+
+
+--
+-- Name: distributor_product_submissions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_product_submissions ALTER COLUMN id SET DEFAULT nextval('public.distributor_product_submissions_id_seq'::regclass);
+
+
+--
+-- Name: distributor_withdraws id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_withdraws ALTER COLUMN id SET DEFAULT nextval('public.distributor_withdraws_id_seq'::regclass);
 
 
 --
@@ -6435,6 +7014,20 @@ ALTER TABLE ONLY public.mini_reviews ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.mini_search_log ALTER COLUMN id SET DEFAULT nextval('public.mini_search_log_id_seq'::regclass);
+
+
+--
+-- Name: mini_service_messages id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mini_service_messages ALTER COLUMN id SET DEFAULT nextval('public.mini_service_messages_id_seq'::regclass);
+
+
+--
+-- Name: mini_service_sessions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mini_service_sessions ALTER COLUMN id SET DEFAULT nextval('public.mini_service_sessions_id_seq'::regclass);
 
 
 --
@@ -6711,6 +7304,13 @@ ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.w
 
 
 --
+-- Name: distributor_bank_cards id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_bank_cards ALTER COLUMN id SET DEFAULT nextval('trial.distributor_bank_cards_id_seq'::regclass);
+
+
+--
 -- Name: distributor_goods id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
 --
 
@@ -6722,6 +7322,34 @@ ALTER TABLE ONLY trial.distributor_goods ALTER COLUMN id SET DEFAULT nextval('tr
 --
 
 ALTER TABLE ONLY trial.distributor_materials ALTER COLUMN id SET DEFAULT nextval('trial.distributor_materials_id_seq'::regclass);
+
+
+--
+-- Name: distributor_product_submissions id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_product_submissions ALTER COLUMN id SET DEFAULT nextval('trial.distributor_product_submissions_id_seq'::regclass);
+
+
+--
+-- Name: distributor_withdraws id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_withdraws ALTER COLUMN id SET DEFAULT nextval('trial.distributor_withdraws_id_seq'::regclass);
+
+
+--
+-- Name: mini_service_messages id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.mini_service_messages ALTER COLUMN id SET DEFAULT nextval('trial.mini_service_messages_id_seq'::regclass);
+
+
+--
+-- Name: mini_service_sessions id; Type: DEFAULT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.mini_service_sessions ALTER COLUMN id SET DEFAULT nextval('trial.mini_service_sessions_id_seq'::regclass);
 
 
 --
@@ -7001,12 +7629,12 @@ COPY public.collect_receipt (id, receipt_no, order_sn, customer_id, customer_nam
 108	SK202605251332		21	阿斯娜		9342.45	2026-05-25	cash	58	公司收入账号		1	2026-05-25 12:30:05.975811	\N		1
 109	SK202606099755	HT20260608001	0		四子王旗于洋	500.00	2026-06-08	customer	58	公司收入账号	合同HT20260608001审核自动生成	1	2026-06-09 04:45:56.095906	\N	sale	1
 110	SK202606097385	HT20260603001	60	古城主题邮局文创店		3810.00	2026-05-29	cash	7	公司支出账户	合同收款 #288	1	2026-06-09 11:16:58.393105	\N		1
-111	SK202606099406		5	蒙优农品		3950.00	2025-11-10	cash	58	公司收入账号		1	2026-06-09 11:53:46.435774	\N		1
 114	SK202606133262	XS202606123658	63	美团平台	美团平台	124.41	2026-03-17	customer	59	零售收款账户	[美团] 美团订单 XS202606123658	1	2026-06-13 03:06:06.89829	\N		1
 115	SK202606134560	XS202606129510	63	美团平台	美团平台	28.71	2026-03-19	customer	59	零售收款账户	[美团] 美团订单 XS202606129510	1	2026-06-13 03:06:07.350018	\N		1
 116	SK202606139468	XS202606124495	63	美团平台	美团平台	20.88	2026-03-24	customer	59	零售收款账户	[美团] 美团订单 XS202606124495	1	2026-06-13 03:06:07.799403	\N		1
 117	SK202606136802	XS202606125003	63	美团平台	美团平台	19.57	2026-03-30	customer	59	零售收款账户	[美团] 美团订单 XS202606125003	1	2026-06-13 03:06:08.250013	\N		1
 118	SK202606138625	XS202606121749	63	美团平台	美团平台	38.80	2026-03-30	customer	59	零售收款账户	[美团] 美团订单 XS202606121749	1	2026-06-13 03:06:08.705825	\N		1
+111	SK202606099406		5	蒙优农品		3950.00	2025-11-10	cash	58	公司收入账号		0	2026-06-09 11:53:46.435774	2026-08-04 11:45:37.926459		1
 119	SK202606131230	XS202606128193	63	美团平台	美团平台	17.40	2026-03-30	customer	59	零售收款账户	[美团] 美团订单 XS202606128193	1	2026-06-13 03:06:09.165046	\N		1
 120	SK202606133468	XS202606129409	63	美团平台	美团平台	25.06	2026-03-30	customer	59	零售收款账户	[美团] 美团订单 XS202606129409	1	2026-06-13 03:06:09.642842	\N		1
 121	SK202606136677	XS202606127912	63	美团平台	美团平台	11.22	2026-03-30	customer	59	零售收款账户	[美团] 美团订单 XS202606127912	1	2026-06-13 03:06:10.138761	\N		1
@@ -7136,6 +7764,9 @@ COPY public.collect_receipt (id, receipt_no, order_sn, customer_id, customer_nam
 244	SK202606165215	XS202606167300	63	美团平台	美团平台	216.00	2026-06-16	customer	59	零售收款账户	[美团] 美团订单 XS202606167300	1	2026-06-16 06:11:13.210333	\N		1
 245	SK202606179622	HT20260617001	3	阿润诺尔		722.00	2026-06-17	cash	58	公司收入账号	合同收款 #415	1	2026-06-17 08:48:12.128103	\N		1
 246	SK202606174621	XS202606175755	63	美团平台	美团平台	24.36	2026-06-17	customer	59	零售收款账户	[美团] 美团订单 XS202606175755	1	2026-06-17 11:46:58.022062	\N		1
+247	SK202608046984	HT20260803001	21	阿斯娜		1902.00	2026-08-03	cash	58	公司收入账号	合同收款 #422	1	2026-08-04 02:46:41.985103	\N		1
+248	SK202608053586	HT20260604001	61	阿旗乌兰牧骑		1260.00	2026-06-04	cash	58	公司收入账号	合同收款 #289	1	2026-08-05 04:58:17.541558	\N		1
+249	SK202608189054		21	阿斯娜		11792.22	2026-08-18	cash	58	公司收入账号		1	2026-08-18 05:18:09.660715	\N		1
 \.
 
 
@@ -7153,6 +7784,56 @@ COPY public.company_info (id, name, logo, address, tel, email, remark, shop_id) 
 --
 
 COPY public.customer_level_prices (id, level_id, goods_id, level_price) FROM stdin;
+1	1	3104	8.00
+2	1	877	8.50
+3	1	994	10.00
+4	1	989	11.50
+5	1	980	20.00
+6	1	992	20.00
+7	1	936	9.60
+8	1	1018	8.00
+9	1	864	1.00
+10	1	1008	13.00
+11	1	876	6.40
+12	1	991	27.00
+13	1	916	23.00
+14	1	885	16.00
+16	1	3086	40.00
+17	1	941	16.50
+18	1	938	16.50
+19	1	3085	7.50
+20	1	874	57.00
+21	1	920	15.00
+22	1	824	30.00
+23	1	937	18.00
+24	1	875	9.80
+25	1	836	6.00
+26	1	3103	4.00
+27	1	981	23.00
+28	1	1014	17.00
+29	1	1017	1.00
+30	1	3090	30.00
+31	1	934	15.50
+32	1	996	17.00
+33	1	976	17.00
+34	1	988	18.50
+35	1	933	10.40
+36	1	964	9.80
+37	1	935	15.50
+38	1	926	29.70
+39	1	927	24.75
+40	1	915	9.90
+41	1	924	9.90
+42	1	917	10.89
+43	1	1007	14.00
+44	1	867	12.00
+45	1	871	9.50
+46	1	869	10.00
+47	1	963	2.00
+48	1	958	1.80
+15	1	3093	11.00
+50	1	3179	9.60
+51	1	827	8.50
 \.
 
 
@@ -7161,6 +7842,7 @@ COPY public.customer_level_prices (id, level_id, goods_id, level_price) FROM std
 --
 
 COPY public.customer_levels (id, name, discount, commission_rate, sort, created_at) FROM stdin;
+1	阿斯娜批发价	100.00	0.00	10	2026-07-26 15:28:38.046398+00
 \.
 
 
@@ -7173,10 +7855,26 @@ COPY public.depts (id, name, parent_id, sort, status, created_at, shop_id) FROM 
 
 
 --
+-- Data for Name: distributor_bank_cards; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_bank_cards (id, distributor_id, bank_name, card_no, holder_name, is_default, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: distributor_goods; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 COPY public.distributor_goods (id, distributor_id, goods_id, status, sort, custom_price, commission_rate, created_at, visible) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_hidden_goods; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_hidden_goods (distributor_id, goods_id, created_at) FROM stdin;
 \.
 
 
@@ -7189,11 +7887,29 @@ COPY public.distributor_materials (id, title, type, content, file_url, goods_id,
 
 
 --
+-- Data for Name: distributor_product_submissions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_product_submissions (id, distributor_id, title, category, images, detail_images, description, spec, unit_name, suggested_price, stock_qty, freight_template, qualification_urls, platform_fee_rate, review_status, review_note, reviewed_by, reviewed_at, goods_id, machine_review_status, created_at, updated_at, deleted_at, short_title, ship_origin, shipping_fee, delivery_time) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_withdraws; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.distributor_withdraws (id, distributor_id, amount, bank_card_id, bank_name, card_no_snapshot, holder_name_snapshot, status, reject_reason, transfer_no, created_at, handled_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: distributors; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.distributors (id, user_id, name, phone, code, commission_rate, status, apply_reason, note, created_at, approved_at) FROM stdin;
-1	3	然	17747344571	D0001	10.00	1			2026-07-24 07:57:47.14432	2026-07-24 08:12:46.430045
+COPY public.distributors (id, user_id, name, phone, code, commission_rate, status, apply_reason, note, created_at, approved_at, platform_fee_rate, settlement_cycle_days, agreement_type, agreement_no, agreement_url, agreement_start, agreement_end, sub_mchid, merchant_onboarding_status, settlement_mode) FROM stdin;
+3	6	阿斯娜	18747637511	D0003	10.00	1			2026-07-26 12:10:07.622641	2026-07-26 12:40:38.034919	10.00	7	offline			\N	\N		not_started	manual
+1	3	然	17747344571	D0001	10.00	1			2026-07-24 07:57:47.14432	2026-07-24 08:12:46.430045	10.00	7	offline			\N	\N		not_started	manual
+2	5	王刚	18586265352	D0002	20.00	1	吴总朋友		2026-07-26 11:57:58.524793	2026-07-26 12:40:30.878609	10.00	15	offline			\N	\N		not_started	manual
 \.
 
 
@@ -7226,7 +7942,6 @@ COPY public.finance_funds (id, name, fund_type, balance, bank_name, bank_account
 41	浙江金矿包装	2	5010.76				1	2026-04-01 01:41:30.624632	2026-04-01 01:41:30.624632	2026-04-03 10:06:22.105188	1
 42	杂/采购商	2	593.36				1	2026-04-01 01:41:47.809639	2026-04-01 01:41:47.809639	2026-04-03 10:06:22.645469	1
 43	奥都奶食品	2	1755.00				1	2026-04-01 01:41:52.19548	2026-04-01 01:41:52.19548	2026-04-03 10:06:23.216924	1
-7	公司支出账户	1	-109153.34				1	2026-03-29 15:37:30.872532	2026-06-19 06:50:57.38426	\N	1
 44	阿润查干	2	1244.00				1	2026-04-01 01:42:55.914895	2026-04-01 01:42:55.914895	2026-04-03 10:06:23.750295	1
 45	茁硕乐/牛肉干	2	980.00				1	2026-04-01 01:43:28.037714	2026-04-01 01:43:28.037714	2026-04-03 10:06:24.314573	1
 46	雷记炒货	2	300.00				1	2026-04-01 01:43:48.404603	2026-04-01 01:43:48.404603	2026-04-03 10:06:24.858895	1
@@ -7235,14 +7950,13 @@ COPY public.finance_funds (id, name, fund_type, balance, bank_name, bank_account
 49	扎旗吉十奶制品	2	90.00				1	2026-04-01 01:44:12.504769	2026-04-01 01:44:12.504769	2026-04-03 10:06:26.607375	1
 50	阿齐图/巴林右旗	2	1470.00				1	2026-04-01 01:44:14.584655	2026-04-01 01:44:14.584655	2026-04-03 10:06:27.157839	1
 51	额吉伊德	2	161.00				1	2026-04-01 01:44:30.428536	2026-04-01 01:44:30.428536	2026-04-03 10:06:27.707888	1
-59	零售收款账户	2	64762.68				1	2026-04-17 10:33:24.542601	2026-07-24 09:20:18.940066	\N	1
-10	乌日力格/额外支出	1	-11460.00				1	2026-03-29 15:38:12.808151	2026-03-29 15:38:16.346442	\N	1
 17	银河包装	2	13214.10				1	2026-04-01 01:38:11.386958	2026-04-01 01:38:11.386958	2026-04-03 10:06:08.919212	1
 18	盛大印刷	2	7677.78				1	2026-04-01 01:38:49.558648	2026-04-01 01:38:49.558648	2026-04-03 10:06:09.480587	1
 19	淘宝紫辰包装	2	260.00				1	2026-04-01 01:39:01.145132	2026-04-01 01:39:01.145132	2026-04-03 10:06:10.041447	1
 20	沈阳东源包材厂	2	2381.12				1	2026-04-01 01:39:07.239587	2026-04-01 01:39:07.239587	2026-04-03 10:06:10.592153	1
 21	沈阳乾兴包装	2	254.80				1	2026-04-01 01:39:26.901642	2026-04-01 01:39:26.901642	2026-04-03 10:06:11.148388	1
 22	淘宝/江苏永发玻璃制品厂	2	1385.10				1	2026-04-01 01:39:41.946062	2026-04-01 01:39:41.946062	2026-04-03 10:06:11.685737	1
+58	公司收入账号	1	126166.90				1	2026-04-04 06:35:02.404585	2026-08-18 05:18:10.726851	\N	1
 52	奥特尔奶食品店	2	526.00				1	2026-04-01 01:44:32.50387	2026-04-01 01:44:32.50387	2026-04-03 10:06:28.251099	1
 23	山东锦食食品	2	1630.18				1	2026-04-01 01:39:46.666249	2026-04-01 01:39:46.666249	2026-04-03 10:06:12.235733	1
 53	沈阳包装	2	2785.97				1	2026-04-01 01:44:34.60976	2026-04-01 01:44:34.60976	2026-04-03 10:06:28.796527	1
@@ -7261,13 +7975,15 @@ COPY public.finance_funds (id, name, fund_type, balance, bank_name, bank_account
 56	格日勒	2	100.00				1	2026-04-01 01:45:06.859374	2026-04-01 01:45:06.859374	2026-04-03 10:06:30.605775	1
 34	锡盟艾润萨利SC	2	470.00				1	2026-04-01 01:40:38.405518	2026-04-01 01:40:38.405518	2026-04-03 10:06:18.288084	1
 57	德吉奶食品	2	270.00				1	2026-04-01 01:45:18.58188	2026-04-01 01:45:18.58188	2026-04-03 10:06:31.1476	1
+7	公司支出账户	1	-119226.34				1	2026-03-29 15:37:30.872532	2026-08-22 03:59:43.556137	\N	1
 35	阿旗北方	2	63.30				1	2026-04-01 01:40:40.547541	2026-04-01 01:40:40.547541	2026-04-03 10:06:18.838344	1
 8	孟根	1	-51797.24				1	2026-03-29 15:37:37.415389	2026-05-17 08:13:11.294341	\N	1
 36	拼多多/随机店采购	2	3087.24				1	2026-04-01 01:41:01.802908	2026-04-01 01:41:01.802908	2026-04-03 10:06:19.371705	1
-58	公司收入账号	1	103370.46				1	2026-04-04 06:35:02.404585	2026-06-17 08:48:12.182782	\N	1
 37	民族印刷厂	2	192.00				1	2026-04-01 01:41:11.181848	2026-04-01 01:41:11.181848	2026-04-03 10:06:19.917713	1
 38	淘宝/杂	2	1850.00				1	2026-04-01 01:41:15.437281	2026-04-01 01:41:15.437281	2026-04-03 10:06:20.47073	1
 5	道力干记录付款单	1	0.00				1	2026-03-29 07:56:07.75335	2026-06-07 14:44:27.349323	2026-06-07 14:44:27.349323	1
+59	零售收款账户	2	70753.78				1	2026-04-17 10:33:24.542601	2026-08-23 14:02:22.440054	\N	1
+10	乌日力格/额外支出	1	-1460.00				1	2026-03-29 15:38:12.808151	2026-08-08 03:26:13.17634	\N	1
 39	纯净奶食品	2	21510.60				1	2026-04-01 01:41:22.119502	2026-04-01 01:41:22.119502	2026-04-03 10:06:21.01012	1
 9	乌日力格	1	-45905.93				1	2026-03-29 15:38:03.482551	2026-05-17 08:13:27.890335	\N	1
 \.
@@ -7301,7 +8017,8 @@ COPY public.finance_receivable (id, customer_id, customer_name, order_sn, total_
 -- Data for Name: finance_statements; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.finance_statements (id, statement_no, customer_id, customer_name, amount, start_date, end_date, remark, status, created_at, deleted_at, shop_id) FROM stdin;
+COPY public.finance_statements (id, statement_no, customer_id, customer_name, amount, start_date, end_date, remark, status, created_at, deleted_at, shop_id, supplier_id, supplier_name, partner_type, opening_recv, opening_pay, opening_balance, recv_amount, pay_amount, collected_amount, paid_amount, closing_recv, closing_pay, net_amount, settle_mode, detail, confirm_time, confirm_remark, admin_name) FROM stdin;
+51	DZ202608043919	59	博盈商品	348.00	2025-01-01	2026-12-31		0	2026-08-04 06:59:34.352262	\N	1	140	博盈商品	both	0.00	0.00	0.00	348.00	305.00	0.00	305.00	348.00	0.00	348.00	full	[{"date": "2026-05-29", "paid": 0, "side": "pay", "type": "采购订单", "debit": 0, "credit": 305, "offset": 0, "summary": "采购入库", "order_sn": "PO2026052918554541426", "collected": 0}, {"date": "2026-05-29", "paid": 305, "side": "pay", "type": "采购付款", "debit": 0, "credit": 0, "offset": 0, "summary": "采购单付款", "order_sn": "PO2026052918554541426", "collected": 0}, {"date": "2026-05-29", "paid": 0, "side": "recv", "type": "销售合同", "debit": 348, "credit": 0, "offset": 0, "summary": "[NO:HT20260529001]", "order_sn": "HT20260529001", "collected": 0}]	\N		
 \.
 
 
@@ -7309,345 +8026,365 @@ COPY public.finance_statements (id, statement_no, customer_id, customer_name, am
 -- Data for Name: goods; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand_id, brand_name, spec, price, cost, stock, min_stock, max_stock, remark, status, images, create_time, update_time, deleted_at, goods_name, goods_sn, en_name, goods_memo, goods_type, sell_price, cost_price, barcode, safe_min, safe_max, sort, make_time, can_sale, can_buy, can_make, can_outsource, multi_unit, multi_spec, shop_id) FROM stdin;
-810			168	散货	0	散	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:45:58.352636	2026-03-29 06:45:58.352636	\N	乌日莫/奥特尔	SP0000226			1	15.00	12.00		0	0	0	0	1	1	1	1	f	f	1
-812			167	广告物料	0	散	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:00.138942	2026-03-29 06:46:00.138942	\N	花形奶锅巴	SP0000224			1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-814			167	广告物料	0	袋	0		1斤/原味	0.00	0.00	0	0	0		1		2026-03-29 06:46:01.987682	2026-03-29 06:46:01.987682	\N	奥都/真空奶豆腐	SP0000222			1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-815			170	成品	0	瓶	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:03.381383	2026-03-29 06:46:03.381383	\N	酸马奶	SP0000221			1	25.00	15.00	6900002213934	0	0	0	0	1	1	1	1	f	f	1
-816			170	成品	0	瓶	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:04.950399	2026-03-29 06:46:04.950399	\N	乌日汗大瓶酸奶	SP0000220			1	20.00	16.00	6900002209130	0	0	0	0	1	1	1	1	f	f	1
-817			170	成品	0	瓶	0		小	0.00	0.00	0	0	0		1		2026-03-29 06:46:05.861995	2026-03-29 06:46:05.861995	\N	乌日汗小瓶酸奶	SP0000219			1	8.00	6.00	6903547102122	0	0	0	0	1	1	1	1	f	f	1
-818			171	酒	0	件	0		500ML*4	0.00	0.00	0	0	0		1		2026-03-29 06:46:07.26264	2026-03-29 06:46:07.26264	\N	四季红福	SP0000218			1	120.00	100.00		0	0	0	0	1	1	1	1	f	f	1
-819			171	酒	0	桶	0		2L	0.00	0.00	0	0	0		1		2026-03-29 06:46:08.168863	2026-03-29 06:46:08.168863	\N	红日桶装酒	SP0000217			1	28.00	21.00		0	0	0	0	1	1	1	1	f	f	1
-821			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.042136	2026-03-29 06:46:10.042136	\N	天山原浆/大	SP0000215			1	25.00	16.05	6926919861169	0	0	0	0	1	1	1	1	f	f	1
-832			167	广告物料	0	袋	0		100克	0.00	0.00	0	0	0		1		2026-03-29 06:46:22.622511	2026-03-29 06:46:22.622511	\N	8元烤奶皮/成品	SP0000204			1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-833			170	成品	0	袋	0		180	0.00	0.00	0	0	0		1		2026-03-29 06:46:23.576842	2026-03-29 06:46:23.576842	\N	10元/脆香奶条	SP0000203			1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-820			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:09.089646	2026-06-12 13:24:46.654613	\N	天山原浆/小	SP0000216	牧区纯坊 天山原浆40%vol/350ml/一瓶		1	15.00	9.23	6900002169910	0	0	0	0	1	1	1	1	f	f	1
-823			167	广告物料	0	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:11.874816	2026-06-12 13:08:30.120123	\N	黄油/中瓶	SP0000213	牧区纯坊 手工黄油310克/瓶		1	25.00	15.00		0	0	0	0	1	1	1	1	f	f	1
-838			180	成品	55	袋	0		2斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:32.937152	2026-04-26 16:16:22.575727	\N	奶粉蒙古国	SP0000197			1	36.00	32.00		0	0	0	0	1	1	1	1	f	f	1
-811			167	广告物料	0	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:45:59.242186	2026-06-13 06:40:19.380225	\N	蒙古果子/格日勒	SP0000225			1	10.00	9.30		0	0	0	0	1	1	1	1	f	f	1
-809			170	成品	0	盒	0		10斤装	0.00	0.00	0	0	0		1		2026-03-29 06:45:57.423231	2026-06-07 13:47:12.339481	\N	10斤装/小米/绿色纸盒	SP0000227			1	70.00	55.00		0	0	0	0	1	1	1	1	f	f	1
-808			423	其他品牌成品	0	盒	0		100克	0.00	0.00	0	0	0		1		2026-03-29 06:45:56.452492	2026-06-07 14:06:31.735023	\N	彩色奶圈圈/透明桶装	SP0000228			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-813			167	广告物料	0	张	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:01.045929	2026-05-30 11:33:05.113423	\N	奶豆腐/超大/乌日汗	SP0000223			1	85.00	60.00	6900002239603	0	0	0	0	1	1	1	1	f	f	1
-837			172	散装	55	袋	0		1一斤	0.00	0.00	0	0	0		1		2026-03-29 06:46:31.020745	2026-06-12 13:18:34.855367	\N	甜味奶豆腐块儿/大	SP0000198	牧区纯坊 纯手工奶豆微甜500克/块		1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1
-828			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:18.944102	2026-06-07 14:28:46.356594	\N	中等/奶豆腐/	SP0000208			1	32.00	30.00		0	0	0	0	1	1	1	1	f	f	1
-829			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:19.857632	2026-07-21 04:03:15.726504	\N	奶豆腐/原味/中/科尔沁	SP0000207			1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1
-826			172	散装	0	盒	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:46:15.715184	2026-04-26 16:25:18.182639	\N	乌日汗酸奶	SP0000210			1	15.00	9.00	6900002102839	0	0	0	0	1	1	1	1	f	f	1
-834			167	广告物料	0	袋	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:24.537651	2026-06-07 09:22:49.339579	\N	新年福字袋/小	SP0000202			4	0.00	0.22		0	0	0	0	1	1	1	1	f	f	1
-804			167	广告物料	0	瓶	0		1L	0.00	0.00	0	0	0		1		2026-03-29 06:45:51.478038	2026-04-26 16:25:54.405513	\N	德吉酸奶/2斤装	SP0000232			1	18.00	15.00	6900002324565	0	0	0	0	1	1	1	1	f	f	1
-805			167	广告物料	0	瓶	0		500mL	0.00	0.00	0	0	0		1		2026-03-29 06:45:52.387318	2026-04-26 16:25:54.896585	\N	德吉酸奶/一斤装	SP0000231			1	12.00	8.00	6954129710171	0	0	0	0	1	1	1	1	f	f	1
-806			167	广告物料	0	瓶	0		250mL	0.00	0.00	0	0	0		1		2026-03-29 06:45:53.28094	2026-04-26 16:25:55.367208	\N	德吉酸奶/半斤	SP0000230			1	8.00	4.00		0	0	0	0	1	1	1	1	f	f	1
-807			170	成品	0	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:45:55.547042	2026-06-13 06:40:19.843667	\N	蒙古果/格日勒/大	SP0000229			1	16.00	12.00	6926743385045	0	0	0	0	1	1	1	1	f	f	1
-824			172	散装	62	斤	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:13.346968	2026-05-24 08:09:21.5788	\N	黄油/散装/纯净	SP0000212			5	48.00	25.00		0	0	0	0	1	1	1	1	f	f	1
-831			170	成品	0	袋	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:21.672573	2026-06-12 12:54:10.79056	\N	果条/阿润	SP0000205	牧区纯坊 散装手工油炸果条250g/袋		1	12.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-825			172	散装	0	盒	0		300ml	0.00	0.00	0	0	0		1		2026-03-29 06:46:14.691322	2026-05-30 11:33:06.035023	\N	故乡宝酸马奶	SP0000211			1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1
-836			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:29.95024	2026-06-12 13:24:48.347172	\N	礼盒/2026	SP0000199	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒		4	8.00	5.16		0	0	0	0	1	1	1	1	f	f	1
-846			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:40.760643	2026-04-26 16:16:59.346294	\N	酸奶/额吉伊德	SP0000189			1	10.00	6.00		0	0	0	0	1	1	1	1	f	f	1
-861			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:56.438149	2026-06-12 12:54:11.261397	\N	五香瓜子	SP0000174	牧区纯坊 散装原味香瓜子500克/袋		1	18.00	15.00	6900001763790	0	0	0	0	1	1	1	1	f	f	1
-875			196	定制类产品	56	盒	0		140g	0.00	0.00	0	0	0		1		2026-03-29 06:47:16.184249	2026-04-04 09:40:34.586821	\N	憨野/冻炒米	SP0000160			1	23.50	4.48	6993375937417	0	0	0	0	1	1	1	1	f	f	1
-871			180	成品	57	个	0		380g	0.00	0.00	0	0	0		1		2026-03-29 06:47:08.101844	2026-06-12 13:15:18.298417	\N	小青砖茶砖	SP0000164	牧区纯坊 青砖茶 380克/块		1	12.00	7.11	6928141402320	0	0	0	0	1	1	1	1	t	f	1
-857			167	广告物料	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:52.743295	2026-04-26 16:26:18.051593	\N	厚奶皮	SP0000178			1	25.00	19.00		0	0	0	0	1	1	1	1	f	f	1
-877			196	定制类产品	56	盒	0		120g/憨野	0.00	0.00	0	0	0		1		2026-03-29 06:47:18.386251	2026-06-12 13:24:47.84734	\N	憨野/奶锅巴/	SP0000158	牧区纯坊 香酥奶皮子锅巴120克/一盒		1	27.00	5.28	6900001584957	0	0	0	0	1	1	1	1	f	f	1
-867			180	成品	56	盒	0		5g/袋泡茶/30泡	0.00	0.00	0	0	0		1		2026-03-29 06:47:04.41107	2026-05-30 13:26:51.348032	\N	5g/青砖袋泡茶	SP0000168			1	28.00	7.96	6980240258574	0	0	0	0	1	1	1	1	t	f	1
-844			180	成品	56	盒	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:38.927496	2026-06-13 02:13:43.470447	\N	希日嘎拉奶茶专用茶	SP0000191	牧区纯坊 乌都牧奶茶 调味茶固体饮品400克/袋		1	25.00	22.00		0	0	0	0	1	1	1	1	f	f	1
-869			180	成品	55	袋	0		450g	0.00	0.00	0	0	0		1		2026-03-29 06:47:06.260498	2026-05-30 13:38:31.022859	\N	青砖碎茶	SP0000166			1	12.00	7.31		0	0	0	0	1	1	1	1	t	f	1
-850			184	袋子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:46.288178	2026-06-07 09:22:50.433922	\N	红糖袋/delicious	SP0000185			4	0.00	0.49		0	0	0	0	1	1	1	1	f	f	1
-848			181	糖果sugar	55	袋	0		净含量172	0.00	0.00	0	0	0		1		2026-03-29 06:46:43.034656	2026-04-04 09:41:00.133843	\N	10元组合糖	SP0000187			1	10.00	6.00	6945391354769	0	0	0	0	1	1	1	1	f	f	1
-859			181	糖果sugar	62	斤	0		奶油炒米/  黑芝麻/ 乌日莫糖/ 酸奶炒米/ 奶油花生	0.00	0.00	0	0	0		1		2026-03-29 06:46:54.595963	2026-06-13 04:57:06.570969	\N	糖/阿润	SP0000176	牧区纯坊 手工奶糖奶油炒米味500克/一袋		5	35.00	25.00		0	0	0	0	1	1	1	1	f	f	1
-863			172	散装	57	个	0		7克/包	0.00	0.00	0	0	0		1		2026-03-29 06:47:00.700348	2026-04-26 15:27:29.561605	\N	冻炒米/小包散/精品	SP0000172			1	0.00	0.22	6922984070163	0	0	0	0	1	1	1	1	f	f	1
-865			170	成品	55	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:47:02.573843	2026-04-26 15:30:12.769193	\N	牛肉干/和希格图	SP0000170			1	89.00	49.00	6906087912087	0	0	0	0	1	1	1	1	f	f	1
-851			170	成品	56	盒	0		3根	0.00	0.00	0	0	0		1		2026-03-29 06:46:47.22213	2026-04-26 16:11:23.681498	\N	晴王糖葫芦	SP0000184			1	0.00	14.00	6957075066268	0	0	0	0	1	1	1	1	f	f	1
-853			170	成品	62	斤	0		香辣	0.00	0.00	0	0	0		1		2026-03-29 06:46:49.040653	2026-04-26 16:12:05.681314	\N	牛肉干/散/香辣	SP0000182			1	115.00	98.00	6900002054622	0	0	0	0	1	1	1	1	f	f	1
-855			167	广告物料	65	散	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:50.934138	2026-04-26 16:12:53.511307	\N	奶锅巴/扎旗吉十奶制品	SP0000180			1	28.00	18.00	6937111207251	0	0	0	0	1	1	1	1	f	f	1
-840			180	成品	56	盒	0		300克	0.00	0.00	0	0	0		1		2026-03-29 06:46:35.18057	2026-04-26 16:16:23.517775	\N	奶茶粉战粮	SP0000195			1	20.00	15.00		0	0	0	0	1	1	1	1	f	f	1
-842			180	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:37.067494	2026-04-26 16:16:24.443777	\N	努德勒沁调和茶	SP0000193			1	25.00	22.00		0	0	0	0	1	1	1	1	f	f	1
-866			170	成品	54	瓶	0		400ke	0.00	0.00	0	0	0		1		2026-03-29 06:47:03.500209	2026-04-26 15:30:53.830618	\N	酸奶/纯净	SP0000169			1	12.00	6.00		0	0	0	0	1	1	1	1	f	f	1
-854			170	成品	62	斤	0		原味	0.00	0.00	0	0	0		1		2026-03-29 06:46:49.989028	2026-05-16 08:28:44.212667	\N	牛肉干/散/原味	SP0000181			5	115.00	98.00	6939980951432	0	0	0	0	1	1	1	1	f	f	1
-895			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:37.070662	2026-04-04 09:40:14.8887	\N	黄油渣月饼	SP0000140			1	8.00	5.00	6900001407174	0	0	0	0	1	1	1	1	f	f	1
-894			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:36.135289	2026-04-04 09:40:15.8266	\N	酸奶月饼	SP0000141			1	8.00	5.00	6900001418318	0	0	0	0	1	1	1	1	f	f	1
-893			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:35.211921	2026-04-04 09:40:16.790561	\N	奶豆腐月饼	SP0000142			1	8.00	5.00	6900001427497	0	0	0	0	1	1	1	1	f	f	1
-892			198	供货品	54	瓶	0		250	0.00	0.00	0	0	0		1		2026-03-29 06:47:34.284505	2026-05-28 15:20:03.427954	\N	那牧尔酸奶	SP0000143			1	8.00	4.00	6900001436777	0	0	0	0	1	1	1	1	f	f	1
-891			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:32.872859	2026-04-04 09:40:18.688385	\N	芝士奶豆腐月饼	SP0000144			1	8.00	5.00	6900001442932	0	0	0	0	1	1	1	1	f	f	1
-890			172	散装	62	斤	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.97204	2026-05-30 11:58:30.649672	\N	红枣	SP0000145			1	18.00	11.67	6900001459821	0	0	0	0	1	1	1	1	f	f	1
-856			170	成品	53	张	0		1.2	0.00	0.00	0	0	0		1		2026-03-29 06:46:51.851488	2026-05-28 15:39:30.126214	\N	科尔沁/大奶豆腐	SP0000179			1	48.00	33.00	6974218180685	0	0	0	0	1	1	1	1	f	f	1
-887			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:27.782543	2026-05-30 10:44:16.349627	\N	羊乳奶粉/奶茶专用	SP0000148			1	32.00	25.00	6900001481464	0	0	0	0	1	1	1	1	f	f	1
-882			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:23.133723	2026-07-19 14:05:41.408836	\N	阿润月饼/黄油渣馅	SP0000153			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-886			170	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:26.803653	2026-04-04 09:40:23.797224	\N	冻炒米/科尔沁	SP0000149			1	12.00	7.00	6900001499679	0	0	0	0	1	1	1	1	f	f	1
-870			180	成品	57	个	0		1.5kg	0.00	0.00	0	0	0		1		2026-03-29 06:47:07.159071	2026-04-26 15:29:41.524191	\N	大青砖茶砖	SP0000165			1	35.00	273.05	6910261376045	0	0	0	0	1	1	1	1	t	f	1
-888			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:29.077221	2026-05-30 10:44:15.900438	\N	河套奶粉	SP0000147			1	18.00	14.00	6900001473306	0	0	0	0	1	1	1	1	f	f	1
-860			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:55.53842	2026-04-26 16:20:29.366472	\N	普通瓜子	SP0000175			1	12.00	10.00	6915044718067	0	0	0	0	1	1	1	1	f	f	1
-880			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:21.300867	2026-07-19 14:05:42.537837	\N	阿润月饼/五仁馅	SP0000155	牧区纯坊 纯手工月饼 五仁馅350克/一袋		1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-881			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:22.211561	2026-07-19 14:05:41.956867	\N	阿润月饼/奶皮子馅	SP0000154			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-852			170	成品	62	斤	0		孜然	0.00	0.00	0	0	0		1		2026-03-29 06:46:48.134464	2026-04-26 16:12:05.210481	\N	牛肉干/散/孜然	SP0000183			1	115.00	98.00	6961257264978	0	0	0	0	1	1	1	1	f	f	1
-879			167	广告物料	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:20.325013	2026-06-13 03:10:18.675769	\N	干肉奶茶	SP0000156			1	15.00	6.00	6982118636994	0	0	0	0	1	1	1	1	f	f	1
-876			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-03-29 06:47:17.101234	2026-04-04 09:40:33.593086	\N	憨野/奶条	SP0000159			1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1
-845			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:39.821893	2026-07-12 06:09:21.749902	\N	乳清饮料	SP0000190	牧区纯乳清冷饮450克/杯		1	6.00	4.53	6943774380698	0	0	0	0	1	1	1	1	f	f	1
-873			192	牛肉干	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:12.37242	2026-06-07 09:22:51.546691	\N	专袋/牛肉干包装	SP0000162			4	0.00	1.47	6980832219752	0	0	0	0	1	1	1	1	f	f	1
-864			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:01.663181	2026-04-04 09:40:44.95816	\N	礼盒/腰封	SP0000171			1	0.50	0.37		0	0	0	0	1	1	1	1	f	f	1
-862			187	黄油	54	瓶	0		120mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:59.307415	2026-04-04 09:40:46.859721	\N	专瓶/黄油渣	SP0000173			1	0.00	1.80		0	0	0	0	1	1	1	1	f	f	1
-858			170	成品	56	盒	0		3棵	0.00	0.00	0	0	0		1		2026-03-29 06:46:53.65596	2026-04-26 16:02:59.960371	\N	糖葫芦	SP0000177			1	10.00	6.00	6963465779827	0	0	0	0	1	1	1	1	f	f	1
-885			172	散装	62	斤	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:25.913003	2026-06-13 06:37:36.09636	\N	冻炒米/散装	SP0000150			5	25.00	16.00	6900001505720	0	0	0	0	1	1	1	1	f	f	1
-868			180	成品	55	袋	0		450g/25袋	0.00	0.00	0	0	0		1		2026-03-29 06:47:05.316893	2026-06-12 13:11:00.165315	\N	16g青砖袋泡茶	SP0000167	牧区纯坊 速溶青砖茶400克/袋		1	18.00	10.17	6974109183959	0	0	0	0	1	1	1	1	t	f	1
-841			180	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:36.092855	2026-04-26 16:16:23.981491	\N	奶茶粉贡格尔	SP0000194			1	22.00	18.00		0	0	0	0	1	1	1	1	f	f	1
-884			170	成品	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.971807	2026-05-30 10:16:20.580944	\N	实惠/奶豆腐	SP0000151			1	20.00	10.00	6900001519215	0	0	0	0	1	1	1	1	f	f	1
-849			181	糖果sugar	55	袋	0		净含量172	0.00	0.00	0	0	0		1		2026-03-29 06:46:43.975249	2026-04-04 09:40:59.149522	\N	15元组合糖	SP0000186			1	15.00	8.60		0	0	0	0	1	1	1	1	f	f	1
-847			170	成品	55	袋	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:46:41.675045	2026-04-26 16:16:59.83195	\N	乌日莫/袋装	SP0000188			1	10.00	7.00		0	0	0	0	1	1	1	1	f	f	1
-889			170	成品	56	盒	0		1盒	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.038654	2026-05-30 10:44:15.437713	\N	奶皮卷/科尔沁	SP0000146			1	30.00	15.00	6900001463143	0	0	0	0	1	1	1	1	f	f	1
-843			172	散装	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:38.007844	2026-04-26 16:16:24.906588	\N	阿依古丽奶茶专用红茶	SP0000192			1	0.00	22.00		0	0	0	0	1	1	1	1	f	f	1
-878			170	成品	56	盒	0		1一斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:19.354998	2026-04-26 15:27:11.664307	\N	羊奶粉/1斤	SP0000157			1	18.00	12.50		0	0	0	0	1	1	1	1	f	f	1
-923			172	散装	62	斤	0		{"unit_linked_goods":{"炒米海丰袋装":{"id":932,"name":"炒米海丰袋装"}}}	0.00	0.00	0	0	0		1		2026-03-29 06:48:04.51461	2026-06-09 02:17:57.541142	\N	海丰炒米/散装/硬口/	SP0000112			5	7.50	4.80	6900001127456	0	0	0	0	1	1	1	1	t	f	1
-938			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:18.849827	2026-04-04 09:39:32.368854	\N	透明成品/鲜奶酪/甜味/线下	SP0000097			1	29.80	0.00	6977375240277	0	0	0	0	1	1	1	1	f	f	1
-936			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:16.97035	2026-04-04 09:39:34.223162	\N	透明成品/奶条/甜味/线下	SP0000099			1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1
-934			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:15.030001	2026-04-04 09:39:36.112874	\N	透明成品/奶皮千层/线下	SP0000101			1	26.60	0.00	6900001013558	0	0	0	0	1	1	1	1	f	f	1
-928			178	塑料袋	55	袋	0		大/中/小	0.00	0.00	0	0	0		1		2026-03-29 06:48:09.276363	2026-04-04 09:39:41.706616	\N	塑料购物袋	SP0000107			1	0.00	0.00	6900001075048	0	0	0	0	1	1	1	1	f	f	1
-915			170	成品	56	盒	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:47:56.98916	2026-06-13 06:46:21.808426	\N	黄油渣/盒	SP0000120			1	12.00	10.00	6900001205597	0	0	0	0	1	1	1	1	f	f	1
-899			170	成品	54	瓶	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:41.411767	2026-06-12 13:08:30.931341	\N	纯净/黄油/斤	SP0000136	牧区纯坊 精品黄油420克/瓶		1	35.00	22.00	6900001367517	0	0	0	0	1	1	1	1	f	f	1
-908			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:49.741949	2026-06-22 03:42:25.218999	\N	哈斯乌拉牛肉干500g原味	SP0000127	牧区纯坊 风干牛肉干500克/袋		1	98.00	89.00	6900001278368	0	0	0	0	1	1	1	1	f	f	1
-901			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:47:43.221915	2026-06-30 02:18:32.40348	\N	手工白花炒米/散装	SP0000134			5	7.00	5.17	6900001345795	0	0	0	0	1	1	1	1	t	f	1
-912			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:53.899291	2026-04-04 09:39:57.700902	\N	蓝旗绿乳糖水果	SP0000123			1	6.00	4.00	6900001238866	0	0	0	0	1	1	1	1	f	f	1
-910			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:51.965511	2026-04-04 09:39:59.637306	\N	蓝旗绿乳糖奶香酥	SP0000125			1	6.00	4.00	6900001257630	0	0	0	0	1	1	1	1	f	f	1
-926			172	散装	57	个	0		1斤2两	0.00	0.00	0	0	0		1		2026-03-29 06:48:07.413569	2026-06-12 13:18:33.896029	\N	大奶豆腐砖/1.2斤	SP0000109	牧区纯坊 纯手工奶豆腐原味350克/块		1	35.00	25.00	6900001096391	0	0	0	0	1	1	1	1	f	f	1
-921			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:48:02.593872	2026-06-12 13:23:40.57332	\N	嚼口脆炒米糖/散装	SP0000114	牧区纯坊 牧区奶糖 爵口味 250克		5	25.00	22.00	6900001147035	0	0	0	0	1	1	1	1	t	f	1
-924			170	成品	55	袋	0		300克	0.00	0.00	0	0	0		1		2026-03-29 06:48:05.452649	2026-05-30 10:44:16.807833	\N	冻炒米/袋装	SP0000111			1	12.00	7.00	6900001115240	0	0	0	0	1	1	1	1	f	f	1
-896			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:37.982567	2026-04-04 09:40:13.876275	\N	奶皮月饼	SP0000139			1	8.00	5.00	6900001399224	0	0	0	0	1	1	1	1	f	f	1
-903			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:45.154085	2026-05-29 11:29:06.339154	\N	盛宇燃奶豆腐/甜味	SP0000132			1	26.00	19.00	6900001329621	0	0	0	0	1	1	1	1	f	f	1
-930			170	成品	55	袋	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:48:11.17935	2026-05-28 16:13:49.526286	\N	加沙奶豆腐	SP0000105			1	16.00	12.00	6973630778288	0	0	0	0	1	1	1	1	f	f	1
-917			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:58.885589	2026-06-13 06:37:33.757237	\N	机器乌日末液体	SP0000118			1	15.00	9.00	6900001182829	0	0	0	0	1	1	1	1	f	f	1
-919			170	成品	54	瓶	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:48:00.739062	2026-04-26 15:38:18.640347	\N	黄油/斤	SP0000116			1	26.00	20.00	6900001162463	0	0	0	0	1	1	1	1	f	f	1
-906			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:47.908082	2026-06-13 06:37:34.684758	\N	真空奶豆腐砖/原味	SP0000129			1	26.00	19.00	6900001297957	0	0	0	0	1	1	1	1	f	f	1
-898			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:47:40.504891	2026-06-07 09:22:52.673303	\N	透专标签/奶皮千层	SP0000137			4	0.00	0.07	6900001376529	0	0	0	0	1	1	1	1	f	f	1
-932			170	成品	55	袋	0		500克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:48:13.155796	2026-06-07 11:20:15.904649	\N	炒米海丰袋装	SP0000103			1	7.50	5.50	6958856810059	0	0	0	0	1	1	1	1	f	f	1
-914			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:55.689564	2026-04-04 09:39:55.808835	\N	蓝旗绿乳糖炼乳	SP0000121			1	6.00	4.00	6900001214103	0	0	0	0	1	1	1	1	f	f	1
-950			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:30.827947	2026-06-07 09:22:53.768889	\N	透专标签/奶皮卷	SP0000085			4	0.00	0.37	6900000856863	0	0	0	0	1	1	1	1	f	f	1
-951			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:32.155746	2026-06-07 09:23:01.276417	\N	透专标签/冻炒米	SP0000084			4	0.00	0.37	6900000847671	0	0	0	0	1	1	1	1	f	f	1
-949			184	袋子	53	张	0		500克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:29.858794	2026-04-04 09:39:21.82756	\N	专袋/乌日莫/炒米	SP0000086			1	0.00	0.79	6900000861218	0	0	0	0	1	1	1	1	f	f	1
-948			184	袋子	53	张	0		250克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:28.905411	2026-04-04 09:39:22.794312	\N	专袋/乌日莫	SP0000087			1	0.00	0.46	6900000874528	0	0	0	0	1	1	1	1	f	f	1
-947			167	广告物料	53	张	0		价格/规格/不定	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.999927	2026-04-04 09:39:23.781238	\N	展示用卡牌	SP0000088			1	0.00	0.00	6900000881797	0	0	0	0	1	1	1	1	f	f	1
-946			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.116959	2026-04-04 09:39:24.755591	\N	半成品/透明/鲜奶皮	SP0000089			2	26.60	14.00	6900000899530	0	0	0	0	1	1	1	1	f	f	1
-945			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:26.204461	2026-04-04 09:39:25.684083	\N	半成品/透明/奶皮卷	SP0000090			2	26.60	13.00	6900000907890	0	0	0	0	1	1	1	1	f	f	1
-943			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:24.289833	2026-04-04 09:39:27.623013	\N	半成品/透明/原味奶条	SP0000092			2	22.00	7.20	6900000924342	0	0	0	0	1	1	1	1	f	f	1
-942			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:23.394765	2026-04-04 09:39:28.545146	\N	半成品/透明/甜味奶条	SP0000093			2	22.00	6.80	6900000935538	0	0	0	0	1	1	1	1	f	f	1
-941			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:22.463963	2026-04-04 09:39:29.486763	\N	透明成品/鲜奶酪/原味/线下	SP0000094			1	29.80	0.00	6900000947515	0	0	0	0	1	1	1	1	f	f	1
-905			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:47.007702	2026-06-12 13:18:34.394702	\N	真空奶豆腐砖/甜味	SP0000130	牧区纯坊 纯手工奶豆腐微甜350克/块		1	26.00	17.00	6900001305887	0	0	0	0	1	1	1	1	f	f	1
-940			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:21.541764	2026-04-26 15:27:43.599047	\N	半成品/透明/甜味/鲜奶酪	SP0000095			2	29.80	13.00	6900000955561	0	0	0	0	1	1	1	1	f	f	1
-937			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:17.935558	2026-04-04 09:39:33.316193	\N	透明成品/鲜奶皮/线下	SP0000098			1	29.80	0.00	6900000986032	0	0	0	0	1	1	1	1	f	f	1
-916			172	散装	62	斤	0		半斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:57.888413	2026-06-22 03:38:38.718121	\N	脆奶条/散装/科尔沁	SP0000119			5	25.00	13.00	6900001196244	0	0	0	0	1	1	1	1	t	f	1
-933			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:14.106114	2026-04-04 09:39:37.040944	\N	透明成品/奶条/原味/线下	SP0000102			1	22.00	0.00	6900001026070	0	0	0	0	1	1	1	1	f	f	1
-904			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:46.093461	2026-05-29 11:29:06.786727	\N	盛宇燃奶豆腐/原味	SP0000131			1	26.00	19.00	6900001315573	0	0	0	0	1	1	1	1	f	f	1
-918			170	成品	54	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:59.814553	2026-06-12 13:08:29.071972	\N	黄油/半斤	SP0000117	牧区纯坊 纯手工熬制黄油250克/瓶		1	16.00	11.00	6900001176074	0	0	0	0	1	1	1	1	f	f	1
-927			172	散装	57	个	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:48:08.309904	2026-04-04 09:39:42.653272	\N	小奶豆腐砖/1斤	SP0000108			1	30.00	20.00	6900001086128	0	0	0	0	1	1	1	1	f	f	1
-925			172	散装	57	个	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:48:06.43905	2026-04-04 09:39:44.622632	\N	小/无印花/奶豆腐砖/1斤	SP0000110			1	32.00	20.00	6900001102849	0	0	0	0	1	1	1	1	f	f	1
-944			200	给组装好产品	56	盒	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:25.20265	2026-04-26 15:27:28.557107	\N	半成品/透明/奶皮千层	SP0000091			2	25.60	12.00	6900000917840	0	0	0	0	1	1	1	1	f	f	1
-929			170	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:48:10.195771	2026-05-30 10:26:42.193132	\N	白砂糖	SP0000106			1	5.00	3.50	6900001064304	0	0	0	0	1	1	1	1	f	f	1
-931			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:48:12.214368	2026-06-22 03:42:24.97059	\N	炒米粉/aag	SP0000104			1	6.50	4.80	6900001043080	0	0	0	0	1	1	1	1	f	f	1
-913			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:54.788268	2026-04-04 09:39:56.730814	\N	蓝旗绿乳糖黄油球	SP0000122			1	6.00	4.00	6900001223574	0	0	0	0	1	1	1	1	f	f	1
-911			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:52.948674	2026-04-04 09:39:58.67584	\N	蓝旗绿乳糖果仁酥	SP0000124			1	6.00	4.00	6900001241338	0	0	0	0	1	1	1	1	f	f	1
-909			181	糖果sugar	55	袋	0		450g	0.00	0.00	0	0	0		1		2026-03-29 06:47:50.676924	2026-04-04 09:40:00.640344	\N	蓝旗绿乳糖惠虹糖	SP0000126			1	9.00	7.00	6900001262639	0	0	0	0	1	1	1	1	f	f	1
-935			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:16.074131	2026-06-12 13:59:50.24209	\N	透明成品/奶皮卷/线下	SP0000100	牧区纯坊 奶皮子有点卷系列		1	26.60	0.00	6900001005826	0	0	0	0	1	1	1	1	f	f	1
-900			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:47:42.322564	2026-06-07 07:32:55.888489	\N	透专标签/脆香奶条/微甜	SP0000135			1	0.00	0.10	6900001356463	0	0	0	0	1	1	1	1	f	f	1
-902			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:47:44.189326	2026-04-28 03:06:02.264782	\N	乌日莫糖/散装	SP0000133			5	30.00	22.00	6900001338681	0	0	0	0	1	1	1	1	t	f	1
-897			198	供货品	55	袋	0		5	0.00	0.00	0	0	0		1		2026-03-29 06:47:39.086674	2026-04-04 09:40:12.916589	\N	早餐包/那牧尔	SP0000138			1	15.00	10.00	6900001382864	0	0	0	0	1	1	1	1	f	f	1
-939			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:20.581591	2026-04-26 15:27:43.107978	\N	半成品/透明/原味/鲜奶酪	SP0000096			2	29.80	13.00	6900000966050	0	0	0	0	1	1	1	1	f	f	1
-1006			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:32.29213	2026-04-04 09:38:26.14676	\N	顺丰快递费	SP0000028			1	0.00	0.00	6900000286232	0	0	0	0	1	1	1	1	f	f	1
-1022			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:47.397246	2026-04-21 05:37:29.68895	\N	专袋/传统奶豆腐	SP0000012			4	0.00	0.55	6900000127767	0	0	0	0	1	1	1	1	f	f	1
-974			203	组装好品	54	瓶	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:55.46244	2026-06-07 09:23:02.936925	\N	纯净黄油/瓶装好的	SP0000060			4	0.00	6.00	6900000604359	0	0	0	0	1	1	1	1	t	f	1
-972			172	散装	62	斤	0		45散称/斤/9元/100克	0.00	0.00	0	0	0		1		2026-03-29 06:48:53.114651	2026-04-04 09:38:59.079705	\N	原味/散称/奶豆腐块儿	SP0000062			1	70.00	45.00	6900000623124	0	0	0	0	1	1	1	1	f	f	1
-1020			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:45.516509	2026-06-08 06:49:07.516116	\N	标签/不干胶/奶果子	SP0000014			4	0.00	0.18	6900000148085	0	0	0	0	1	1	1	1	f	f	1
-980			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0		1		2026-03-29 06:49:02.270151	2026-06-11 07:21:14.663869	\N	新/青砖奶茶	SP0000054			1	58.00	0.00	6977252570039	0	0	0	0	1	1	1	1	f	f	1
-1017			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:42.517342	2026-04-21 05:37:34.651764	\N	手提袋	SP0000017			4	0.00	0.94	6900000178722	0	0	0	0	1	1	1	1	f	f	1
-970			170	成品	56	盒	0		200克	0.00	0.00	0	0	0	供货价13	1		2026-03-29 06:48:51.325392	2026-04-26 15:27:42.644649	\N	热奶豆腐碗	SP0000064			1	15.00	10.00	6900000642521	0	0	0	0	1	1	1	1	f	f	1
-961			201	亚克力	56	盒	0		182X120X28/烤奶豆腐片/奶皮卷	0.00	0.00	0	0	0		1		2026-03-29 06:48:41.925836	2026-06-07 09:22:53.220283	\N	扁盒/亚克力/带内托	SP0000074			4	0.00	1.75	6900000747152	0	0	0	0	1	1	1	1	f	f	1
-1012			204	其他成本	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:37.853679	2026-04-04 09:38:19.778259	\N	北方人工费	SP0000022			1	0.00	1.30	6900000221261	0	0	0	0	1	1	1	1	f	f	1
-990			210	奶果子	55	袋	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:14.199822	2026-06-07 09:23:08.464246	\N	奶果子/专用塑膜袋	SP0000044			4	0.00	0.10	6900000443474	0	0	0	0	1	1	1	1	t	f	1
-1004			204	其他成本	59	件	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:30.397892	2026-04-04 09:38:28.363081	\N	圆通速递快递费	SP0000030			1	0.00	4.00	6900000308856	0	0	0	0	1	1	1	1	f	f	1
-1002			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:28.558493	2026-04-04 09:38:30.339759	\N	封口机/真空	SP0000032			1	0.00	3800.00	6900000324528	0	0	0	0	1	1	1	1	f	f	1
-1019			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:44.564594	2026-06-08 06:49:07.988728	\N	标签/不干胶/冻炒米	SP0000015			4	0.00	0.11	6900000151480	0	0	0	0	1	1	1	1	f	f	1
-1016			187	黄油	54	瓶	0		100ML	0.00	0.00	0	0	0		1		2026-03-29 06:49:41.599301	2026-04-21 05:50:59.336003	\N	专瓶/黄油	SP0000018			4	0.00	1.80	6900000186971	0	0	0	0	1	1	1	1	f	f	1
-954			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:34.870605	2026-06-07 09:22:55.97699	\N	透专标签/乳清奶条/甜味	SP0000081			4	0.00	0.05	6900000815004	0	0	0	0	1	1	1	1	f	f	1
-984			205	青砖奶茶	53	张	0		一张	0.00	0.00	0	0	0		1		2026-03-29 06:49:07.274393	2026-04-04 09:38:47.474644	\N	茶包/类腰封纸	SP0000050			1	0.00	0.18	6900000504012	0	0	0	0	1	1	1	1	f	f	1
-982			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:04.122927	2026-04-04 09:38:49.420416	\N	塑料手提袋	SP0000052			1	0.00	0.19	6900000526367	0	0	0	0	1	1	1	1	f	f	1
-1010			189	半成品	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:49:36.02884	2026-07-12 06:06:46.94148	\N	奶油球	SP0000024			3	0.00	0.45	6900000243728	0	0	0	0	1	1	1	1	t	f	1
-978			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:00.454145	2026-04-04 09:38:53.224677	\N	新茶专用标签纸	SP0000056			1	0.00	0.05	6900000561600	0	0	0	0	1	1	1	1	f	f	1
-999			205	青砖奶茶	53	张	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:24.473332	2026-06-07 09:23:04.603874	\N	茶专用/不干胶/标签	SP0000035			4	0.00	0.04	6900000358921	0	0	0	0	1	1	1	1	f	f	1
-962			201	亚克力	56	盒	0		85X85X63  鲜奶皮	0.00	0.00	0	0	0		1		2026-03-29 06:48:42.8266	2026-06-07 09:22:57.108143	\N	中/方形/亚克力盒/	SP0000072			4	2.50	0.85	6900000724486	0	0	0	0	1	1	1	1	f	f	1
-968			172	散装	53	张	0		150-180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:49.50128	2026-04-04 09:39:02.818465	\N	大/奶皮	SP0000066			1	20.00	13.00	6900000661992	0	0	0	0	1	1	1	1	f	f	1
-966			202	散小包装	58	小包	0		50克	0.00	0.00	0	0	0		1		2026-03-29 06:48:47.671566	2026-04-04 09:39:04.755603	\N	查嘎粉/小包装袋	SP0000068			1	5.00	3.00	6900000686492	0	0	0	0	1	1	1	1	f	f	1
-964			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:44.692601	2026-04-04 09:39:06.680267	\N	透明成品/冻炒米/线下	SP0000070			1	23.50	0.00	6900000709295	0	0	0	0	1	1	1	1	f	f	1
-956			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:36.709091	2026-06-07 09:22:57.653519	\N	透专标签/鲜奶皮	SP0000079			4	0.00	0.37	6900000794933	0	0	0	0	1	1	1	1	f	f	1
-952			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:33.061995	2026-06-07 09:22:59.631914	\N	透专标签/奶酪/原味	SP0000083			4	0.00	0.37	6900000831130	0	0	0	0	1	1	1	1	f	f	1
-959			201	亚克力	56	盒	0		235X170X35	0.00	0.00	0	0	0		1		2026-03-29 06:48:40.035059	2026-04-04 09:39:11.628438	\N	大/牛薄脆盒/亚克力	SP0000076			1	0.00	2.60	6900000761425	0	0	0	0	1	1	1	1	f	f	1
-957			201	亚克力	56	盒	0		待包换/冻炒米 145X85X55	0.00	0.00	0	0	0		1		2026-03-29 06:48:38.085612	2026-04-04 09:39:13.554767	\N	大/长方/亚克力/待用	SP0000078			1	0.00	1.30	6900000782027	0	0	0	0	1	1	1	1	f	f	1
-986			189	半成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:49:09.108042	2026-06-07 09:23:01.834763	\N	精品/奶豆腐块儿/原味	SP0000048			3	20.00	14.50	6900000481263	0	0	0	0	1	1	1	1	f	f	1
-977			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:59.050296	2026-06-07 09:23:06.254381	\N	新茶包人工费	SP0000057			3	0.00	1.00	6900000571565	0	0	0	0	1	1	1	1	f	f	1
-998			205	青砖奶茶	53	张	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:23.558588	2026-06-07 09:23:04.049587	\N	茶专用/硫酸纸	SP0000036			4	0.00	0.28	6900000362581	0	0	0	0	1	1	1	1	f	f	1
-991			189	半成品	62	斤	0		散装一斤	0.00	0.00	0	0	0		1		2026-03-29 06:49:15.192546	2026-06-13 05:03:43.661643	\N	奶果子/散装	SP0000043			5	60.00	25.00	6900000434411	0	0	0	0	1	1	1	1	t	f	1
-993			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:18.84322	2026-06-07 09:23:07.905778	\N	冻炒米专用/塑膜袋	SP0000041			4	0.00	0.10	6900000413063	0	0	0	0	1	1	1	1	f	f	1
-987			208	样品采购	62	斤	0		不定具体产品	0.00	0.00	0	0	0		1		2026-03-29 06:49:10.488839	2026-04-04 09:38:44.71778	\N	采购样品专用/乳制品	SP0000047			1	0.00	0.00	6900000479748	0	0	0	0	1	1	1	1	f	f	1
-973			189	半成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:54.105148	2026-06-07 09:23:00.727958	\N	精品/奶豆腐块儿/甜味/	SP0000061			3	20.00	14.50	6900000617311	0	0	0	0	1	1	1	1	f	f	1
-967			168	散货	63	桶	0		4斤装	0.00	0.00	0	0	0	4斤装/1元一斤	1		2026-03-29 06:48:48.573276	2026-06-13 06:46:21.333943	\N	查嘎/乳清	SP0000067	传统查嘎酸奶五斤大桶装		1	10.00	5.00	6900000679211	0	0	0	0	1	1	1	1	f	f	1
-1011			189	半成品	58	小包	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	已加运费平均采购价	1		2026-03-29 06:49:36.942129	2026-06-07 11:36:04.308945	\N	茶包	SP0000023			3	0.00	0.15	6900000233034	0	0	0	0	1	1	1	1	t	f	1
-979			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:01.363799	2026-05-28 17:22:09.625011	\N	新茶包/纸	SP0000055			1	0.00	0.02	6900000553413	0	0	0	0	1	1	1	1	t	f	1
-997			189	半成品	58	小包	0		2g	0.00	0.00	0	0	0		1		2026-03-29 06:49:22.630194	2026-07-22 14:25:12.966969	\N	茶专用/盐包	SP0000037			3	0.00	0.06	6900000375562	0	0	0	0	1	1	1	1	t	f	1
-981			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:49:03.200495	2026-07-22 14:22:32.555616	\N	烤奶皮	SP0000053			5	30.00	22.00	6900000535282	0	0	0	0	1	1	1	1	t	f	1
-1005			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:31.377292	2026-04-04 09:38:27.428664	\N	泰成物流费	SP0000029			1	0.00	0.00	6900000291007	0	0	0	0	1	1	1	1	f	f	1
-1003			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:29.482236	2026-04-04 09:38:29.357769	\N	热收缩膜机	SP0000031			1	0.00	1838.00	6900000316828	0	0	0	0	1	1	1	1	f	f	1
-1001			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:27.293725	2026-04-04 09:38:31.266689	\N	冷冻柜/冰箱	SP0000033			1	0.00	1609.48	6900000335117	0	0	0	0	1	1	1	1	f	f	1
-1009			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:35.084281	2026-06-07 09:23:05.69676	\N	专盒/青砖奶茶外盒	SP0000025			4	0.00	2.50	6900000256884	0	0	0	0	1	1	1	1	f	f	1
-1000			205	青砖奶茶	57	个	0		袋100个/平均价0.1599	0.00	0.00	0	0	0		1		2026-03-29 06:49:25.419757	2026-06-07 10:19:59.557368	\N	木勺	SP0000034			4	0.00	0.11	6900000349016	0	0	0	0	1	1	1	1	t	f	1
-985			193	成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:49:08.209757	2026-05-23 04:35:17.121673	\N	甜味传统奶豆腐/袋装成品	SP0000049			1	42.00	12.78	6900000499096	0	0	0	0	1	1	1	1	t	f	1
-955			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:35.780754	2026-06-07 09:22:54.8772	\N	透专标签/乳清奶条/原味	SP0000080			4	0.00	0.05	6900000807613	0	0	0	0	1	1	1	1	f	f	1
-1013			189	半成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:38.797883	2026-06-22 06:19:25.280499	\N	冻炒米/给组装半成品/那牧尔	SP0000021			2	0.00	5.50	6900000218137	0	0	0	0	1	1	1	1	f	f	1
-960			201	亚克力	56	盒	0		31g	0.00	0.00	0	0	0		1		2026-03-29 06:48:40.941275	2026-06-07 09:22:52.095123	\N	三角/奶皮千层盒	SP0000075			4	0.00	0.85	6900000754498	0	0	0	0	1	1	1	1	f	f	1
-976			193	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:57.349972	2026-04-04 09:38:55.162679	\N	暂用/茶 新旧更替	SP0000058			1	58.00	0.00	6900000589769	0	0	0	0	1	1	1	1	f	f	1
-958			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:39.011957	2026-06-23 09:40:38.097402	\N	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077	SSM-028注塑长方盒130+85*62（茶叶盒）		4	0.00	1.56	6900000778282	0	0	0	0	1	1	1	1	t	f	1
-975			187	黄油	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:56.402437	2026-06-07 09:23:02.390076	\N	黄油脖签	SP0000059			4	0.00	0.08	6900000598069	0	0	0	0	1	1	1	1	f	f	1
-971			172	散装	62	斤	0		45散称/斤/9元/100克	0.00	0.00	0	0	0		1		2026-03-29 06:48:52.219121	2026-04-04 09:39:00.03641	\N	甜味/散称/奶豆腐块儿	SP0000063			1	70.00	45.00	6900000639276	0	0	0	0	1	1	1	1	f	f	1
-969			172	散装	53	张	0		120-150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:50.432711	2026-04-04 09:39:01.907737	\N	小/奶皮	SP0000065			1	15.00	10.00	6900000651693	0	0	0	0	1	1	1	1	f	f	1
-965			200	给组装好产品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:45.594305	2026-04-04 09:39:05.738346	\N	半成品/透明/冻炒米	SP0000069			2	23.50	4.20	6900000699220	0	0	0	0	1	1	1	1	f	f	1
-953			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:33.971244	2026-06-07 09:22:58.534509	\N	透专标签/奶酪/甜味	SP0000082			4	0.00	0.37	6900000828304	0	0	0	0	1	1	1	1	f	f	1
-983			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:06.374033	2026-06-07 09:23:00.181442	\N	甜味/标签/不干胶/传统奶豆腐	SP0000051			4	0.00	0.06	6900000517653	0	0	0	0	1	1	1	1	f	f	1
-995			205	青砖奶茶	55	袋	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:20.768185	2026-06-07 09:23:03.484631	\N	茶专用/热缩膜	SP0000039			4	0.00	0.10	6900000393419	0	0	0	0	1	1	1	1	t	f	1
-1018			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:43.444451	2026-04-21 05:37:33.680624	\N	礼盒/蓝界	SP0000016			4	8.00	4.55	6900000169010	0	0	0	0	1	1	1	1	f	f	1
-1021			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:46.451412	2026-06-09 07:48:53.691996	\N	标签/不干胶/品牌传统奶豆腐	SP0000013			4	0.00	0.06	6900000132020	0	0	0	0	1	1	1	1	f	f	1
-1033			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:58.382336	2026-04-11 11:51:41.521831	\N	专袋/奶条	SP0000001			4	0.00	0.71	6900000015365	0	0	0	0	1	1	1	1	t	f	1
-1031			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:56.37743	2026-04-21 05:37:19.992995	\N	专底盒/奶条	SP0000003			4	0.00	0.37	6900000032892	0	0	0	0	1	1	1	1	t	f	1
-1029			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:54.408934	2026-04-21 05:37:22.382201	\N	专内盒/奶果子	SP0000005			4	0.00	0.65	6900000053298	0	0	0	0	1	1	1	1	t	f	1
-1027			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:52.573581	2026-04-21 05:37:24.737877	\N	真空袋	SP0000007			4	0.00	0.17	6900000079283	0	0	0	0	1	1	1	1	f	f	1
-1025			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:50.732689	2026-04-21 05:37:26.723914	\N	定制款/专内袋/扎那家奶果子	SP0000009			4	0.00	0.07	6900000097364	0	0	0	0	1	1	1	1	t	f	1
-1023			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:48.83623	2026-04-21 05:37:28.622936	\N	标签/不干胶/奶条/原味	SP0000011			4	0.00	0.05	6900000115061	0	0	0	0	1	1	1	1	f	f	1
-3080			0		0		0			0.00	0.00	0	0	0		1		2026-03-30 16:54:36.941869	2026-03-30 16:54:36.941869	2026-03-30 16:54:37.7036	_TEST_IMPORT_DELETE_ME				1	0.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-1028			187	黄油	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:53.495723	2026-04-21 05:37:23.400412	\N	专标签/黄油	SP0000006			4	0.00	0.06	6900000068809	0	0	0	0	1	1	1	1	f	f	1
-3151			424	现制产品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.086038	2026-06-13 02:21:16.18439	\N	牧区纯坊 乌日莫拌炒米180克/盒				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-1015			189	半成品	55	袋	0		250克/一袋	0.00	0.00	0	0	0		1		2026-03-29 06:49:40.677313	2026-06-13 05:03:42.392576	\N	散装/原味奶条	SP0000019			5	0.00	9.00	6915451232840	0	0	0	0	1	1	1	1	t	f	1
-1026			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:51.651482	2026-04-21 05:37:25.751365	\N	专内袋/奶果子	SP0000008			4	0.00	0.08	6900000085792	0	0	0	0	1	1	1	1	t	f	1
-1024			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:49.772554	2026-04-21 05:37:27.664081	\N	标签/不干胶/奶条/甜味	SP0000010			4	0.00	0.05	6900000108033	0	0	0	0	1	1	1	1	f	f	1
-3177			423	其他品牌成品	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:42:19.372797	2026-06-17 11:42:19.885769	\N	蒙古国饮料				1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-996			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/996/header_1.jpg","category":"精选","detailImages":["/media/goods/996/detail_1.jpg","/media/goods/996/detail_2.jpg","/media/goods/996/detail_3.jpg"],"headerImages":["/media/goods/996/header_1.jpg","/media/goods/996/header_2.jpg","/media/goods/996/header_3.jpg"],"baseSales":988}}	1		2026-03-29 06:49:21.709118	2026-07-22 14:58:58.428328	\N	青砖奶茶成品	SP0000038			1	58.00	15.00	6900000389670	0	0	1	0	1	1	1	1	f	f	1
-872			189	半成品	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:10.015007	2026-04-26 16:06:26.28185	\N	半成品/黄金纬度牛肉干/那牧尔	SP0000163			2	88.00	48.95	6973457825186	0	0	0	0	1	1	1	1	t	f	1
-963			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:43.763191	2026-06-23 09:45:18.072027	\N	小/方形/亚克力盒/	SP0000071	SSH-001正方食品盒7.4+7.4*7.8CM		4	2.00	1.00	6900000719676	0	0	0	0	1	1	1	1	t	f	1
-839			180	成品	55	袋	0		360克	0.00	0.00	0	0	0		1		2026-03-29 06:46:34.281064	2026-04-26 16:16:23.045852	\N	奶皮子粉	SP0000196			1	16.00	12.00		0	0	0	0	1	1	1	1	f	f	1
-922			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:48:03.552073	2026-05-02 01:41:07.619808	\N	酸奶炒米糖/散装	SP0000113			5	20.00	10.00	6900001139227	0	0	0	0	1	1	1	1	t	f	1
-3148			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084176	2026-06-12 12:09:01.084176	\N	牧区纯坊 香蕉味蛋糕458克/盒				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3154			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088527	2026-06-12 12:09:01.088527	\N	牧区纯坊 蒙牛 0添加有机原味软牛奶200克10盒/箱				1	58.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3081			207		52	块	0		1	0.00	0.00	0	0	0		1		2026-04-02 05:08:11.653687	2026-04-04 09:37:56.503363	2026-04-20 15:34:48.142306	奶豆腐块			实惠奶豆腐，科尔沁奶食品供货	1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-1032			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:57.401382	2026-04-21 05:37:19.016586	\N	专盒/冻炒米	SP0000002			4	0.00	0.87	6900000028430	0	0	0	0	1	1	1	1	t	f	1
-1030			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:55.371296	2026-04-21 05:37:21.407925	\N	专外盒/奶果子	SP0000004			4	0.00	0.65	6900000045203	0	0	0	0	1	1	1	1	t	f	1
-3147			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.082182	2026-06-12 12:09:01.082182	2026-06-12 12:24:33.246435	牧区纯坊 小米原浆 40度 清香型 500ml/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3146			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.07922	2026-06-12 12:09:01.07922	2026-06-12 13:08:38.72099	牧区纯坊 纯手工熬制黄油250克/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3165			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.279842	2026-06-12 12:09:01.279842	2026-06-12 13:23:53.00308	牧区纯坊 牧区奶糖 爵口味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3145			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.988316	2026-06-12 12:09:00.988316	2026-06-12 13:59:51.600094	牧区纯坊 奶皮子有点卷草莓味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1
-3166			424	现制产品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.281385	2026-06-13 02:21:15.724742	\N	红糖枸杞红枣奶茶450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1
-1014			189	半成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:49:39.760183	2026-06-22 07:58:17.379209	\N	散装/甜味奶条	SP0000020			5	30.00	15.70	6962547070553	0	0	0	0	1	1	1	1	t	f	1
-994			193	成品	56	盒	0		110克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/994/header_1.jpg","category":"精选","detailImages":["/media/goods/994/detail_1.jpg","/media/goods/994/detail_2.jpg","/media/goods/994/detail_3.jpg"],"headerImages":["/media/goods/994/header_1.jpg","/media/goods/994/header_2.jpg","/media/goods/994/header_3.jpg"],"baseSales":281}}	1		2026-03-29 06:49:19.767881	2026-07-22 14:58:58.438067	\N	冻炒米成品盒	SP0000040			1	36.00	6.00	6900000408112	0	0	4	0	1	1	1	1	f	f	1
-989			193	成品	54	瓶	0		100克	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/989/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/989/header_1.jpg","https://nomaderp.pages.dev/media/goods/989/header_2.jpg","https://nomaderp.pages.dev/media/goods/989/header_3.jpg","https://nomaderp.pages.dev/media/goods/989/header_4.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1瓶","erpId":989,"price":39},{"label":"2瓶","erpId":989,"price":75},{"label":"3瓶","erpId":989,"price":108}],"baseSales":341}}	1		2026-03-29 06:49:12.346781	2026-07-22 14:58:58.475591	\N	蒙古黄油/瓶装成品	SP0000045	牧区纯坊品牌 蒙古 黄油 100克/瓶		1	39.00	8.05	6900000452315	0	0	8	0	1	1	1	1	t	f	1
-1007			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":false}}	1		2026-03-29 06:49:33.228395	2026-06-12 12:17:31.029808	\N	原味奶条成品	SP0000027	牧区纯坊 蒙古鲜奶制品奶条250克/袋		1	52.00	11.61	6900000277492	0	0	7	0	1	1	1	1	f	f	1
-3149			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084679	2026-06-12 12:09:01.084679	2026-06-12 13:15:30.366906	牧区纯坊 青砖茶 380克/块				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3179			175	成品	56	盒	0		120克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 06:56:45.322236	2026-06-22 06:56:45.576504	\N	透明成品/奶条/甜味/线下/方盒				1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1
-3180			188	牧区纯坊X游牧奇遇	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 07:01:15.052876	2026-06-22 07:01:15.306619	\N	透明奶茶杯				1	2.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3118			423	其他品牌成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784686608630_9tlp5h","headerImages":["/api/image/img_1784686608630_9tlp5h","/api/image/img_1784686627419_8cq3ey"],"detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[{"name":"规格","values":[{"label":"大桶装","image":"/api/image/img_1784686548893_sqgo4t"},{"label":"小桶装","image":"/api/image/img_1784686564601_2sag06"}]}],"skuCombos":[{"combo":["大桶装"],"price":0,"erpId":3118},{"combo":["小桶装"],"price":0,"erpId":3118}],"skuVariants":[{"label":"大桶装","price":0,"erpId":3118},{"label":"小桶装","price":0,"erpId":3118}],"isRedeemable":false,"pointsCost":0}}	1		2026-05-27 04:43:46.719064	2026-07-22 14:58:58.471568	\N	烤奶花				5	30.00	20.00		0	0	11	0	1	1	1	1	t	f	1
-3082			0		0	个	0			0.00	0.00	0	0	0		1		2026-04-20 13:43:39.305757	2026-04-20 13:43:39.305757	2026-04-20 15:34:47.155953	牛肉瓜				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3083			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.136041	2026-04-21 07:34:54.136041	\N	敖汉小米5㎏				1	90.00	65.00		0	0	0	0	1	1	1	1	f	f	1
-3084			0		0	盒	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.357518	2026-04-21 07:34:54.357518	\N	四色小米2㎏				1	69.00	42.00		0	0	0	0	1	1	1	1	f	f	1
-3086			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.113849	2026-04-21 07:34:55.113849	\N	布袋小米2.5㎏				1	50.00	37.00		0	0	0	0	1	1	1	1	f	f	1
-3087			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.313877	2026-04-21 07:34:55.313877	\N	郁金川2.5㎏				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1
-3089			0		0	箱	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.714876	2026-04-21 07:34:55.714876	\N	有机黄小米2㎏				1	59.50	43.00		0	0	0	0	1	1	1	1	f	f	1
-3095			168	散货	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-05-04 02:50:29.320833	2026-05-04 02:51:20.172825	\N	牧区黄油小瓶				1	22.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3097			421	文创	56	盒	0			0.00	0.00	0	0	0		1		2026-05-04 03:05:14.20207	2026-05-04 03:05:14.20207	\N	明信片/风景版				1	22.90	0.00		0	0	0	0	1	1	1	1	f	f	1
-3100			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-08 03:59:32.917368	2026-05-08 03:59:32.917368	\N	楚楚给				1	12.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3101			168	散货	55	袋	0			0.00	0.00	0	0	0		1		2026-05-10 08:50:24.242221	2026-05-10 08:50:24.242221	\N	老式软放饼				1	15.00	8.00		0	0	0	0	1	1	1	1	f	f	1
-3105			422	BOM产品	56	盒	0			0.00	0.00	0	0	0		1		2026-05-11 14:20:19.665607	2026-05-11 14:20:19.665607	\N	奶豆腐/盒装				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3156			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.176574	2026-06-12 12:09:01.176574	2026-06-12 12:17:37.200595	牧区纯坊 蒙古鲜奶制品奶条250克/袋				1	52.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3088			0		0	斤	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.511212	2026-05-16 08:23:40.140146	\N	黑芝麻丸5㎏				5	25.00	19.35		0	0	0	0	1	1	1	1	f	f	1
-3108			193	成品	56	套	0			0.00	0.00	0	0	0	标准套装礼盒，成本由BOM000023计算	1		2026-05-17 08:14:21.916721	2026-05-17 08:15:01.559343	\N	品牌套装礼盒				1	0.00	122.22		0	0	0	0	1	0	1	1	f	f	1
-3109			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-18 03:01:25.00075	2026-05-18 11:34:28.813568	\N	奶派/坚果/芒果/樱桃				1	35.00	24.00		0	0	0	0	1	1	1	1	f	f	1
-3110			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-18 03:05:05.334564	2026-05-18 11:34:28.216464	\N	樱桃味/干噎酸奶/散				5	35.00	15.00		0	0	0	0	1	1	1	1	f	f	1
-3113			0		53		0			0.00	0.00	0	0	0		1		2026-05-23 04:33:12.035261	2026-05-25 12:56:15.216291	\N	明信片/带种子				1	10.00	9.00		0	0	0	0	1	1	1	1	f	f	1
-3106			168	散货	53	张	0			0.00	0.00	0	0	0		1		2026-05-13 08:40:05.732185	2026-06-07 14:28:45.880709	\N	甜味奶豆腐				1	30.00	28.00		0	0	0	0	1	1	1	1	f	f	1
-3103			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:22:15.838897	2026-05-24 06:46:08.828174	\N	牧区酸奶小				1	8.00	3.00		0	0	0	0	1	1	1	1	f	f	1
-3104			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:22:57.254763	2026-05-24 06:46:20.239126	\N	牧区酸奶/大				1	20.00	6.00		0	0	0	0	1	1	1	1	f	f	1
-3111			421		57		0			0.00	0.00	0	0	0		1		2026-05-21 14:49:40.495133	2026-05-25 12:56:13.81057	\N	蒙古元素永生花				1	65.00	45.00		0	0	0	0	1	1	1	1	f	f	1
-3112			421		57		0			0.00	0.00	0	0	0		1		2026-05-21 15:21:15.13533	2026-05-25 12:56:15.686673	\N	阿旗book				1	29.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-3091			168	散货	62	斤	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-04-27 11:01:48.030256	2026-06-08 04:17:14.094865	\N	牛肉干/散称				5	128.00	98.00		0	0	0	0	1	1	1	1	f	f	1
-3093			168	散货	63	桶	0			0.00	0.00	0	0	0		1		2026-04-30 01:28:05.174482	2026-05-28 14:17:30.039862	\N	烤奶花（小桶）				1	20.00	4.68		0	0	0	0	1	1	1	1	f	f	1
-3094			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-02 01:31:58.139275	2026-06-22 03:42:25.454283	\N	科尔沁糖（酸奶/嚼口/乌日末		牧区纯坊 牧区奶糖 酸奶味 250克		5	25.00	10.00		0	0	0	0	1	1	1	1	f	f	1
-3158			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.182427	2026-06-12 12:09:01.182427	2026-06-12 13:24:54.10506	牧区纯坊 天山原浆40%vol/350ml/一瓶				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-822			167	广告物料	0	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.970494	2026-05-29 11:29:09.116874	\N	黄油/大瓶/科尔沁	SP0000214			1	30.00	21.00	6907262383018	0	0	0	0	1	1	1	1	f	f	1
-3092			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-04-29 06:00:42.815829	2026-05-30 11:19:56.95243	\N	干噎酸奶				5	40.00	30.00		0	0	0	0	1	1	1	1	f	f	1
-3090			0		62	斤	0			0.00	0.00	0	0	0		1		2026-04-23 15:39:04.52016	2026-05-31 06:20:53.767192	\N	手工棒棒糖				5	30.00	25.00		0	0	0	0	1	1	1	1	t	f	1
-3096			168	散货	54	瓶	0		500g	0.00	0.00	0	0	0		1		2026-05-04 02:51:12.709616	2026-06-12 12:18:37.917596	\N	牧区黄油大瓶		牧区纯坊 纯手工熬制黄油500克/瓶		1	46.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3102			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:21:33.896996	2026-06-12 12:24:27.715355	\N	小米原浆		牧区纯坊 小米原浆 40度 清香型 500ml/瓶		1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3099			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-06 01:25:07.998513	2026-06-12 12:54:10.329039	\N	饺子		牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋		1	25.00	18.00		0	0	0	0	1	1	1	1	f	f	1
-3155			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088912	2026-06-12 12:09:01.088912	2026-06-12 13:18:49.1727	牧区纯坊 纯手工奶豆腐微甜350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3107			168	散货	52	块	0			0.00	0.00	0	0	0		1		2026-05-14 09:01:46.065231	2026-06-22 07:27:52.482911	\N	科尔沁中奶豆腐				1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1
-3157			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.180589	2026-06-12 12:09:01.180589	2026-06-12 13:24:58.80373	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3116			423	其他品牌成品	54	瓶	0		260mL	0.00	0.00	0	0	0		1		2026-05-25 11:44:00.104052	2026-05-25 11:45:22.760336	\N	酸马奶/蒙医院				1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1
-3114			421		67		0			0.00	0.00	0	0	0		1		2026-05-23 06:37:13.641868	2026-05-25 12:56:14.277143	\N	宋锦耳坠				1	58.00	23.00		0	0	0	0	1	1	1	1	f	f	1
-920			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		0		2026-03-29 06:48:01.691012	2026-07-20 13:34:58.0936	\N	手工乌日末液体	SP0000115	牧区纯手工乌日莫（奶嚼口）原味500克		5	10.00	5.00	6900001151503	0	0	0	0	1	1	1	1	f	f	1
-3117			421	文创	53	张	0			0.00	0.00	0	0	0		1		2026-05-25 12:35:05.059092	2026-05-25 12:56:16.137955	\N	车载香片	SP2605252385			1	8.80	0.85		0	0	0	0	1	1	1	1	f	f	1
-3126			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-06-03 08:08:35.434038	2026-06-03 08:08:35.434038	\N	120克透明/奶条				1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1
-3123			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-29 10:55:39.733893	2026-05-29 10:57:16.697245	\N	 蒙古国糖果				1	20.00	13.50		0	0	0	0	1	1	1	1	f	f	1
-3122			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-29 10:54:57.114463	2026-05-29 10:57:17.176236	\N	jebu 蒙古国饮料				1	5.00	3.54		0	0	0	0	1	1	1	1	f	f	1
-3121			423	其他品牌成品	62	斤	0		{"attrs":[{"name":"口味","values":["甜味","原味"]}],"skus":{"甜味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""},"原味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""}},"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-28 14:47:00.21195	2026-06-13 10:06:31.419865	\N	科尔沁奶豆腐/条/片/原/甜				5	80.00	38.00		0	0	0	0	1	1	1	1	t	t	1
-3124			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:28:32.161661	2026-05-30 11:33:04.219072	\N	彩色奶圈圈/袋装/果味奶渣				1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1
-3125			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:29:21.473675	2026-05-30 11:33:06.484099	\N	细奶条/原味/乌日汗				1	20.00	16.00		0	0	0	0	1	1	1	1	f	f	1
-3181			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-30 15:51:03.822543	2026-06-30 15:51:04.341485	\N	牛奶浓				1	2.50	0.00		0	0	0	0	1	1	1	1	f	f	1
-3120			423	其他品牌成品	55	袋	0		165克	0.00	0.00	0	0	0		1		2026-05-28 14:45:29.011446	2026-05-28 14:48:47.886402	\N	科尔沁袋装/——奶豆腐条/片/				1	25.00	12.50		0	0	0	0	1	1	1	1	f	f	1
-3128			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-04 14:47:51.447173	2026-06-14 05:25:13.879284	\N	专袋/冻炒米/真空袋				4	0.00	0.09	6900000028430	0	0	0	0	1	1	1	1	t	f	1
-3119			423	其他品牌成品	63	桶	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":false,"headerImages":["/api/image/img_1784644264548_libfla","/api/image/img_1784646968622_y3urcg","/api/image/img_1784646983501_kslr44"],"image":"/api/image/img_1784644264548_libfla","detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[{"name":"容量","values":[{"label":"大桶装"},{"label":"小桶装"}]}],"skuCombos":[{"combo":["大桶装"],"price":35,"erpId":3119},{"combo":["小桶装"],"price":30,"erpId":3119}],"skuVariants":[{"label":"大桶装","price":35,"erpId":3119},{"label":"小桶装","price":30,"erpId":3119}],"isRedeemable":false,"pointsCost":0}}	1		2026-05-27 11:19:57.869477	2026-07-22 02:16:14.633296	\N	烤奶花/大桶装				1	25.00	5.40		0	0	0	0	1	1	1	1	t	f	1
-3115			421		57		0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784643891975_n8hlq7","headerImages":["/api/image/img_1784643891975_n8hlq7"],"detailImages":[],"tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":80,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-23 06:41:31.959491	2026-07-22 14:58:58.474388	\N	帆布包				1	39.00	7.00		0	0	12	0	1	1	1	1	f	f	1
-907			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:48.812859	2026-07-02 08:14:55.045978	\N	风干牛肉500g大片	SP0000128	牧区纯坊 大片风干牛肉500g/袋		1	128.00	95.00	6900001286630	0	0	0	0	1	1	1	1	f	f	1
-3152			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.086448	2026-06-12 12:09:01.086448	2026-06-12 13:08:37.237757	牧区纯坊品牌 蒙古 黄油 100克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3153			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088094	2026-06-12 12:09:01.088094	2026-06-12 13:35:46.45875	牧区纯乳清冷饮450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1
-3127			193	成品	62	斤	0		一斤装/拆装/定制	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-04 13:40:02.960069	2026-06-13 05:03:41.268039	\N	冻炒米成品/散装/小袋装				5	36.00	32.20	6900000408112	0	0	2	0	1	1	1	1	f	f	1
-3182			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-03 02:50:44.713096	2026-07-03 02:50:55.99174	\N	郁金川小米2.5㎏  				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1
-3129			185	包材	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-07 07:31:34.248809	2026-06-07 07:32:55.376336	\N	专标签/亚克力/奶锅巴				1	0.00	0.10		0	0	0	0	1	1	1	1	f	f	1
-3164			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.278585	2026-06-12 12:09:01.278585	2026-06-12 12:16:10.826099	牧区纯坊 纯手工月饼 黄油渣馅350g/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3167			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.282711	2026-06-12 12:09:01.282711	2026-06-12 12:17:37.204941	牧区纯坊 大片风干牛肉500g/袋				1	138.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-830			167	广告物料	0	袋	0		2.5kg	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:46:20.776315	2026-06-07 13:47:11.837582	\N	小米/10斤/小袋/红嘴/阿旗	SP0000206			1	22.00	19.00		0	0	0	0	1	1	1	1	f	f	1
-3159			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.183702	2026-06-12 12:09:01.183702	2026-06-12 12:42:31.27564	牧区纯坊 纯手工月饼 五仁馅350克/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3130			421	文创	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"show":false}}	1		2026-06-08 04:53:39.257805	2026-06-08 06:26:49.292877	\N	小马挂件				1	0.00	5.00		0	0	0	0	1	1	1	1	f	f	1
-3163			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.276507	2026-06-12 12:09:01.276507	2026-06-12 13:23:51.554095	牧区纯坊 牧区奶糖 酸奶味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3161			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.187229	2026-06-12 12:09:01.187229	2026-06-12 13:59:53.19333	牧区纯坊 奶皮子有点卷220克 果味夹层/盒				1	28.80	0.00		0	0	0	0	1	1	1	1	f	f	1
-3162			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.188614	2026-06-12 12:09:01.188614	2026-06-12 14:05:16.949552	牧区纯坊 纯手工奶豆腐1000g原味350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3160			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.185601	2026-06-12 12:09:01.185601	\N	牧区纯坊 无糖饼干500克/盒				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-1008			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/1008/header_1.jpg","category":"精选","detailImages":["/media/goods/1008/detail_1.jpg","/media/goods/1008/detail_2.jpg","/media/goods/1008/detail_3.jpg"],"headerImages":["/media/goods/1008/header_1.jpg","/media/goods/1008/header_2.jpg","/media/goods/1008/header_3.jpg"],"baseSales":111}}	1		2026-03-29 06:49:34.136449	2026-07-22 14:58:58.446974	\N	甜味奶条成品	SP0000026			1	52.00	10.61	6900000265125	0	0	3	0	1	1	1	1	f	f	1
-3172			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.37861	2026-06-12 12:09:01.37861	2026-06-12 12:52:19.598618	牧区纯手工乌日莫（奶嚼口）原味500克				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3175			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.383092	2026-06-12 12:09:01.383092	2026-06-12 12:54:19.499984	牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋				1	26.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3169			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.286609	2026-06-12 12:09:01.286609	2026-06-12 12:54:22.846708	牧区纯坊 散装原味香瓜子500克/袋				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3173			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.379879	2026-06-12 12:09:01.379879	2026-06-12 13:08:40.577208	牧区纯坊 手工黄油310克/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3168			193	成品	63	桶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.284158	2026-06-12 12:09:01.284158	2026-06-12 13:35:47.068225	牧区纯坊 传统酸奶汤(查嘎)原味五斤大桶装				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3174			193	成品	63	桶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.381346	2026-06-12 12:09:01.381346	2026-06-12 13:35:48.562796	牧区纯坊 传统老酸奶(查嘎)原味五斤大桶装				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3171			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.376247	2026-06-12 12:09:01.376247	2026-06-12 13:59:53.678358	牧区纯坊 奶皮子有点卷青果味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1
-3170			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.288295	2026-06-12 12:09:01.288295	2026-06-13 02:19:12.306096	赛汗塔拉手工制作奶豆腐原味约400g/块				1	45.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-988			193	成品	55	袋	0		150	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/988/header_1.jpg","category":"精选","detailImages":["/media/goods/988/detail_1.jpg","/media/goods/988/detail_2.jpg","/media/goods/988/detail_3.jpg"],"headerImages":["/media/goods/988/header_1.jpg","/media/goods/988/header_2.jpg","/media/goods/988/header_3.jpg"],"baseSales":287}}	1		2026-03-29 06:49:11.402339	2026-07-22 14:58:58.462569	\N	品牌传统奶豆腐/袋装成品	SP0000046			1	42.00	12.78	6900000461987	0	0	5	0	1	1	1	1	t	f	1
-874			193	成品	55	袋	0		140克	0.00	0.00	0	0	0	{"__brand__":{"image":"/media/goods/874/header_3.jpg","headerImages":["/media/goods/874/header_3.jpg","/media/goods/874/header_2.jpg","/media/goods/874/header_1.jpg"],"detailImage":"","tags":[],"category":"精选","wholesalePrice":0,"minOrderQuantity":1,"baseSales":365,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true}}	1		2026-03-29 06:47:13.890147	2026-07-22 14:58:58.464585	\N	黄金纬度/牛肉干/成品袋	SP0000161	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋		1	98.00	48.95		0	0	6	0	1	1	1	1	f	f	1
-3140			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.883276	2026-06-12 12:09:00.883276	2026-06-12 12:16:10.82737	牧区纯坊 纯手工月饼 奶豆腐馅儿350克/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-883			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.030271	2026-07-19 14:05:40.938075	\N	阿润月饼/奶豆腐馅	SP0000152			1	15.00	10.00	6922814823197	0	0	0	0	1	1	1	1	f	f	1
-3134			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679641	2026-06-12 12:09:00.679641	2026-06-12 13:05:05.221909	牧区纯坊 风干牛肉干500克/袋				1	108.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3144			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.986052	2026-06-12 12:09:00.986052	\N	牧区纯坊 泰象苏打水352ml/瓶				1	5.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3141			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.982681	2026-06-12 12:09:00.982681	2026-06-12 12:17:37.202047	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋				1	118.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3150			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.085034	2026-06-12 12:09:01.085034	2026-06-12 12:18:40.519752	牧区纯坊 纯手工熬制黄油500克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3133			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679486	2026-06-12 12:09:00.679486	2026-06-12 12:54:21.488937	牧区纯坊 散装手工油炸果条250g/袋				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3131			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.678323	2026-06-12 12:09:00.678323	2026-06-12 13:08:41.501932	牧区纯坊 精品黄油420克/瓶				1	33.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3135			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679799	2026-06-12 12:09:00.679799	2026-06-12 13:11:16.64474	牧区纯坊 速溶青砖茶400克/袋				1	19.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3136			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.880967	2026-06-12 12:09:00.880967	2026-06-12 13:18:45.063756	牧区纯坊 纯手工奶豆腐原味350克/块				1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3137			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.881481	2026-06-12 12:09:00.881481	2026-06-12 13:18:51.894909	牧区纯坊 纯手工奶豆微甜500克/块				1	38.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3138			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.882351	2026-06-12 12:09:00.882351	2026-06-12 13:24:55.452329	牧区纯坊 香酥奶皮子锅巴120克/一盒				1	22.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3143			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.984009	2026-06-12 12:09:00.984009	2026-06-12 13:59:50.712194	牧区纯坊 奶皮子有点卷蓝莓味180克/盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1
-3132			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.678795	2026-06-12 12:09:00.678795	2026-06-13 02:13:43.932393	牧区纯坊 乌都牧奶茶 调味茶固体饮品400克/袋				1	38.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3142			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.98342	2026-06-12 12:09:00.98342	2026-06-13 02:14:51.166394	牧区纯坊 手工奶糖奶油炒米味500克/一袋				1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3098			423	其他品牌成品	52	块	0			0.00	0.00	0	0	0		1		2026-05-04 12:03:25.488052	2026-06-13 02:19:10.895691	\N	大奶豆腐/科尔沁		赛汗塔拉手工制作奶豆腐原味约400g/块		1	45.00	33.00		0	0	0	0	1	1	1	1	f	f	1
-3139			424	现制产品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.882146	2026-06-13 02:21:15.129387	\N	蒙古青砖奶茶豪华套餐450克/杯				1	18.80	0.00		0	0	0	0	1	1	1	1	f	f	1
-835			170	成品	65	散	0		散装	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:46:25.464428	2026-06-13 05:10:34.986539	\N	奶果子/小包装/成品	SP0000200			5	50.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-803			167	广告物料	62	斤	0		斤	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:45:50.485118	2026-06-13 06:37:35.618029	\N	炒米/散/巴林	SP0000233			5	7.00	5.00		0	0	0	0	1	1	1	1	f	f	1
-3176			423	其他品牌成品	55	袋	0		360克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:40:59.451893	2026-06-17 11:41:00.017816	\N	奶皮子粉麦西来普				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-3178			423		52		0			0.00	0.00	0	0	0		1		2026-06-18 03:26:30.481528	2026-06-18 03:26:30.481528	\N	佳赫蛋糕				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1
-827			175	成品	0	盒	0		200克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"headerImages":["/api/image/img_1784643974370_40fbis","/api/image/img_1784646925599_2qx78l"],"image":"/api/image/img_1784643974370_40fbis","detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:46:18.023543	2026-07-22 14:58:58.44941	\N	透明成品/奶锅巴/线下	SP0000209			1	27.00	0.00		0	0	7	0	1	1	1	1	f	f	1
-3085			0		0	桶	0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784732252802_rcen9o","headerImages":["/api/image/img_1784732252802_rcen9o","/api/image/img_1784732263444_mfpfpr","/api/image/img_1784732268564_g8qovy","/api/image/img_1784732283940_ji3lgi"],"detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-04-21 07:34:54.900679	2026-07-22 14:58:58.45286	\N	小米锅巴110g				1	16.60	6.50		0	0	9	0	1	1	1	1	f	f	1
-3183			188	牧区纯坊X游牧奇遇	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-12 06:10:54.579751	2026-07-12 06:10:55.070756	\N	阿旗礼袋蒙文				1	10.00	1.90		0	0	0	0	1	1	1	1	f	f	1
-3184			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-12 06:12:16.47886	2026-07-12 06:12:16.947793	\N	阿旗冰箱贴				1	46.00	16.50		0	0	0	0	1	1	1	1	f	f	1
-3186			421	周边	52	块	0			0.00	0.00	0	0	0	{"__brand__":{"image":"/api/image/img_1784645654789_vxxn2y","headerImages":["/api/image/img_1784645654789_vxxn2y","/api/image/img_1784645670190_yg6qbu"],"detailImage":"","tags":["presale"],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true}}	1		2026-07-21 14:52:53.947001	2026-07-22 14:58:58.822028	\N	阴山岩画羊毛毡香皂				1	88.00	0.00		0	0	10	0	1	1	1	1	f	f	1
-3185			188	牧区纯坊X游牧奇遇	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"牧区纯坊X游牧奇遇","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-19 14:33:54.908607	2026-07-19 14:36:52.606007	\N	憨野 黄油/50克				1	0.00	3.50		0	0	0	0	1	1	1	1	f	f	1
-992			193	成品	56	盒	0		240克	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/992/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/992/header_1.jpg","https://nomaderp.pages.dev/media/goods/992/header_2.jpg","https://nomaderp.pages.dev/media/goods/992/header_3.jpg","https://nomaderp.pages.dev/media/goods/992/header_4.jpg","https://nomaderp.pages.dev/media/goods/992/header_5.jpg"],"detailImages":["https://nomaderp.pages.dev/media/goods/992/detail_1.jpg","https://nomaderp.pages.dev/media/goods/992/detail_2.jpg","https://nomaderp.pages.dev/media/goods/992/detail_3.jpg","https://nomaderp.pages.dev/media/goods/992/detail_4.jpg","https://nomaderp.pages.dev/media/goods/992/detail_5.jpg","https://nomaderp.pages.dev/media/goods/992/detail_6.jpg","https://nomaderp.pages.dev/media/goods/992/detail_7.jpg","https://nomaderp.pages.dev/media/goods/992/detail_8.jpg","https://nomaderp.pages.dev/media/goods/992/detail_9.jpg","https://nomaderp.pages.dev/media/goods/992/detail_10.jpg","https://nomaderp.pages.dev/media/goods/992/detail_11.jpg","https://nomaderp.pages.dev/media/goods/992/detail_12.jpg","https://nomaderp.pages.dev/media/goods/992/detail_13.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1盒","erpId":992,"price":58},{"label":"2盒","erpId":992,"price":110},{"label":"3盒","erpId":992,"price":159}],"baseSales":1288}}	1		2026-03-29 06:49:16.624293	2026-07-22 14:58:58.432295	\N	牧区奶豆腐/盒装/成品	SP0000042			1	58.00	13.21	6900000427543	0	0	2	0	1	1	1	1	f	f	1
+COPY public.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand_id, brand_name, spec, price, cost, stock, min_stock, max_stock, remark, status, images, create_time, update_time, deleted_at, goods_name, goods_sn, en_name, goods_memo, goods_type, sell_price, cost_price, barcode, safe_min, safe_max, sort, make_time, can_sale, can_buy, can_make, can_outsource, multi_unit, multi_spec, shop_id, owner_type, owner_distributor_id, platform_fee_rate) FROM stdin;
+812			167	广告物料	0	散	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:00.138942	2026-03-29 06:46:00.138942	\N	花形奶锅巴	SP0000224			1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+814			167	广告物料	0	袋	0		1斤/原味	0.00	0.00	0	0	0		1		2026-03-29 06:46:01.987682	2026-03-29 06:46:01.987682	\N	奥都/真空奶豆腐	SP0000222			1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+815			170	成品	0	瓶	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:03.381383	2026-03-29 06:46:03.381383	\N	酸马奶	SP0000221			1	25.00	15.00	6900002213934	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+817			170	成品	0	瓶	0		小	0.00	0.00	0	0	0		1		2026-03-29 06:46:05.861995	2026-03-29 06:46:05.861995	\N	乌日汗小瓶酸奶	SP0000219			1	8.00	6.00	6903547102122	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+818			171	酒	0	件	0		500ML*4	0.00	0.00	0	0	0		1		2026-03-29 06:46:07.26264	2026-03-29 06:46:07.26264	\N	四季红福	SP0000218			1	120.00	100.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+819			171	酒	0	桶	0		2L	0.00	0.00	0	0	0		1		2026-03-29 06:46:08.168863	2026-03-29 06:46:08.168863	\N	红日桶装酒	SP0000217			1	28.00	21.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+821			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.042136	2026-03-29 06:46:10.042136	\N	天山原浆/大	SP0000215			1	25.00	16.05	6926919861169	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+832			167	广告物料	0	袋	0		100克	0.00	0.00	0	0	0		1		2026-03-29 06:46:22.622511	2026-03-29 06:46:22.622511	\N	8元烤奶皮/成品	SP0000204			1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+833			170	成品	0	袋	0		180	0.00	0.00	0	0	0		1		2026-03-29 06:46:23.576842	2026-03-29 06:46:23.576842	\N	10元/脆香奶条	SP0000203			1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+820			171	酒	0	瓶	0		490mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:09.089646	2026-06-12 13:24:46.654613	\N	天山原浆/小	SP0000216	牧区纯坊 天山原浆40%vol/350ml/一瓶		1	15.00	9.23	6900002169910	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+823			167	广告物料	0	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:11.874816	2026-06-12 13:08:30.120123	\N	黄油/中瓶	SP0000213	牧区纯坊 手工黄油310克/瓶		1	25.00	15.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+838			180	成品	55	袋	0		2斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:32.937152	2026-04-26 16:16:22.575727	\N	奶粉蒙古国	SP0000197			1	36.00	32.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+810			168	散货	0	散	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:45:58.352636	2026-07-31 05:41:56.050616	\N	乌日莫/奥特尔	SP0000226			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+809			170	成品	0	盒	0		10斤装	0.00	0.00	0	0	0		1		2026-03-29 06:45:57.423231	2026-06-07 13:47:12.339481	\N	10斤装/小米/绿色纸盒	SP0000227			1	70.00	55.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+808			423	其他品牌成品	0	盒	0		100克	0.00	0.00	0	0	0		1		2026-03-29 06:45:56.452492	2026-06-07 14:06:31.735023	\N	彩色奶圈圈/透明桶装	SP0000228			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+813			167	广告物料	0	张	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:01.045929	2026-05-30 11:33:05.113423	\N	奶豆腐/超大/乌日汗	SP0000223			1	85.00	60.00	6900002239603	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+837			172	散装	55	袋	0		1一斤	0.00	0.00	0	0	0		1		2026-03-29 06:46:31.020745	2026-06-12 13:18:34.855367	\N	甜味奶豆腐块儿/大	SP0000198	牧区纯坊 纯手工奶豆微甜500克/块		1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+828			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:18.944102	2026-06-07 14:28:46.356594	\N	中等/奶豆腐/	SP0000208			1	32.00	30.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+829			167	广告物料	0	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:19.857632	2026-08-22 02:47:38.290626	\N	奶豆腐/原味/中/科尔沁	SP0000207			1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+834			167	广告物料	0	袋	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:24.537651	2026-06-07 09:22:49.339579	\N	新年福字袋/小	SP0000202			4	0.00	0.22		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+804			167	广告物料	0	瓶	0		1L	0.00	0.00	0	0	0		1		2026-03-29 06:45:51.478038	2026-04-26 16:25:54.405513	\N	德吉酸奶/2斤装	SP0000232			1	18.00	15.00	6900002324565	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+805			167	广告物料	0	瓶	0		500mL	0.00	0.00	0	0	0		1		2026-03-29 06:45:52.387318	2026-04-26 16:25:54.896585	\N	德吉酸奶/一斤装	SP0000231			1	12.00	8.00	6954129710171	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+806			167	广告物料	0	瓶	0		250mL	0.00	0.00	0	0	0		1		2026-03-29 06:45:53.28094	2026-04-26 16:25:55.367208	\N	德吉酸奶/半斤	SP0000230			1	8.00	4.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+807			170	成品	0	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:45:55.547042	2026-06-13 06:40:19.843667	\N	蒙古果/格日勒/大	SP0000229			1	16.00	12.00	6926743385045	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+824			172	散装	62	斤	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:13.346968	2026-05-24 08:09:21.5788	\N	黄油/散装/纯净	SP0000212			5	48.00	25.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+831			170	成品	0	袋	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:21.672573	2026-06-12 12:54:10.79056	\N	果条/阿润	SP0000205	牧区纯坊 散装手工油炸果条250g/袋		1	12.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+825			172	散装	0	盒	0		300ml	0.00	0.00	0	0	0		1		2026-03-29 06:46:14.691322	2026-05-30 11:33:06.035023	\N	故乡宝酸马奶	SP0000211			1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+816			170	成品	0	瓶	0		大	0.00	0.00	0	0	0		1		2026-03-29 06:46:04.950399	2026-08-08 03:24:06.111475	\N	乌日汗大瓶酸奶	SP0000220			1	20.00	8.00	6900002209130	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+836			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:29.95024	2026-06-12 13:24:48.347172	\N	礼盒/2026	SP0000199	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒		4	8.00	5.16		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+811			167	广告物料	0	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:45:59.242186	2026-08-08 03:20:41.023945	\N	蒙古果子/格日勒	SP0000225			1	10.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+826			423	其他品牌成品	54	瓶	0		500克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:46:15.715184	2026-08-08 03:24:06.590766	\N	乌日汗酸奶/中	SP0000210			1	10.00	6.00	6900002102839	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+846			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:40.760643	2026-04-26 16:16:59.346294	\N	酸奶/额吉伊德	SP0000189			1	10.00	6.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+861			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:56.438149	2026-06-12 12:54:11.261397	\N	五香瓜子	SP0000174	牧区纯坊 散装原味香瓜子500克/袋		1	18.00	15.00	6900001763790	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+875			196	定制类产品	56	盒	0		140g	0.00	0.00	0	0	0		1		2026-03-29 06:47:16.184249	2026-04-04 09:40:34.586821	\N	憨野/冻炒米	SP0000160			1	23.50	4.48	6993375937417	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+871			180	成品	57	个	0		380g	0.00	0.00	0	0	0		1		2026-03-29 06:47:08.101844	2026-06-12 13:15:18.298417	\N	小青砖茶砖	SP0000164	牧区纯坊 青砖茶 380克/块		1	12.00	7.11	6928141402320	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+857			167	广告物料	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:52.743295	2026-04-26 16:26:18.051593	\N	厚奶皮	SP0000178			1	25.00	19.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+877			196	定制类产品	56	盒	0		120g/憨野	0.00	0.00	0	0	0		1		2026-03-29 06:47:18.386251	2026-06-12 13:24:47.84734	\N	憨野/奶锅巴/	SP0000158	牧区纯坊 香酥奶皮子锅巴120克/一盒		1	27.00	5.28	6900001584957	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+867			180	成品	56	盒	0		5g/袋泡茶/30泡	0.00	0.00	0	0	0		1		2026-03-29 06:47:04.41107	2026-05-30 13:26:51.348032	\N	5g/青砖袋泡茶	SP0000168			1	28.00	7.96	6980240258574	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+844			180	成品	56	盒	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:38.927496	2026-06-13 02:13:43.470447	\N	希日嘎拉奶茶专用茶	SP0000191	牧区纯坊 乌都牧奶茶 调味茶固体饮品400克/袋		1	25.00	22.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+869			180	成品	55	袋	0		450g	0.00	0.00	0	0	0		1		2026-03-29 06:47:06.260498	2026-05-30 13:38:31.022859	\N	青砖碎茶	SP0000166			1	12.00	7.31		0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+850			184	袋子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:46:46.288178	2026-06-07 09:22:50.433922	\N	红糖袋/delicious	SP0000185			4	0.00	0.49		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+848			181	糖果sugar	55	袋	0		净含量172	0.00	0.00	0	0	0		1		2026-03-29 06:46:43.034656	2026-04-04 09:41:00.133843	\N	10元组合糖	SP0000187			1	10.00	6.00	6945391354769	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+859			181	糖果sugar	62	斤	0		奶油炒米/  黑芝麻/ 乌日莫糖/ 酸奶炒米/ 奶油花生	0.00	0.00	0	0	0		1		2026-03-29 06:46:54.595963	2026-06-13 04:57:06.570969	\N	糖/阿润	SP0000176	牧区纯坊 手工奶糖奶油炒米味500克/一袋		5	35.00	25.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+863			172	散装	57	个	0		7克/包	0.00	0.00	0	0	0		1		2026-03-29 06:47:00.700348	2026-04-26 15:27:29.561605	\N	冻炒米/小包散/精品	SP0000172			1	0.00	0.22	6922984070163	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+865			170	成品	55	袋	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:47:02.573843	2026-04-26 15:30:12.769193	\N	牛肉干/和希格图	SP0000170			1	89.00	49.00	6906087912087	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+851			170	成品	56	盒	0		3根	0.00	0.00	0	0	0		1		2026-03-29 06:46:47.22213	2026-04-26 16:11:23.681498	\N	晴王糖葫芦	SP0000184			1	0.00	14.00	6957075066268	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+853			170	成品	62	斤	0		香辣	0.00	0.00	0	0	0		1		2026-03-29 06:46:49.040653	2026-04-26 16:12:05.681314	\N	牛肉干/散/香辣	SP0000182			1	115.00	98.00	6900002054622	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+855			167	广告物料	65	散	0		散	0.00	0.00	0	0	0		1		2026-03-29 06:46:50.934138	2026-04-26 16:12:53.511307	\N	奶锅巴/扎旗吉十奶制品	SP0000180			1	28.00	18.00	6937111207251	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+840			180	成品	56	盒	0		300克	0.00	0.00	0	0	0		1		2026-03-29 06:46:35.18057	2026-04-26 16:16:23.517775	\N	奶茶粉战粮	SP0000195			1	20.00	15.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+842			180	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:37.067494	2026-04-26 16:16:24.443777	\N	努德勒沁调和茶	SP0000193			1	25.00	22.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+866			170	成品	54	瓶	0		400ke	0.00	0.00	0	0	0		1		2026-03-29 06:47:03.500209	2026-04-26 15:30:53.830618	\N	酸奶/纯净	SP0000169			1	12.00	6.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+854			170	成品	62	斤	0		原味	0.00	0.00	0	0	0		1		2026-03-29 06:46:49.989028	2026-05-16 08:28:44.212667	\N	牛肉干/散/原味	SP0000181			5	115.00	98.00	6939980951432	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+895			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:37.070662	2026-04-04 09:40:14.8887	\N	黄油渣月饼	SP0000140			1	8.00	5.00	6900001407174	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+894			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:36.135289	2026-04-04 09:40:15.8266	\N	酸奶月饼	SP0000141			1	8.00	5.00	6900001418318	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+893			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:35.211921	2026-04-04 09:40:16.790561	\N	奶豆腐月饼	SP0000142			1	8.00	5.00	6900001427497	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+892			198	供货品	54	瓶	0		250	0.00	0.00	0	0	0		1		2026-03-29 06:47:34.284505	2026-05-28 15:20:03.427954	\N	那牧尔酸奶	SP0000143			1	8.00	4.00	6900001436777	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+891			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:32.872859	2026-04-04 09:40:18.688385	\N	芝士奶豆腐月饼	SP0000144			1	8.00	5.00	6900001442932	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+890			172	散装	62	斤	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.97204	2026-05-30 11:58:30.649672	\N	红枣	SP0000145			1	18.00	11.67	6900001459821	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+856			170	成品	53	张	0		1.2	0.00	0.00	0	0	0		1		2026-03-29 06:46:51.851488	2026-05-28 15:39:30.126214	\N	科尔沁/大奶豆腐	SP0000179			1	48.00	33.00	6974218180685	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+887			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:27.782543	2026-05-30 10:44:16.349627	\N	羊乳奶粉/奶茶专用	SP0000148			1	32.00	25.00	6900001481464	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+881			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:22.211561	2026-08-12 09:08:06.461147	\N	阿润月饼/奶皮子馅	SP0000154			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+886			170	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:26.803653	2026-04-04 09:40:23.797224	\N	冻炒米/科尔沁	SP0000149			1	12.00	7.00	6900001499679	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+870			180	成品	57	个	0		1.5kg	0.00	0.00	0	0	0		1		2026-03-29 06:47:07.159071	2026-04-26 15:29:41.524191	\N	大青砖茶砖	SP0000165			1	35.00	273.05	6910261376045	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+888			170	成品	56	盒	0		320克	0.00	0.00	0	0	0		1		2026-03-29 06:47:29.077221	2026-05-30 10:44:15.900438	\N	河套奶粉	SP0000147			1	18.00	14.00	6900001473306	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+882			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:23.133723	2026-08-12 09:08:06.314605	\N	阿润月饼/黄油渣馅	SP0000153			1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+860			172	散装	65	散	0		散称	0.00	0.00	0	0	0		1		2026-03-29 06:46:55.53842	2026-04-26 16:20:29.366472	\N	普通瓜子	SP0000175			1	12.00	10.00	6915044718067	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+880			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:21.300867	2026-08-12 09:08:06.636186	\N	阿润月饼/五仁馅	SP0000155	牧区纯坊 纯手工月饼 五仁馅350克/一袋		1	15.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+852			170	成品	62	斤	0		孜然	0.00	0.00	0	0	0		1		2026-03-29 06:46:48.134464	2026-04-26 16:12:05.210481	\N	牛肉干/散/孜然	SP0000183			1	115.00	98.00	6961257264978	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+879			167	广告物料	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:20.325013	2026-06-13 03:10:18.675769	\N	干肉奶茶	SP0000156			1	15.00	6.00	6982118636994	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+876			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-03-29 06:47:17.101234	2026-04-04 09:40:33.593086	\N	憨野/奶条	SP0000159			1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+845			167	广告物料	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:46:39.821893	2026-07-12 06:09:21.749902	\N	乳清饮料	SP0000190	牧区纯乳清冷饮450克/杯		1	6.00	4.53	6943774380698	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+873			192	牛肉干	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:12.37242	2026-06-07 09:22:51.546691	\N	专袋/牛肉干包装	SP0000162			4	0.00	1.47	6980832219752	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+864			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:01.663181	2026-04-04 09:40:44.95816	\N	礼盒/腰封	SP0000171			1	0.50	0.37		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+862			187	黄油	54	瓶	0		120mL	0.00	0.00	0	0	0		1		2026-03-29 06:46:59.307415	2026-04-04 09:40:46.859721	\N	专瓶/黄油渣	SP0000173			1	0.00	1.80		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+858			170	成品	56	盒	0		3棵	0.00	0.00	0	0	0		1		2026-03-29 06:46:53.65596	2026-04-26 16:02:59.960371	\N	糖葫芦	SP0000177			1	10.00	6.00	6963465779827	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+885			172	散装	62	斤	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:25.913003	2026-06-13 06:37:36.09636	\N	冻炒米/散装	SP0000150			5	25.00	16.00	6900001505720	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+868			180	成品	55	袋	0		450g/25袋	0.00	0.00	0	0	0		1		2026-03-29 06:47:05.316893	2026-06-12 13:11:00.165315	\N	16g青砖袋泡茶	SP0000167	牧区纯坊 速溶青砖茶400克/袋		1	18.00	10.17	6974109183959	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+841			180	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:36.092855	2026-04-26 16:16:23.981491	\N	奶茶粉贡格尔	SP0000194			1	22.00	18.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+884			170	成品	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.971807	2026-05-30 10:16:20.580944	\N	实惠/奶豆腐	SP0000151			1	20.00	10.00	6900001519215	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+849			181	糖果sugar	55	袋	0		净含量172	0.00	0.00	0	0	0		1		2026-03-29 06:46:43.975249	2026-04-04 09:40:59.149522	\N	15元组合糖	SP0000186			1	15.00	8.60		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+847			170	成品	55	袋	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:46:41.675045	2026-04-26 16:16:59.83195	\N	乌日莫/袋装	SP0000188			1	10.00	7.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+889			170	成品	56	盒	0		1盒	0.00	0.00	0	0	0		1		2026-03-29 06:47:30.038654	2026-05-30 10:44:15.437713	\N	奶皮卷/科尔沁	SP0000146			1	30.00	15.00	6900001463143	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+843			172	散装	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:46:38.007844	2026-04-26 16:16:24.906588	\N	阿依古丽奶茶专用红茶	SP0000192			1	0.00	22.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+878			170	成品	56	盒	0		1一斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:19.354998	2026-04-26 15:27:11.664307	\N	羊奶粉/1斤	SP0000157			1	18.00	12.50		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+926			172	散装	57	个	0		1斤2两	0.00	0.00	0	0	0		1		2026-03-29 06:48:07.413569	2026-08-11 15:27:46.821715	\N	大奶豆腐砖/1.2斤	SP0000109	牧区纯坊 纯手工奶豆腐原味350克/块		1	35.00	25.00	6900001096391	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+923			172	散装	62	斤	0		{"unit_linked_goods":{"炒米海丰袋装":{"id":932,"name":"炒米海丰袋装"}}}	0.00	0.00	0	0	0		1		2026-03-29 06:48:04.51461	2026-06-09 02:17:57.541142	\N	海丰炒米/散装/硬口/	SP0000112			5	7.50	4.80	6900001127456	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+938			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:18.849827	2026-04-04 09:39:32.368854	\N	透明成品/鲜奶酪/甜味/线下	SP0000097			1	29.80	0.00	6977375240277	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+934			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:15.030001	2026-04-04 09:39:36.112874	\N	透明成品/奶皮千层/线下	SP0000101			1	26.60	0.00	6900001013558	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+928			178	塑料袋	55	袋	0		大/中/小	0.00	0.00	0	0	0		1		2026-03-29 06:48:09.276363	2026-04-04 09:39:41.706616	\N	塑料购物袋	SP0000107			1	0.00	0.00	6900001075048	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+915			170	成品	56	盒	0		250克	0.00	0.00	0	0	0		1		2026-03-29 06:47:56.98916	2026-06-13 06:46:21.808426	\N	黄油渣/盒	SP0000120			1	12.00	10.00	6900001205597	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+899			170	成品	54	瓶	0		1斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:41.411767	2026-06-12 13:08:30.931341	\N	纯净/黄油/斤	SP0000136	牧区纯坊 精品黄油420克/瓶		1	35.00	22.00	6900001367517	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+908			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:49.741949	2026-06-22 03:42:25.218999	\N	哈斯乌拉牛肉干500g原味	SP0000127	牧区纯坊 风干牛肉干500克/袋		1	98.00	89.00	6900001278368	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+901			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:47:43.221915	2026-07-27 14:43:23.714878	\N	手工白花炒米/散装	SP0000134			5	7.00	5.17	6900001345795	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+912			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:53.899291	2026-04-04 09:39:57.700902	\N	蓝旗绿乳糖水果	SP0000123			1	6.00	4.00	6900001238866	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+910			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:51.965511	2026-04-04 09:39:59.637306	\N	蓝旗绿乳糖奶香酥	SP0000125			1	6.00	4.00	6900001257630	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+921			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:48:02.593872	2026-06-12 13:23:40.57332	\N	嚼口脆炒米糖/散装	SP0000114	牧区纯坊 牧区奶糖 爵口味 250克		5	25.00	22.00	6900001147035	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+924			170	成品	55	袋	0		300克	0.00	0.00	0	0	0		1		2026-03-29 06:48:05.452649	2026-05-30 10:44:16.807833	\N	冻炒米/袋装	SP0000111			1	12.00	7.00	6900001115240	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+936			175	成品	56	盒	0		200克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:16.97035	2026-08-03 09:47:36.019231	\N	透明成品/奶条/甜味/线下	SP0000099			1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+896			198	供货品	58	小包	0		80克	0.00	0.00	0	0	0		1		2026-03-29 06:47:37.982567	2026-04-04 09:40:13.876275	\N	奶皮月饼	SP0000139			1	8.00	5.00	6900001399224	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+903			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:45.154085	2026-05-29 11:29:06.339154	\N	盛宇燃奶豆腐/甜味	SP0000132			1	26.00	19.00	6900001329621	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+930			170	成品	55	袋	0		500克	0.00	0.00	0	0	0		1		2026-03-29 06:48:11.17935	2026-05-28 16:13:49.526286	\N	加沙奶豆腐	SP0000105			1	16.00	12.00	6973630778288	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+917			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:58.885589	2026-06-13 06:37:33.757237	\N	机器乌日末液体	SP0000118			1	15.00	9.00	6900001182829	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+919			170	成品	54	瓶	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:48:00.739062	2026-04-26 15:38:18.640347	\N	黄油/斤	SP0000116			1	26.00	20.00	6900001162463	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+906			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:47.908082	2026-06-13 06:37:34.684758	\N	真空奶豆腐砖/原味	SP0000129			1	26.00	19.00	6900001297957	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+898			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:47:40.504891	2026-06-07 09:22:52.673303	\N	透专标签/奶皮千层	SP0000137			4	0.00	0.07	6900001376529	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+932			170	成品	55	袋	0		500克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:48:13.155796	2026-06-07 11:20:15.904649	\N	炒米海丰袋装	SP0000103			1	7.50	5.50	6958856810059	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+914			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:55.689564	2026-04-04 09:39:55.808835	\N	蓝旗绿乳糖炼乳	SP0000121			1	6.00	4.00	6900001214103	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+950			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:30.827947	2026-06-07 09:22:53.768889	\N	透专标签/奶皮卷	SP0000085			4	0.00	0.37	6900000856863	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+929			170	成品	55	袋	0		400克	0.00	0.00	0	0	0		1		2026-03-29 06:48:10.195771	2026-07-28 05:53:03.657986	\N	白砂糖	SP0000106			1	5.00	3.50	6900001064304	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+951			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:32.155746	2026-06-07 09:23:01.276417	\N	透专标签/冻炒米	SP0000084			4	0.00	0.37	6900000847671	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+949			184	袋子	53	张	0		500克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:29.858794	2026-04-04 09:39:21.82756	\N	专袋/乌日莫/炒米	SP0000086			1	0.00	0.79	6900000861218	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+948			184	袋子	53	张	0		250克装	0.00	0.00	0	0	0		1		2026-03-29 06:48:28.905411	2026-04-04 09:39:22.794312	\N	专袋/乌日莫	SP0000087			1	0.00	0.46	6900000874528	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+947			167	广告物料	53	张	0		价格/规格/不定	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.999927	2026-04-04 09:39:23.781238	\N	展示用卡牌	SP0000088			1	0.00	0.00	6900000881797	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+946			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:27.116959	2026-04-04 09:39:24.755591	\N	半成品/透明/鲜奶皮	SP0000089			2	26.60	14.00	6900000899530	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+945			200	给组装好产品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:26.204461	2026-04-04 09:39:25.684083	\N	半成品/透明/奶皮卷	SP0000090			2	26.60	13.00	6900000907890	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+916			172	散装	62	斤	0		半斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:57.888413	2026-08-05 04:57:48.98511	\N	脆奶条/散装/科尔沁	SP0000119			5	25.00	13.00	6900001196244	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+943			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:24.289833	2026-04-04 09:39:27.623013	\N	半成品/透明/原味奶条	SP0000092			2	22.00	7.20	6900000924342	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+942			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:23.394765	2026-04-04 09:39:28.545146	\N	半成品/透明/甜味奶条	SP0000093			2	22.00	6.80	6900000935538	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+941			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:22.463963	2026-04-04 09:39:29.486763	\N	透明成品/鲜奶酪/原味/线下	SP0000094			1	29.80	0.00	6900000947515	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+905			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:47.007702	2026-06-12 13:18:34.394702	\N	真空奶豆腐砖/甜味	SP0000130	牧区纯坊 纯手工奶豆腐微甜350克/块		1	26.00	17.00	6900001305887	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+940			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:21.541764	2026-04-26 15:27:43.599047	\N	半成品/透明/甜味/鲜奶酪	SP0000095			2	29.80	13.00	6900000955561	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+937			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:17.935558	2026-04-04 09:39:33.316193	\N	透明成品/鲜奶皮/线下	SP0000098			1	29.80	0.00	6900000986032	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+933			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:14.106114	2026-04-04 09:39:37.040944	\N	透明成品/奶条/原味/线下	SP0000102			1	22.00	0.00	6900001026070	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+904			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:47:46.093461	2026-05-29 11:29:06.786727	\N	盛宇燃奶豆腐/原味	SP0000131			1	26.00	19.00	6900001315573	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+918			170	成品	54	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:47:59.814553	2026-06-12 13:08:29.071972	\N	黄油/半斤	SP0000117	牧区纯坊 纯手工熬制黄油250克/瓶		1	16.00	11.00	6900001176074	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+927			172	散装	57	个	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:48:08.309904	2026-04-04 09:39:42.653272	\N	小奶豆腐砖/1斤	SP0000108			1	30.00	20.00	6900001086128	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+925			172	散装	57	个	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:48:06.43905	2026-04-04 09:39:44.622632	\N	小/无印花/奶豆腐砖/1斤	SP0000110			1	32.00	20.00	6900001102849	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+944			200	给组装好产品	56	盒	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:25.20265	2026-04-26 15:27:28.557107	\N	半成品/透明/奶皮千层	SP0000091			2	25.60	12.00	6900000917840	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+931			170	成品	55	袋	0		500g	0.00	0.00	0	0	0		1		2026-03-29 06:48:12.214368	2026-06-22 03:42:24.97059	\N	炒米粉/aag	SP0000104			1	6.50	4.80	6900001043080	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+913			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:54.788268	2026-04-04 09:39:56.730814	\N	蓝旗绿乳糖黄油球	SP0000122			1	6.00	4.00	6900001223574	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+911			181	糖果sugar	55	袋	0		270	0.00	0.00	0	0	0		1		2026-03-29 06:47:52.948674	2026-04-04 09:39:58.67584	\N	蓝旗绿乳糖果仁酥	SP0000124			1	6.00	4.00	6900001241338	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+909			181	糖果sugar	55	袋	0		450g	0.00	0.00	0	0	0		1		2026-03-29 06:47:50.676924	2026-04-04 09:40:00.640344	\N	蓝旗绿乳糖惠虹糖	SP0000126			1	9.00	7.00	6900001262639	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+935			175	成品	56	盒	0		180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:16.074131	2026-06-12 13:59:50.24209	\N	透明成品/奶皮卷/线下	SP0000100	牧区纯坊 奶皮子有点卷系列		1	26.60	0.00	6900001005826	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+900			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:47:42.322564	2026-06-07 07:32:55.888489	\N	透专标签/脆香奶条/微甜	SP0000135			1	0.00	0.10	6900001356463	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+902			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:47:44.189326	2026-04-28 03:06:02.264782	\N	乌日莫糖/散装	SP0000133			5	30.00	22.00	6900001338681	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+897			198	供货品	55	袋	0		5	0.00	0.00	0	0	0		1		2026-03-29 06:47:39.086674	2026-04-04 09:40:12.916589	\N	早餐包/那牧尔	SP0000138			1	15.00	10.00	6900001382864	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+939			200	给组装好产品	56	盒	0		200克	0.00	0.00	0	0	0		1		2026-03-29 06:48:20.581591	2026-04-26 15:27:43.107978	\N	半成品/透明/原味/鲜奶酪	SP0000096			2	29.80	13.00	6900000966050	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1006			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:32.29213	2026-04-04 09:38:26.14676	\N	顺丰快递费	SP0000028			1	0.00	0.00	6900000286232	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1022			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:47.397246	2026-04-21 05:37:29.68895	\N	专袋/传统奶豆腐	SP0000012			4	0.00	0.55	6900000127767	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+974			203	组装好品	54	瓶	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:55.46244	2026-06-07 09:23:02.936925	\N	纯净黄油/瓶装好的	SP0000060			4	0.00	6.00	6900000604359	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+972			172	散装	62	斤	0		45散称/斤/9元/100克	0.00	0.00	0	0	0		1		2026-03-29 06:48:53.114651	2026-04-04 09:38:59.079705	\N	原味/散称/奶豆腐块儿	SP0000062			1	70.00	45.00	6900000623124	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1020			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:45.516509	2026-06-08 06:49:07.516116	\N	标签/不干胶/奶果子	SP0000014			4	0.00	0.18	6900000148085	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+980			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0		1		2026-03-29 06:49:02.270151	2026-06-11 07:21:14.663869	\N	新/青砖奶茶	SP0000054			1	58.00	0.00	6977252570039	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1017			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:42.517342	2026-04-21 05:37:34.651764	\N	手提袋	SP0000017			4	0.00	0.94	6900000178722	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+970			170	成品	56	盒	0		200克	0.00	0.00	0	0	0	供货价13	1		2026-03-29 06:48:51.325392	2026-04-26 15:27:42.644649	\N	热奶豆腐碗	SP0000064			1	15.00	10.00	6900000642521	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+961			201	亚克力	56	盒	0		182X120X28/烤奶豆腐片/奶皮卷	0.00	0.00	0	0	0		1		2026-03-29 06:48:41.925836	2026-06-07 09:22:53.220283	\N	扁盒/亚克力/带内托	SP0000074			4	0.00	1.75	6900000747152	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1012			204	其他成本	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:37.853679	2026-04-04 09:38:19.778259	\N	北方人工费	SP0000022			1	0.00	1.30	6900000221261	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+990			210	奶果子	55	袋	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:14.199822	2026-06-07 09:23:08.464246	\N	奶果子/专用塑膜袋	SP0000044			4	0.00	0.10	6900000443474	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1004			204	其他成本	59	件	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:30.397892	2026-04-04 09:38:28.363081	\N	圆通速递快递费	SP0000030			1	0.00	4.00	6900000308856	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1002			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:28.558493	2026-04-04 09:38:30.339759	\N	封口机/真空	SP0000032			1	0.00	3800.00	6900000324528	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1019			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:44.564594	2026-06-08 06:49:07.988728	\N	标签/不干胶/冻炒米	SP0000015			4	0.00	0.11	6900000151480	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1016			187	黄油	54	瓶	0		100ML	0.00	0.00	0	0	0		1		2026-03-29 06:49:41.599301	2026-04-21 05:50:59.336003	\N	专瓶/黄油	SP0000018			4	0.00	1.80	6900000186971	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+954			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:34.870605	2026-06-07 09:22:55.97699	\N	透专标签/乳清奶条/甜味	SP0000081			4	0.00	0.05	6900000815004	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1010			189	半成品	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:49:36.02884	2026-08-08 04:28:28.287303	\N	奶油球	SP0000024			3	0.00	0.45	6900000243728	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+984			205	青砖奶茶	53	张	0		一张	0.00	0.00	0	0	0		1		2026-03-29 06:49:07.274393	2026-04-04 09:38:47.474644	\N	茶包/类腰封纸	SP0000050			1	0.00	0.18	6900000504012	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+982			178	塑料袋	57	个	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:04.122927	2026-04-04 09:38:49.420416	\N	塑料手提袋	SP0000052			1	0.00	0.19	6900000526367	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+978			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:00.454145	2026-04-04 09:38:53.224677	\N	新茶专用标签纸	SP0000056			1	0.00	0.05	6900000561600	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+999			205	青砖奶茶	53	张	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:24.473332	2026-06-07 09:23:04.603874	\N	茶专用/不干胶/标签	SP0000035			4	0.00	0.04	6900000358921	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+962			201	亚克力	56	盒	0		85X85X63  鲜奶皮	0.00	0.00	0	0	0		1		2026-03-29 06:48:42.8266	2026-06-07 09:22:57.108143	\N	中/方形/亚克力盒/	SP0000072			4	2.50	0.85	6900000724486	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+968			172	散装	53	张	0		150-180克	0.00	0.00	0	0	0		1		2026-03-29 06:48:49.50128	2026-04-04 09:39:02.818465	\N	大/奶皮	SP0000066			1	20.00	13.00	6900000661992	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+966			202	散小包装	58	小包	0		50克	0.00	0.00	0	0	0		1		2026-03-29 06:48:47.671566	2026-04-04 09:39:04.755603	\N	查嘎粉/小包装袋	SP0000068			1	5.00	3.00	6900000686492	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+964			175	成品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:44.692601	2026-04-04 09:39:06.680267	\N	透明成品/冻炒米/线下	SP0000070			1	23.50	0.00	6900000709295	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+956			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:36.709091	2026-06-07 09:22:57.653519	\N	透专标签/鲜奶皮	SP0000079			4	0.00	0.37	6900000794933	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+952			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:33.061995	2026-06-07 09:22:59.631914	\N	透专标签/奶酪/原味	SP0000083			4	0.00	0.37	6900000831130	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+959			201	亚克力	56	盒	0		235X170X35	0.00	0.00	0	0	0		1		2026-03-29 06:48:40.035059	2026-04-04 09:39:11.628438	\N	大/牛薄脆盒/亚克力	SP0000076			1	0.00	2.60	6900000761425	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+957			201	亚克力	56	盒	0		待包换/冻炒米 145X85X55	0.00	0.00	0	0	0		1		2026-03-29 06:48:38.085612	2026-04-04 09:39:13.554767	\N	大/长方/亚克力/待用	SP0000078			1	0.00	1.30	6900000782027	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+986			189	半成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:49:09.108042	2026-06-07 09:23:01.834763	\N	精品/奶豆腐块儿/原味	SP0000048			3	20.00	14.50	6900000481263	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+977			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:59.050296	2026-06-07 09:23:06.254381	\N	新茶包人工费	SP0000057			3	0.00	1.00	6900000571565	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1011			189	半成品	58	小包	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	已加运费平均采购价	1		2026-03-29 06:49:36.942129	2026-08-17 05:11:00.964572	\N	茶包	SP0000023			3	0.00	0.17	6900000233034	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+998			205	青砖奶茶	53	张	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:23.558588	2026-06-07 09:23:04.049587	\N	茶专用/硫酸纸	SP0000036			4	0.00	0.28	6900000362581	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+991			189	半成品	62	斤	0		散装一斤	0.00	0.00	0	0	0		1		2026-03-29 06:49:15.192546	2026-06-13 05:03:43.661643	\N	奶果子/散装	SP0000043			5	60.00	25.00	6900000434411	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+993			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:18.84322	2026-06-07 09:23:07.905778	\N	冻炒米专用/塑膜袋	SP0000041			4	0.00	0.10	6900000413063	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+987			208	样品采购	62	斤	0		不定具体产品	0.00	0.00	0	0	0		1		2026-03-29 06:49:10.488839	2026-04-04 09:38:44.71778	\N	采购样品专用/乳制品	SP0000047			1	0.00	0.00	6900000479748	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+973			189	半成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:54.105148	2026-06-07 09:23:00.727958	\N	精品/奶豆腐块儿/甜味/	SP0000061			3	20.00	14.50	6900000617311	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+967			168	散货	63	桶	0		4斤装	0.00	0.00	0	0	0	4斤装/1元一斤	1		2026-03-29 06:48:48.573276	2026-06-13 06:46:21.333943	\N	查嘎/乳清	SP0000067	传统查嘎酸奶五斤大桶装		1	10.00	5.00	6900000679211	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+979			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:01.363799	2026-05-28 17:22:09.625011	\N	新茶包/纸	SP0000055			1	0.00	0.02	6900000553413	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+997			189	半成品	58	小包	0		2g	0.00	0.00	0	0	0		1		2026-03-29 06:49:22.630194	2026-07-22 14:25:12.966969	\N	茶专用/盐包	SP0000037			3	0.00	0.06	6900000375562	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+981			172	散装	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0		1		2026-03-29 06:49:03.200495	2026-08-22 03:53:05.682911	\N	烤奶皮	SP0000053			5	30.00	22.00	6900000535282	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1005			204	其他成本	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:31.377292	2026-04-04 09:38:27.428664	\N	泰成物流费	SP0000029			1	0.00	0.00	6900000291007	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1003			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:29.482236	2026-04-04 09:38:29.357769	\N	热收缩膜机	SP0000031			1	0.00	1838.00	6900000316828	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1001			214	设备	60	台	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:27.293725	2026-04-04 09:38:31.266689	\N	冷冻柜/冰箱	SP0000033			1	0.00	1609.48	6900000335117	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1009			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:35.084281	2026-06-07 09:23:05.69676	\N	专盒/青砖奶茶外盒	SP0000025			4	0.00	2.50	6900000256884	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1000			205	青砖奶茶	57	个	0		袋100个/平均价0.1599	0.00	0.00	0	0	0		1		2026-03-29 06:49:25.419757	2026-06-07 10:19:59.557368	\N	木勺	SP0000034			4	0.00	0.11	6900000349016	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+985			193	成品	55	袋	0		150克	0.00	0.00	0	0	0		1		2026-03-29 06:49:08.209757	2026-05-23 04:35:17.121673	\N	甜味传统奶豆腐/袋装成品	SP0000049			1	42.00	12.78	6900000499096	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+955			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:35.780754	2026-06-07 09:22:54.8772	\N	透专标签/乳清奶条/原味	SP0000080			4	0.00	0.05	6900000807613	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1013			189	半成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:38.797883	2026-06-22 06:19:25.280499	\N	冻炒米/给组装半成品/那牧尔	SP0000021			2	0.00	5.50	6900000218137	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+960			201	亚克力	56	盒	0		31g	0.00	0.00	0	0	0		1		2026-03-29 06:48:40.941275	2026-06-07 09:22:52.095123	\N	三角/奶皮千层盒	SP0000075			4	0.00	0.85	6900000754498	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+976			193	成品	56	盒	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:57.349972	2026-04-04 09:38:55.162679	\N	暂用/茶 新旧更替	SP0000058			1	58.00	0.00	6900000589769	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+958			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:39.011957	2026-06-23 09:40:38.097402	\N	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077	SSM-028注塑长方盒130+85*62（茶叶盒）		4	0.00	1.56	6900000778282	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+975			187	黄油	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:48:56.402437	2026-06-07 09:23:02.390076	\N	黄油脖签	SP0000059			4	0.00	0.08	6900000598069	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+971			172	散装	62	斤	0		45散称/斤/9元/100克	0.00	0.00	0	0	0		1		2026-03-29 06:48:52.219121	2026-04-04 09:39:00.03641	\N	甜味/散称/奶豆腐块儿	SP0000063			1	70.00	45.00	6900000639276	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+969			172	散装	53	张	0		120-150克	0.00	0.00	0	0	0		1		2026-03-29 06:48:50.432711	2026-04-04 09:39:01.907737	\N	小/奶皮	SP0000065			1	15.00	10.00	6900000651693	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+965			200	给组装好产品	56	盒	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:48:45.594305	2026-04-04 09:39:05.738346	\N	半成品/透明/冻炒米	SP0000069			2	23.50	4.20	6900000699220	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+953			199	标签纸	53	张	0		1张	0.00	0.00	0	0	0		1		2026-03-29 06:48:33.971244	2026-06-07 09:22:58.534509	\N	透专标签/奶酪/甜味	SP0000082			4	0.00	0.37	6900000828304	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+983			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:06.374033	2026-06-07 09:23:00.181442	\N	甜味/标签/不干胶/传统奶豆腐	SP0000051			4	0.00	0.06	6900000517653	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+995			205	青砖奶茶	55	袋	0		0	0.00	0.00	0	0	0		1		2026-03-29 06:49:20.768185	2026-06-07 09:23:03.484631	\N	茶专用/热缩膜	SP0000039			4	0.00	0.10	6900000393419	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1018			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:43.444451	2026-04-21 05:37:33.680624	\N	礼盒/蓝界	SP0000016			4	8.00	4.55	6900000169010	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1021			207	传统奶豆腐	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:46.451412	2026-06-09 07:48:53.691996	\N	标签/不干胶/品牌传统奶豆腐	SP0000013			4	0.00	0.06	6900000132020	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1027			178	塑料袋	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:52.573581	2026-08-04 06:20:18.793837	\N	真空袋	SP0000007			4	0.00	0.25	6900000079283	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1033			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:58.382336	2026-04-11 11:51:41.521831	\N	专袋/奶条	SP0000001			4	0.00	0.71	6900000015365	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1031			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:56.37743	2026-04-21 05:37:19.992995	\N	专底盒/奶条	SP0000003			4	0.00	0.37	6900000032892	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1029			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:54.408934	2026-04-21 05:37:22.382201	\N	专内盒/奶果子	SP0000005			4	0.00	0.65	6900000053298	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1025			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:50.732689	2026-04-21 05:37:26.723914	\N	定制款/专内袋/扎那家奶果子	SP0000009			4	0.00	0.07	6900000097364	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1023			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:48.83623	2026-04-21 05:37:28.622936	\N	标签/不干胶/奶条/原味	SP0000011			4	0.00	0.05	6900000115061	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3080			0		0		0			0.00	0.00	0	0	0		1		2026-03-30 16:54:36.941869	2026-03-30 16:54:36.941869	2026-03-30 16:54:37.7036	_TEST_IMPORT_DELETE_ME				1	0.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1028			187	黄油	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:53.495723	2026-04-21 05:37:23.400412	\N	专标签/黄油	SP0000006			4	0.00	0.06	6900000068809	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3151			424	现制产品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.086038	2026-06-13 02:21:16.18439	\N	牧区纯坊 乌日莫拌炒米180克/盒				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1015			189	半成品	55	袋	0		250克/一袋	0.00	0.00	0	0	0		1		2026-03-29 06:49:40.677313	2026-06-13 05:03:42.392576	\N	散装/原味奶条	SP0000019			5	0.00	9.00	6915451232840	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1026			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:51.651482	2026-04-21 05:37:25.751365	\N	专内袋/奶果子	SP0000008			4	0.00	0.08	6900000085792	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1024			215	奶条	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:49.772554	2026-04-21 05:37:27.664081	\N	标签/不干胶/奶条/甜味	SP0000010			4	0.00	0.05	6900000108033	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3177			423	其他品牌成品	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:42:19.372797	2026-06-17 11:42:19.885769	\N	蒙古国饮料				1	8.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+996			193	成品	56	盒	0		16次泡	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/996/header_1.jpg","category":"精选","detailImages":["/media/goods/996/detail_1.jpg","/media/goods/996/detail_2.jpg","/media/goods/996/detail_3.jpg"],"headerImages":["/media/goods/996/header_1.jpg","/media/goods/996/header_2.jpg","/media/goods/996/header_3.jpg"],"baseSales":988,"productInfo":{"fullName":"青砖蒙古奶茶（袋泡型）","ingredients":"奶茶专用袋泡茶（青砖茶）+ 独立奶球（含乳饮品）+ 独立调味盐包","specs":"一盒含 16 个茶包 + 16 个奶球 + 16 个盐包","nutritionCreamer":"奶球每10mL：能量110kJ / 蛋白质0.4g / 脂肪2.7g(0反式脂肪酸) / 碳水0.2g / 钠15mg","craft":"采用聂市群体品种与楮叶齐作为原料，用传统青砖茶冷发酵工艺，发酵完成后成堆打洞陈化半年，采用现代技术拼配精制而成","eatMethod":"先泡茶，再放奶和盐。不用煮、不用熬，直接热水泡开即可。加水可续杯，越泡越浓，味道更地道","highlights":"茶还是那个青砖茶，只是变碎了可以直接泡开；不含反式脂肪；真正的正宗蒙古奶茶味道"}}}	1		2026-03-29 06:49:21.709118	2026-07-26 23:03:15.749137	\N	青砖奶茶成品	SP0000038			1	58.00	15.00	6900000389670	0	0	1	0	1	1	1	1	f	f	1	official	0	\N
+872			189	半成品	55	袋	0		140克	0.00	0.00	0	0	0		1		2026-03-29 06:47:10.015007	2026-04-26 16:06:26.28185	\N	半成品/黄金纬度牛肉干/那牧尔	SP0000163			2	88.00	48.95	6973457825186	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+963			201	亚克力	57	个	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:48:43.763191	2026-06-23 09:45:18.072027	\N	小/方形/亚克力盒/	SP0000071	SSH-001正方食品盒7.4+7.4*7.8CM		4	2.00	1.00	6900000719676	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+839			180	成品	55	袋	0		360克	0.00	0.00	0	0	0		1		2026-03-29 06:46:34.281064	2026-04-26 16:16:23.045852	\N	奶皮子粉	SP0000196			1	16.00	12.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1014			189	半成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:49:39.760183	2026-08-22 03:55:29.9619	\N	散装/甜味奶条	SP0000020			5	30.00	15.50	6962547070553	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+922			181	糖果sugar	62	斤	0		1斤散称	0.00	0.00	0	0	0		1		2026-03-29 06:48:03.552073	2026-05-02 01:41:07.619808	\N	酸奶炒米糖/散装	SP0000113			5	20.00	10.00	6900001139227	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3148			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084176	2026-06-12 12:09:01.084176	\N	牧区纯坊 香蕉味蛋糕458克/盒				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3154			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088527	2026-06-12 12:09:01.088527	\N	牧区纯坊 蒙牛 0添加有机原味软牛奶200克10盒/箱				1	58.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3081			207		52	块	0		1	0.00	0.00	0	0	0		1		2026-04-02 05:08:11.653687	2026-04-04 09:37:56.503363	2026-04-20 15:34:48.142306	奶豆腐块			实惠奶豆腐，科尔沁奶食品供货	1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1032			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:57.401382	2026-04-21 05:37:19.016586	\N	专盒/冻炒米	SP0000002			4	0.00	0.87	6900000028430	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+1030			210	奶果子	53	张	0		1	0.00	0.00	0	0	0		1		2026-03-29 06:49:55.371296	2026-04-21 05:37:21.407925	\N	专外盒/奶果子	SP0000004			4	0.00	0.65	6900000045203	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3147			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.082182	2026-06-12 12:09:01.082182	2026-06-12 12:24:33.246435	牧区纯坊 小米原浆 40度 清香型 500ml/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3146			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.07922	2026-06-12 12:09:01.07922	2026-06-12 13:08:38.72099	牧区纯坊 纯手工熬制黄油250克/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3165			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.279842	2026-06-12 12:09:01.279842	2026-06-12 13:23:53.00308	牧区纯坊 牧区奶糖 爵口味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3145			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.988316	2026-06-12 12:09:00.988316	2026-06-12 13:59:51.600094	牧区纯坊 奶皮子有点卷草莓味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3166			424	现制产品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.281385	2026-06-13 02:21:15.724742	\N	红糖枸杞红枣奶茶450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+989			193	成品	54	瓶	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/989/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/989/header_1.jpg","https://nomaderp.pages.dev/media/goods/989/header_2.jpg","https://nomaderp.pages.dev/media/goods/989/header_3.jpg","https://nomaderp.pages.dev/media/goods/989/header_4.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1瓶","price":39,"erpId":989,"image":""},{"label":"2瓶","price":75,"erpId":989,"image":""},{"label":"3瓶","price":108,"erpId":989,"image":""}],"baseSales":341,"productInfo":{"fullName":"蒙古纯手工黄油（瓶装）","ingredients":"生牛乳（配料表只有牛奶）","specs":"约 100g/瓶（陶瓷罐 + 软木塞封口）","origin":"内蒙古阿鲁科尔沁旗（哈萨尔故乡，从内蒙古牧场直发月内新产）","craft":"中国非物质文化遗产、非遗传承人阿妈手艺。工艺：晨5点挤奶 → 夏12小时/冬24小时自然发酵 → 撇出乌日莫（嚼口）→ 放进奶油专用布质袋，乳清慢慢分离滴下 → 24小时后奶油倒进木桶慢慢搅拌 → 柴火熬制1小时 → 装罐。整个工艺柴火熬制+自然晾干共96小时","nutritionHighlight":"维生素A 66%NRV(528μgRE/100g)","highlights":"60斤牛奶只出2斤黄油；无任何添加，配料表只有牛奶；月内新产更新鲜","storage":"⚠️ 必须冷藏（0-4°C）保存","shelfLife":"冷藏 3-6 个月","eatMethod":"抹面包、拌饭、煎饼、放奶茶里，可代替普通黄油使用"},"detailImage":"","wholesalePrice":0,"minOrderQuantity":1,"specGroups":[{"name":"规格","values":[{"label":"1瓶"},{"label":"2瓶"},{"label":"3瓶"}]}],"skuCombos":[{"combo":["1瓶"],"price":39,"erpId":989},{"combo":["2瓶"],"price":75,"erpId":989},{"combo":["3瓶"],"price":108,"erpId":989}],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:49:12.346781	2026-08-23 03:14:27.817058	\N	蒙古黄油/瓶装成品	SP0000045	牧区纯坊品牌 蒙古 黄油 100克/瓶		1	42.00	8.05	6900000452315	0	0	8	0	1	1	1	1	t	f	1	official	0	\N
+994			193	成品	56	盒	0		110克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/994/header_1.jpg","category":"精选","detailImages":["/media/goods/994/detail_1.jpg","/media/goods/994/detail_2.jpg","/media/goods/994/detail_3.jpg"],"headerImages":["/media/goods/994/header_1.jpg","/media/goods/994/header_2.jpg","/media/goods/994/header_3.jpg"],"baseSales":281,"productInfo":{"fullName":"牧区冻炒米","specs":"净含量 112克±5g × 16袋（独立包装）","origin":"内蒙古（本土特产奶制品）","nutritionHighlights":"维生素A 21%NRV(165μg/100g) / 维生素E 15%NRV(2mg=1E/100g) / 铁 9%NRV(1.4mg/100g)","highlights":"本土特产奶制品，健康好吃，蒙古纯味；含有人体必须营养素","eatMethod":"可直接吃当零食；或泡奶茶、牛奶里更香","shelfLife":"6个月","storage":"常温干燥处"}}}	1		2026-03-29 06:49:19.767881	2026-08-17 05:08:15.923125	\N	冻炒米成品盒	SP0000040			1	36.00	5.50	6900000408112	0	0	4	0	1	1	1	1	f	f	1	official	0	\N
+1007			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":false}}	1		2026-03-29 06:49:33.228395	2026-06-12 12:17:31.029808	\N	原味奶条成品	SP0000027	牧区纯坊 蒙古鲜奶制品奶条250克/袋		1	52.00	11.61	6900000277492	0	0	7	0	1	1	1	1	f	f	1	official	0	\N
+3149			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.084679	2026-06-12 12:09:01.084679	2026-06-12 13:15:30.366906	牧区纯坊 青砖茶 380克/块				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3179			175	成品	56	盒	0		120克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 06:56:45.322236	2026-06-22 06:56:45.576504	\N	透明成品/奶条/甜味/线下/方盒				1	22.00	0.00	6900000999855	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3180			188	牧区纯坊X游牧奇遇	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-22 07:01:15.052876	2026-06-22 07:01:15.306619	\N	透明奶茶杯				1	2.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3118			423	其他品牌成品	62	斤	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784686608630_9tlp5h","headerImages":["/api/image/img_1784686608630_9tlp5h","/api/image/img_1784686627419_8cq3ey"],"detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[{"name":"规格","values":[{"label":"大桶装","image":"/api/image/img_1784686548893_sqgo4t"},{"label":"小桶装","image":"/api/image/img_1784686564601_2sag06"}]}],"skuCombos":[{"combo":["大桶装"],"price":0,"erpId":3118},{"combo":["小桶装"],"price":0,"erpId":3118}],"skuVariants":[{"label":"大桶装","price":0,"erpId":3118},{"label":"小桶装","price":0,"erpId":3118}],"isRedeemable":false,"pointsCost":0,"productInfo":{"fullName":"烤奶花","ingredients":"乳花 (Flour of juncus marigcinus)、面粉、白砂糖等","specs":"净含量 120-130克/罐","origin":"内蒙古（本土工艺奶零食）","craft":"烘焙工艺，将乳花与面粉结合烤制成小花朵形状","shelfLife":"常温 6 个月","storage":"常温密封干燥处","highlights":"造型可爱像小饼干；奶香微甜；便携小罐装","scene":"追剧零食、办公室零食、小朋友零食"}}}	1		2026-05-27 04:43:46.719064	2026-08-17 05:11:38.364914	\N	烤奶花				5	30.00	17.00		0	0	11	0	1	1	1	1	t	f	1	official	0	\N
+3082			0		0	个	0			0.00	0.00	0	0	0		1		2026-04-20 13:43:39.305757	2026-04-20 13:43:39.305757	2026-04-20 15:34:47.155953	牛肉瓜				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3083			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.136041	2026-04-21 07:34:54.136041	\N	敖汉小米5㎏				1	90.00	65.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3084			0		0	盒	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:54.357518	2026-04-21 07:34:54.357518	\N	四色小米2㎏				1	69.00	42.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3086			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.113849	2026-04-21 07:34:55.113849	\N	布袋小米2.5㎏				1	50.00	37.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3087			0		0	袋	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.313877	2026-04-21 07:34:55.313877	\N	郁金川2.5㎏				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3089			0		0	箱	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.714876	2026-04-21 07:34:55.714876	\N	有机黄小米2㎏				1	59.50	43.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3107			168	散货	52	块	0			0.00	0.00	0	0	0		1		2026-05-14 09:01:46.065231	2026-07-25 08:56:38.634799	\N	科尔沁中奶豆腐				1	25.00	17.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3095			168	散货	54	瓶	0		250克	0.00	0.00	0	0	0		1		2026-05-04 02:50:29.320833	2026-05-04 02:51:20.172825	\N	牧区黄油小瓶				1	22.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3097			421	文创	56	盒	0			0.00	0.00	0	0	0		1		2026-05-04 03:05:14.20207	2026-05-04 03:05:14.20207	\N	明信片/风景版				1	22.90	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3100			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-08 03:59:32.917368	2026-05-08 03:59:32.917368	\N	楚楚给				1	12.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3101			168	散货	55	袋	0			0.00	0.00	0	0	0		1		2026-05-10 08:50:24.242221	2026-05-10 08:50:24.242221	\N	老式软放饼				1	15.00	8.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3105			422	BOM产品	56	盒	0			0.00	0.00	0	0	0		1		2026-05-11 14:20:19.665607	2026-05-11 14:20:19.665607	\N	奶豆腐/盒装				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3156			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.176574	2026-06-12 12:09:01.176574	2026-06-12 12:17:37.200595	牧区纯坊 蒙古鲜奶制品奶条250克/袋				1	52.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3088			0		0	斤	0			0.00	0.00	0	0	0		1		2026-04-21 07:34:55.511212	2026-05-16 08:23:40.140146	\N	黑芝麻丸5㎏				5	25.00	19.35		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3108			193	成品	56	套	0			0.00	0.00	0	0	0	标准套装礼盒，成本由BOM000023计算	1		2026-05-17 08:14:21.916721	2026-05-17 08:15:01.559343	\N	品牌套装礼盒				1	0.00	122.22		0	0	0	0	1	0	1	1	f	f	1	official	0	\N
+3109			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-18 03:01:25.00075	2026-05-18 11:34:28.813568	\N	奶派/坚果/芒果/樱桃				1	35.00	24.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3110			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-18 03:05:05.334564	2026-05-18 11:34:28.216464	\N	樱桃味/干噎酸奶/散				5	35.00	15.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3113			0		53		0			0.00	0.00	0	0	0		1		2026-05-23 04:33:12.035261	2026-05-25 12:56:15.216291	\N	明信片/带种子				1	10.00	9.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3106			168	散货	53	张	0			0.00	0.00	0	0	0		1		2026-05-13 08:40:05.732185	2026-06-07 14:28:45.880709	\N	甜味奶豆腐				1	30.00	28.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3103			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:22:15.838897	2026-05-24 06:46:08.828174	\N	牧区酸奶小				1	8.00	3.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3104			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:22:57.254763	2026-05-24 06:46:20.239126	\N	牧区酸奶/大				1	20.00	6.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3112			421		57		0			0.00	0.00	0	0	0		1		2026-05-21 15:21:15.13533	2026-05-25 12:56:15.686673	\N	阿旗book				1	29.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3091			168	散货	62	斤	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-04-27 11:01:48.030256	2026-06-08 04:17:14.094865	\N	牛肉干/散称				5	128.00	98.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3093			168	散货	63	桶	0			0.00	0.00	0	0	0		1		2026-04-30 01:28:05.174482	2026-05-28 14:17:30.039862	\N	烤奶花（小桶）				1	20.00	4.68		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3094			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-02 01:31:58.139275	2026-06-22 03:42:25.454283	\N	科尔沁糖（酸奶/嚼口/乌日末		牧区纯坊 牧区奶糖 酸奶味 250克		5	25.00	10.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3158			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.182427	2026-06-12 12:09:01.182427	2026-06-12 13:24:54.10506	牧区纯坊 天山原浆40%vol/350ml/一瓶				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+822			167	广告物料	0	瓶	0		半斤装	0.00	0.00	0	0	0		1		2026-03-29 06:46:10.970494	2026-05-29 11:29:09.116874	\N	黄油/大瓶/科尔沁	SP0000214			1	30.00	21.00	6907262383018	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3092			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-04-29 06:00:42.815829	2026-05-30 11:19:56.95243	\N	干噎酸奶				5	40.00	30.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3090			0		62	斤	0			0.00	0.00	0	0	0		1		2026-04-23 15:39:04.52016	2026-05-31 06:20:53.767192	\N	手工棒棒糖				5	30.00	25.00		0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3096			168	散货	54	瓶	0		500g	0.00	0.00	0	0	0		1		2026-05-04 02:51:12.709616	2026-06-12 12:18:37.917596	\N	牧区黄油大瓶		牧区纯坊 纯手工熬制黄油500克/瓶		1	46.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3102			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-11 12:21:33.896996	2026-06-12 12:24:27.715355	\N	小米原浆		牧区纯坊 小米原浆 40度 清香型 500ml/瓶		1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3099			168	散货	62	斤	0			0.00	0.00	0	0	0		1		2026-05-06 01:25:07.998513	2026-06-12 12:54:10.329039	\N	饺子		牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋		1	25.00	18.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3155			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088912	2026-06-12 12:09:01.088912	2026-06-12 13:18:49.1727	牧区纯坊 纯手工奶豆腐微甜350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3111			421		57		0			0.00	0.00	0	0	0		1		2026-05-21 14:49:40.495133	2026-08-09 06:24:27.283655	\N	蒙古元素永生花				1	65.00	45.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3157			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.180589	2026-06-12 12:09:01.180589	2026-06-12 13:24:58.80373	牧区纯坊 伴手礼盒/送礼搭档/空盒 礼品盒				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3116			423	其他品牌成品	54	瓶	0		260mL	0.00	0.00	0	0	0		1		2026-05-25 11:44:00.104052	2026-05-25 11:45:22.760336	\N	酸马奶/蒙医院				1	18.00	12.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3114			421		67		0			0.00	0.00	0	0	0		1		2026-05-23 06:37:13.641868	2026-05-25 12:56:14.277143	\N	宋锦耳坠				1	58.00	23.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+920			172	散装	62	斤	0		斤	0.00	0.00	0	0	0		0		2026-03-29 06:48:01.691012	2026-08-22 03:53:40.428663	\N	手工乌日末液体	SP0000115	牧区纯手工乌日莫（奶嚼口）原味500克		5	10.00	10.00	6900001151503	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3119			423	其他品牌成品	63	桶	0		{"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"show":false,"headerImages":["/api/image/img_1784644264548_libfla","/api/image/img_1784646968622_y3urcg","/api/image/img_1784646983501_kslr44"],"image":"/api/image/img_1784644264548_libfla","detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[{"name":"容量","values":[{"label":"大桶装"},{"label":"小桶装"}]}],"skuCombos":[{"combo":["大桶装"],"price":35,"erpId":3119},{"combo":["小桶装"],"price":30,"erpId":3119}],"skuVariants":[{"label":"大桶装","price":35,"erpId":3119,"image":""},{"label":"小桶装","price":30,"erpId":3119,"image":""}],"isRedeemable":false,"pointsCost":0}}	1		2026-05-27 11:19:57.869477	2026-08-23 03:15:16.535705	\N	烤奶花/大桶装				1	30.00	5.40		0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3126			196	定制类产品	56	盒	0		120g	0.00	0.00	0	0	0		1		2026-06-03 08:08:35.434038	2026-06-03 08:08:35.434038	\N	120克透明/奶条				1	16.00	4.08		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3123			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-29 10:55:39.733893	2026-05-29 10:57:16.697245	\N	 蒙古国糖果				1	20.00	13.50		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3122			168	散货	54	瓶	0			0.00	0.00	0	0	0		1		2026-05-29 10:54:57.114463	2026-05-29 10:57:17.176236	\N	jebu 蒙古国饮料				1	5.00	3.54		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3121			423	其他品牌成品	62	斤	0		{"attrs":[{"name":"口味","values":["甜味","原味"]}],"skus":{"甜味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""},"原味":{"sell_price":80,"cost_price":38,"sku_sn":"","barcode":""}},"unit_linked_goods":{}}	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-05-28 14:47:00.21195	2026-06-13 10:06:31.419865	\N	科尔沁奶豆腐/条/片/原/甜				5	80.00	38.00		0	0	0	0	1	1	1	1	t	t	1	official	0	\N
+3124			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:28:32.161661	2026-05-30 11:33:04.219072	\N	彩色奶圈圈/袋装/果味奶渣				1	35.00	28.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3117			421	文创	53	张	0			0.00	0.00	0	0	0		1		2026-05-25 12:35:05.059092	2026-08-09 06:24:26.22816	\N	车载香片	SP2605252385			1	8.80	0.85		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3181			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-30 15:51:03.822543	2026-06-30 15:51:04.341485	\N	牛奶浓				1	2.50	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3120			423	其他品牌成品	55	袋	0		165克	0.00	0.00	0	0	0		1		2026-05-28 14:45:29.011446	2026-05-28 14:48:47.886402	\N	科尔沁袋装/——奶豆腐条/片/				1	25.00	12.50		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3128			212	冻炒米	53	张	0		1	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"detailImage":"","specGroups":[],"skuCombos":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-04 14:47:51.447173	2026-06-14 05:25:13.879284	\N	专袋/冻炒米/真空袋				4	0.00	0.09	6900000028430	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3115			421		57		0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784643891975_n8hlq7","headerImages":["/api/image/img_1784643891975_n8hlq7"],"detailImages":[],"tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":80,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"productInfo":{"fullName":"游牧奇遇 帆布包（周边）","specs":"普通托特包尺寸","design":"蒙古包印花图案，蒙古文装饰，标语 \\"WISH YOU BEST\\"，浅蓝底色","material":"纯棉帆布","type":"品牌周边非食品","note":"非食品类，无成分/保质期"}}}	1		2026-05-23 06:41:31.959491	2026-07-26 23:03:22.397012	\N	帆布包				1	39.00	7.00		0	0	12	0	1	1	1	1	f	f	1	official	0	\N
+907			170	成品	55	袋	0		1斤	0.00	0.00	0	0	0		1		2026-03-29 06:47:48.812859	2026-07-02 08:14:55.045978	\N	风干牛肉500g大片	SP0000128	牧区纯坊 大片风干牛肉500g/袋		1	128.00	95.00	6900001286630	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3125			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0		1		2026-05-30 11:29:21.473675	2026-08-08 03:24:05.634802	\N	细奶条/原味/乌日汗				1	20.00	18.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3152			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.086448	2026-06-12 12:09:01.086448	2026-06-12 13:08:37.237757	牧区纯坊品牌 蒙古 黄油 100克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3153			193	成品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.088094	2026-06-12 12:09:01.088094	2026-06-12 13:35:46.45875	牧区纯乳清冷饮450克/杯				1	12.90	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3127			193	成品	62	斤	0		一斤装/拆装/定制	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-04 13:40:02.960069	2026-06-13 05:03:41.268039	\N	冻炒米成品/散装/小袋装				5	36.00	32.20	6900000408112	0	0	2	0	1	1	1	1	f	f	1	official	0	\N
+3182			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-03 02:50:44.713096	2026-07-03 02:50:55.99174	\N	郁金川小米2.5㎏  				1	40.00	29.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3129			185	包材	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-06-07 07:31:34.248809	2026-06-07 07:32:55.376336	\N	专标签/亚克力/奶锅巴				1	0.00	0.10		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3164			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.278585	2026-06-12 12:09:01.278585	2026-06-12 12:16:10.826099	牧区纯坊 纯手工月饼 黄油渣馅350g/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3167			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.282711	2026-06-12 12:09:01.282711	2026-06-12 12:17:37.204941	牧区纯坊 大片风干牛肉500g/袋				1	138.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+830			167	广告物料	0	袋	0		2.5kg	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[]}}	1		2026-03-29 06:46:20.776315	2026-06-07 13:47:11.837582	\N	小米/10斤/小袋/红嘴/阿旗	SP0000206			1	22.00	19.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3159			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.183702	2026-06-12 12:09:01.183702	2026-06-12 12:42:31.27564	牧区纯坊 纯手工月饼 五仁馅350克/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3130			421	文创	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImages":[],"tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"skuVariants":[],"show":false}}	1		2026-06-08 04:53:39.257805	2026-06-08 06:26:49.292877	\N	小马挂件				1	0.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3163			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.276507	2026-06-12 12:09:01.276507	2026-06-12 13:23:51.554095	牧区纯坊 牧区奶糖 酸奶味 250克				1	25.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3161			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.187229	2026-06-12 12:09:01.187229	2026-06-12 13:59:53.19333	牧区纯坊 奶皮子有点卷220克 果味夹层/盒				1	28.80	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3162			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.188614	2026-06-12 12:09:01.188614	2026-06-12 14:05:16.949552	牧区纯坊 纯手工奶豆腐1000g原味350克/块				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3160			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.185601	2026-06-12 12:09:01.185601	\N	牧区纯坊 无糖饼干500克/盒				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+1008			193	成品	55	袋	0		250克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/1008/header_1.jpg","category":"精选","detailImages":["/media/goods/1008/detail_1.jpg","/media/goods/1008/detail_2.jpg","/media/goods/1008/detail_3.jpg"],"headerImages":["/media/goods/1008/header_1.jpg","/media/goods/1008/header_2.jpg","/media/goods/1008/header_3.jpg"],"baseSales":111,"productInfo":{"fullName":"奶条（甜味成品）","ingredientsOriginal":"牛奶","ingredientsSweet":"牛奶、白砂糖","origin":"内蒙古大草原黄金牧场（北纬43°东经119°）","craft":"这款是用纯牛奶熬制完奶豆腐的乳清里提炼出来的奶渣条，手工挤的，密度低，比奶豆腐软，比奶豆腐口感酸很多。营养价值上，奶豆腐高于奶渣条。一袋≈10斤牛奶浓缩","highlights":"原味配料表只有牛奶；甜味加了白砂糖；纯正家乡好味道；蛋白质52%","storage":"常温干燥处","scene":"休闲零食、追剧零嘴、办公室常备"}}}	1		2026-03-29 06:49:34.136449	2026-07-26 23:03:19.085261	\N	甜味奶条成品	SP0000026			1	52.00	10.61	6900000265125	0	0	3	0	1	1	1	1	f	f	1	official	0	\N
+988			193	成品	55	袋	0		150	0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/media/goods/988/header_1.jpg","category":"精选","detailImages":["/media/goods/988/detail_1.jpg","/media/goods/988/detail_2.jpg","/media/goods/988/detail_3.jpg"],"headerImages":["/media/goods/988/header_1.jpg","/media/goods/988/header_2.jpg","/media/goods/988/header_3.jpg"],"baseSales":287,"productInfo":{"fullName":"品牌传统奶豆腐（袋装）","ingredients":"生牛乳（原味）","specs":"150克/袋（小方块）","origin":"内蒙古大草原黄金牧场（北纬43°东经119°）","craft":"100%纯奶熬制，13斤牛奶浓缩出1斤奶豆腐；无发酵，纯正原味","highlights":"配料表只有生牛乳；比袋装奶皮松软；从我家牧场直发","storage":"常温存放半个月；长期保存请冷冻","shelfLife":"6个月","scene":"休闲零食、下午茶、可泡奶茶"}}}	1		2026-03-29 06:49:11.402339	2026-07-26 23:03:16.95632	\N	品牌传统奶豆腐/袋装成品	SP0000046			1	42.00	12.78	6900000461987	0	0	5	0	1	1	1	1	t	f	1	official	0	\N
+874			193	成品	55	袋	0		140克	0.00	0.00	0	0	0	{"__brand__":{"image":"/media/goods/874/header_3.jpg","headerImages":["/media/goods/874/header_3.jpg","/media/goods/874/header_2.jpg","/media/goods/874/header_1.jpg"],"detailImage":"","tags":[],"category":"精选","wholesalePrice":0,"minOrderQuantity":1,"baseSales":365,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true,"productInfo":{"fullName":"黄金纬度 45° 经典风干牛肉干","specs":"净含量 140g/盒","origin":"内蒙古赤峰市·阿鲁科尔沁旗（黄金畜牧带纬度45°，全球重要农业遗产草原游牧系统）","materials":"只用后腿肉；自然散养牛，鲜肉鲜切，自然风干","nutritionHighlight":"蛋白质 89%NRV，高蛋白零食","highlights":"简约高级包装，送礼优选；老少不挑放心吃","shelfLife":"常温 180 天（未开封）","storage":"常温密封保存；开袋后请尽快食用"}}}	1		2026-03-29 06:47:13.890147	2026-07-26 23:03:20.286988	\N	黄金纬度/牛肉干/成品袋	SP0000161	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋		1	98.00	48.95		0	0	6	0	1	1	1	1	f	f	1	official	0	\N
+3172			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.37861	2026-06-12 12:09:01.37861	2026-06-12 12:52:19.598618	牧区纯手工乌日莫（奶嚼口）原味500克				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3175			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.383092	2026-06-12 12:09:01.383092	2026-06-12 12:54:19.499984	牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋				1	26.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3169			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.286609	2026-06-12 12:09:01.286609	2026-06-12 12:54:22.846708	牧区纯坊 散装原味香瓜子500克/袋				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3173			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.379879	2026-06-12 12:09:01.379879	2026-06-12 13:08:40.577208	牧区纯坊 手工黄油310克/瓶				1	28.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3168			193	成品	63	桶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.284158	2026-06-12 12:09:01.284158	2026-06-12 13:35:47.068225	牧区纯坊 传统酸奶汤(查嘎)原味五斤大桶装				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3174			193	成品	63	桶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.381346	2026-06-12 12:09:01.381346	2026-06-12 13:35:48.562796	牧区纯坊 传统老酸奶(查嘎)原味五斤大桶装				1	16.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3171			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.376247	2026-06-12 12:09:01.376247	2026-06-12 13:59:53.678358	牧区纯坊 奶皮子有点卷青果味180克/一盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3170			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.288295	2026-06-12 12:09:01.288295	2026-06-13 02:19:12.306096	赛汗塔拉手工制作奶豆腐原味约400g/块				1	45.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3140			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.883276	2026-06-12 12:09:00.883276	2026-06-12 12:16:10.82737	牧区纯坊 纯手工月饼 奶豆腐馅儿350克/一袋				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3134			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679641	2026-06-12 12:09:00.679641	2026-06-12 13:05:05.221909	牧区纯坊 风干牛肉干500克/袋				1	108.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3144			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.986052	2026-06-12 12:09:00.986052	\N	牧区纯坊 泰象苏打水352ml/瓶				1	5.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3141			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.982681	2026-06-12 12:09:00.982681	2026-06-12 12:17:37.202047	牧区纯坊 黄金纬度45℃风干牛肉140克/一袋				1	118.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3150			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:01.085034	2026-06-12 12:09:01.085034	2026-06-12 12:18:40.519752	牧区纯坊 纯手工熬制黄油500克/瓶				1	48.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3133			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679486	2026-06-12 12:09:00.679486	2026-06-12 12:54:21.488937	牧区纯坊 散装手工油炸果条250g/袋				1	15.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3131			193	成品	54	瓶	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.678323	2026-06-12 12:09:00.678323	2026-06-12 13:08:41.501932	牧区纯坊 精品黄油420克/瓶				1	33.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3135			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.679799	2026-06-12 12:09:00.679799	2026-06-12 13:11:16.64474	牧区纯坊 速溶青砖茶400克/袋				1	19.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3136			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.880967	2026-06-12 12:09:00.880967	2026-06-12 13:18:45.063756	牧区纯坊 纯手工奶豆腐原味350克/块				1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3137			193	成品	52	块	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.881481	2026-06-12 12:09:00.881481	2026-06-12 13:18:51.894909	牧区纯坊 纯手工奶豆微甜500克/块				1	38.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3138			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.882351	2026-06-12 12:09:00.882351	2026-06-12 13:24:55.452329	牧区纯坊 香酥奶皮子锅巴120克/一盒				1	22.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3143			193	成品	56	盒	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.984009	2026-06-12 12:09:00.984009	2026-06-12 13:59:50.712194	牧区纯坊 奶皮子有点卷蓝莓味180克/盒				1	26.60	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3132			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.678795	2026-06-12 12:09:00.678795	2026-06-13 02:13:43.932393	牧区纯坊 乌都牧奶茶 调味茶固体饮品400克/袋				1	38.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3142			193	成品	55	袋	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.98342	2026-06-12 12:09:00.98342	2026-06-13 02:14:51.166394	牧区纯坊 手工奶糖奶油炒米味500克/一袋				1	35.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3098			423	其他品牌成品	52	块	0			0.00	0.00	0	0	0		1		2026-05-04 12:03:25.488052	2026-06-13 02:19:10.895691	\N	大奶豆腐/科尔沁		赛汗塔拉手工制作奶豆腐原味约400g/块		1	45.00	33.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3139			424	现制产品	57	个	0			0.00	0.00	0	0	0		1		2026-06-12 12:09:00.882146	2026-06-13 02:21:15.129387	\N	蒙古青砖奶茶豪华套餐450克/杯				1	18.80	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+835			170	成品	65	散	0		散装	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:46:25.464428	2026-06-13 05:10:34.986539	\N	奶果子/小包装/成品	SP0000200			5	50.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+803			167	广告物料	62	斤	0		斤	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-03-29 06:45:50.485118	2026-06-13 06:37:35.618029	\N	炒米/散/巴林	SP0000233			5	7.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3176			423	其他品牌成品	55	袋	0		360克	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-06-17 11:40:59.451893	2026-06-17 11:41:00.017816	\N	奶皮子粉麦西来普				1	18.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3178			423		52		0			0.00	0.00	0	0	0		1		2026-06-18 03:26:30.481528	2026-06-18 03:26:30.481528	\N	佳赫蛋糕				1	10.00	0.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+883			170	成品	55	袋	0		4颗/350克	0.00	0.00	0	0	0		1		2026-03-29 06:47:24.030271	2026-08-12 09:08:06.13889	\N	阿润月饼/奶豆腐馅	SP0000152			1	15.00	10.00	6922814823197	0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+827			175	成品	0	盒	0		200克	0.00	0.00	0	0	0	{"__brand__":{"show":true,"headerImages":["/api/image/img_1784643974370_40fbis","/api/image/img_1784646925599_2qx78l"],"image":"/api/image/img_1784643974370_40fbis","detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"productInfo":{"fullName":"香酥奶皮子锅巴（原味）","ingredients":"鲜乳、面粉等（原料表以包装为准）","specs":"净含量 120克/盒","origin":"内蒙古","highlights":"鲜乳原料烘焙，复原味浓郁的奶香；透明包装看得见新鲜；酥脆奶香","eatMethod":"即开即食零食；配奶茶、咖啡都好搭","storage":"常温密封干燥处","shelfLife":"常温 6 个月"}}}	1		2026-03-29 06:46:18.023543	2026-07-26 23:03:23.56208	\N	透明成品/奶锅巴/线下	SP0000209			1	27.00	0.00		0	0	7	0	1	1	1	1	f	f	1	official	0	\N
+3186			421	周边	52	块	0			0.00	0.00	0	0	0	{"__brand__":{"image":"/api/image/img_1784645654789_vxxn2y","headerImages":["/api/image/img_1784645654789_vxxn2y","/api/image/img_1784645670190_yg6qbu"],"detailImage":"","tags":["presale"],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true,"productInfo":{"fullName":"阴山岩画羊毛毡香皂（Natural Felted Soap · Handmade）","design":"4款图案：SUULd、geer、火焰纹图腾、传统涡卷纹，灵感源自阴山岩画","material":"天然羊毛毡包裹手工皂","craft":"纯手工制作","usage":"洗手/洗脸/沐浴用皂；羊毛外层同时具有去角质作用；使用后自然风干，可反复使用","type":"非食品，日用品/礼品","highlights":"设计感强，非常适合送礼；带有蒙古文化元素"}}}	1		2026-07-21 14:52:53.947001	2026-07-26 23:03:25.612415	\N	阴山岩画羊毛毡香皂				1	88.00	0.00		0	0	10	0	1	1	1	1	f	f	1	official	0	\N
+992			193	成品	56	盒	0		240克	0.00	0.00	0	0	0	{"__brand__":{"image":"https://nomaderp.pages.dev/media/goods/992/header_1.jpg","headerImages":["https://nomaderp.pages.dev/media/goods/992/header_1.jpg","https://nomaderp.pages.dev/media/goods/992/header_2.jpg","https://nomaderp.pages.dev/media/goods/992/header_3.jpg","https://nomaderp.pages.dev/media/goods/992/header_4.jpg","https://nomaderp.pages.dev/media/goods/992/header_5.jpg"],"detailImages":["https://nomaderp.pages.dev/media/goods/992/detail_1.jpg","https://nomaderp.pages.dev/media/goods/992/detail_2.jpg","https://nomaderp.pages.dev/media/goods/992/detail_3.jpg","https://nomaderp.pages.dev/media/goods/992/detail_4.jpg","https://nomaderp.pages.dev/media/goods/992/detail_5.jpg","https://nomaderp.pages.dev/media/goods/992/detail_6.jpg","https://nomaderp.pages.dev/media/goods/992/detail_7.jpg","https://nomaderp.pages.dev/media/goods/992/detail_8.jpg","https://nomaderp.pages.dev/media/goods/992/detail_9.jpg","https://nomaderp.pages.dev/media/goods/992/detail_10.jpg","https://nomaderp.pages.dev/media/goods/992/detail_11.jpg","https://nomaderp.pages.dev/media/goods/992/detail_12.jpg","https://nomaderp.pages.dev/media/goods/992/detail_13.jpg"],"show":true,"category":"精选","tags":[],"skuVariants":[{"label":"1盒","erpId":992,"price":58},{"label":"2盒","erpId":992,"price":110},{"label":"3盒","erpId":992,"price":159}],"baseSales":1288,"productInfo":{"fullName":"牧区奶豆腐（盒装）","ingredients":"牛奶、食用糖","specs":"240克/15袋（每小袋独立包装）","shelfLife":"6个月","storage":"常温存放半个月；长期保存请冷冻，或拆袋后放通风处自然晾干","origin":"内蒙古大草原黄金牧场（北纬43°东经119°）","nutritionPer100g":"能量1459kJ(17%NRV) / 蛋白质18.1g(30%NRV) / 脂肪13.2g(22%NRV) / 碳水39.0g(13%NRV) / 钠262mg(13%NRV) / 钙582mg(73%NRV) / 锌2.18mg(15%NRV)","craft":"100%原生奶熬制，传统手艺，不发酵生牛乳；一盒≈8斤牛奶浓缩","highlights":"高钙(73%NRV)、高蛋白(30%NRV)、无添加剂、无防腐剂；配料表只有牛奶和糖","certification":"MA/BLC-MRA/CNAS/QAL 认证，海润检测报告","scene":"营养早餐、休闲零食、下午茶"}}}	1		2026-03-29 06:49:16.624293	2026-07-26 23:03:14.675956	\N	牧区奶豆腐/盒装/成品	SP0000042			1	58.00	13.21	6900000427543	0	0	2	0	1	1	1	1	f	f	1	official	0	\N
+3185			188	牧区纯坊X游牧奇遇	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"牧区纯坊X游牧奇遇","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-19 14:33:54.908607	2026-07-19 14:36:52.606007	\N	憨野 黄油/50克				1	0.00	3.50		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3184			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"/api/image/img_1785069937597_foiloi","headerImages":["/api/image/img_1785069937597_foiloi"],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true,"productInfo":{"fullName":"阿旗（阿鲁科尔沁旗）文创冰箱贴","design":"多款蒙古文化元素图案：龙形、蒙古文\\"万事顺\\"、传统图腾等","material":"磁性材料 + 彩色印刷","type":"非食品，文创周边","highlights":"阿旗本土文化元素；适合作为伴手礼；单个可选，多款可搭"}}}	1		2026-07-12 06:12:16.47886	2026-08-09 06:24:24.369441	\N	阿旗冰箱贴				1	46.00	16.50		0	0	13	0	1	1	1	1	f	f	1	official	0	\N
+3183			188	牧区纯坊X游牧奇遇	53	张	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-12 06:10:54.579751	2026-08-09 06:24:30.167222	\N	阿旗礼袋蒙文				1	10.00	1.90		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3191			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:53:58.367889	2026-07-27 15:00:13.612313	\N	酥饼				1	12.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3195			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:58:35.255092	2026-07-27 15:00:14.119215	\N	河北黄庄月饼				1	10.00	8.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3194			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:57:42.866759	2026-07-27 15:00:14.600664	\N	吐司面包				1	8.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3193			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:57:42.854447	2026-07-27 14:57:43.520859	2026-07-28 01:06:55.013998	吐司面包				1	8.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3187			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:45:55.952155	2026-07-27 15:00:10.430146	\N	玉米棒蛋糕/面包				1	5.00	2.50		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3188			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:46:51.807114	2026-07-27 15:00:11.249483	\N	奶制品月饼				1	13.00	8.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3189			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:47:45.150037	2026-07-27 15:00:11.710761	\N	蒙古细果条				1	10.00	5.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3190			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:53:12.321187	2026-07-27 15:00:12.199283	\N	软方饼				1	15.00	8.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3192			423	其他品牌成品	55	袋	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-07-27 14:54:37.546499	2026-07-27 15:00:13.118961	\N	蒙古大果条				1	12.00	8.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3085			0		0	桶	0			0.00	0.00	0	0	0	{"__brand__":{"show":true,"image":"/api/image/img_1784732252802_rcen9o","headerImages":["/api/image/img_1784732252802_rcen9o","/api/image/img_1784732263444_mfpfpr","/api/image/img_1784732268564_g8qovy","/api/image/img_1784732283940_ji3lgi"],"detailImage":"","tags":[],"category":"休闲","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"productInfo":{"fullName":"敖汉小米锅巴","flavors":"4种口味：原味、孜然、牛肉、麻辣","ingredients":"敖汉旗小米为主，加对应口味调料","specs":"原味/孜然 120克/瓶；牛肉 100克/瓶；麻辣 105克/瓶","origin":"内蒙古敖汉旗（联合国粮农组织认证：全球重要农业文化遗产）","craft":"Made with carefully selected Aohan millet","highlights":"天然小米酥脆；4种风味按口味任选；无油炸；饱腹感强","storage":"常温密封干燥处","shelfLife":"常温 6 个月"}}}	1		2026-04-21 07:34:54.900679	2026-08-03 09:16:51.736034	\N	小米锅巴110g				1	16.60	6.00		0	0	9	0	1	1	1	1	f	f	1	official	0	\N
+3203			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:14:55.157669	2026-08-09 06:24:28.324538	\N	小草娃娃				1	22.00	16.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3204			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:15:32.648153	2026-08-09 06:24:28.770266	\N	蒙草明信片套装				1	49.00	41.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3196			421	周边	52	块	0			0.00	0.00	0	0	0	{"__brand__":{"image":"/api/image/img_1785906245041_xfe4w7","headerImages":["/api/image/img_1785906245041_xfe4w7","/api/image/img_1785906251085_132vva","/api/image/img_1785906260222_f2rzkj","/api/image/img_1785906275072_lrg58n"],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0,"show":true}}	1		2026-08-05 05:03:02.350537	2026-08-05 05:05:04.447001	\N	草原主题羊毛毡香皂				1	68.00	0.00		0	0	10	0	1	1	1	1	f	f	1	official	0	\N
+3197			205	青砖奶茶	53	张	0		1	0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-08 04:12:12.231292	2026-08-08 04:13:10.80855	\N	新茶包/盐底纸				1	0.00	0.20	6900000553413	0	0	0	0	1	1	1	1	t	f	1	official	0	\N
+3205			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:18:35.725426	2026-08-09 06:24:29.661952	\N	书签/可种植				1	30.00	26.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3200			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:10:32.294121	2026-08-09 06:24:25.276228	\N	包你百顺帆布包				1	39.00	8.80		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3206			423	其他品牌成品	54	瓶	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-14 14:18:18.716299	2026-08-14 14:18:19.51804	\N	锡盟松格都格策格酸马奶				1	20.00	16.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3199			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:10:05.609288	2026-08-09 06:24:24.824149	\N	佑系帆布包				1	39.00	8.80		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3198			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:09:44.761853	2026-08-09 06:24:25.759011	\N	宝山备马帆布包				1	39.00	8.80		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3201			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:11:38.602473	2026-08-09 06:24:26.823263	\N	阳光种植/桶装				1	78.00	63.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
+3202			421	周边	57	个	0			0.00	0.00	0	0	0	{"__brand__":{"image":"","headerImages":[],"detailImage":"","tags":[],"category":"周边","wholesalePrice":0,"minOrderQuantity":1,"baseSales":0,"specGroups":[],"skuCombos":[],"skuVariants":[],"isRedeemable":false,"pointsCost":0}}	1		2026-08-09 06:13:50.610653	2026-08-09 06:24:27.863119	\N	种个惊喜				1	35.00	29.00		0	0	0	0	1	1	1	1	f	f	1	official	0	\N
 \.
 
 
@@ -7774,8 +8511,6 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 618	958	个	1.0000	2026-06-23 09:40:37.664729
 31	990	捆	100.0000	2026-04-02 02:58:10.753354
 32	990	袋	1.0000	2026-04-02 02:58:10.757403
-33	989	斤	5.0000	2026-04-02 02:58:14.582466
-34	989	瓶	1.0000	2026-04-02 02:58:14.584355
 619	958	件	183.0000	2026-06-23 09:40:37.667316
 483	1011	小包	1.0000	2026-06-07 11:36:03.464654
 484	1011	件	2000.0000	2026-06-07 11:36:03.467621
@@ -7833,12 +8568,14 @@ COPY public.goods_unit_convert (id, goods_id, unit_name, ratio, create_time) FRO
 255	988	斤	3.0000	2026-05-23 04:35:02.895427
 256	985	袋	1.0000	2026-05-23 04:35:17.646577
 257	985	斤	3.0000	2026-05-23 04:35:17.649308
-662	3119	桶	1.0000	2026-07-21 15:18:19.937418
+733	981	斤	1.0000	2026-08-22 03:53:05.840756
+734	981	盒	0.5000	2026-08-22 03:53:05.843625
+735	989	瓶	1.0000	2026-08-23 03:14:27.318801
 666	3118	斤	1.0000	2026-07-22 03:00:59.922306
 667	3118	大桶装	0.3000	2026-07-22 03:00:59.935956
 668	3118	小桶装	0.2600	2026-07-22 03:00:59.938265
-669	981	斤	1.0000	2026-07-22 14:22:33.923331
-670	981	盒	0.5000	2026-07-22 14:22:33.932651
+736	989	斤	5.0000	2026-08-23 03:14:27.345325
+737	3119	桶	1.0000	2026-08-23 03:15:15.995896
 \.
 
 
@@ -7932,7 +8669,6 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 78	2026-05-25	income	cash	收款单	9342.45		108	SK202605251332	公司收入账号		t	system	2026-06-14 14:39:07.908488
 79	2026-06-08	income	cash	收款单	500.00	四子王旗于洋	109	SK202606099755	公司收入账号	合同HT20260608001审核自动生成	t	system	2026-06-14 14:39:07.908488
 80	2026-05-29	income	cash	收款单	3810.00		110	SK202606097385	公司支出账户	合同收款 #288	t	system	2026-06-14 14:39:07.908488
-81	2025-11-10	income	cash	收款单	3950.00		111	SK202606099406	公司收入账号		t	system	2026-06-14 14:39:07.908488
 82	2026-03-17	income	cash	收款单	124.41	美团平台	114	SK202606133262	零售收款账户	[美团] 美团订单 XS202606123658	t	system	2026-06-14 14:39:07.908488
 83	2026-03-19	income	cash	收款单	28.71	美团平台	115	SK202606134560	零售收款账户	[美团] 美团订单 XS202606129510	t	system	2026-06-14 14:39:07.908488
 84	2026-03-24	income	cash	收款单	20.88	美团平台	116	SK202606139468	零售收款账户	[美团] 美团订单 XS202606124495	t	system	2026-06-14 14:39:07.908488
@@ -9098,7 +9834,6 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 1288	2025-10-20	income	receivable	销售合同	330.00	五洲四海	175	XS202604037856		原单号:HT0006747	t	system	2026-06-14 14:39:14.252711
 1289	2026-03-01	income	receivable	销售合同	1000.00	阿斯娜	275	HT20260524007		[NO:HT20260524007]	t	system	2026-06-14 14:39:14.252711
 1290	2026-05-22	income	receivable	销售合同	1038.00	五洲四海	287	HT20260530001		[NO:HT20260530001] [FI:JTVCJTdCJTIybmFtZSUyMiUzQSUyMiVFOCVCNyU5MSVFOCU4NSVCRiVFOCVCNCVCOSUyMiUyQyUyMmFtb3VudCUyMiUzQTklMkMlMjJiZWFyZXIlMjIlM0ElMjJidXllciUyMiUyQyUyMnN1cHBsaWVyX25hbWUlMjIlM0ElMjIlRTclQkUlOEUlRTUlOUIlQTIlMjIlN0QlNUQ=]	t	system	2026-06-14 14:39:14.252711
-1291	2026-05-29	income	receivable	销售合同	348.00	博盈商品	286	HT20260529001		[NO:HT20260529001]	t	system	2026-06-14 14:39:14.252711
 1297	2026-05-28	income	receivable	销售合同	110.00	电商/微信小店	392	XS202606135372		[微信小店] 3736692231904847872	t	system	2026-06-14 14:39:14.252711
 1298	2026-05-22	income	receivable	销售合同	94.00	电商/微信小店	391	XS202606134795		[微信小店] 3736549860713065984	t	system	2026-06-14 14:39:14.252711
 1302	2026-06-06	income	receivable	销售合同	100.00	电商/微信小店	393	XS202606132783		[微信小店] 3736898242866727936	t	system	2026-06-14 14:39:14.252711
@@ -9511,7 +10246,6 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 1660	2026-06-22	income	cash	零售单	15.00		1503	LS202606227684			t	trigger	2026-06-22 06:39:57.870405
 1661	2026-06-22	expense	cash	付款单	340.00	科尔沁奶食品	830	FK202606229868	公司支出账户	采购单PO2026062215271297352审核自动生成	t	trigger	2026-06-22 07:27:51.994528
 1662	2026-06-22	expense	payable	采购单	340.00	科尔沁奶食品	607	PO2026062215271297352	公司支出账户		t	trigger	2026-06-22 07:27:52.044424
-1663	2026-06-22	expense	payable	采购单	1300.00	孟克河	608	PO2026062215312473851	公司支出账户		t	trigger	2026-06-22 07:32:27.526729
 1664	2026-06-22	expense	cash	付款单	470.00	巴音珠萨朗	831	FK202606225637	公司支出账户	采购单PO2026062215561861413审核自动生成	t	trigger	2026-06-22 07:58:17.05122
 1665	2026-06-22	expense	payable	采购单	471.00	巴音珠萨朗	609	PO2026062215561861413	公司支出账户		t	trigger	2026-06-22 07:58:17.105471
 1666	2026-06-22	income	cash	零售单	22.00		1504	LS202606226191			t	trigger	2026-06-22 10:17:35.111575
@@ -9630,6 +10364,143 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 1781	2026-07-23	income	cash	零售单	35.00		1584	LS202607233345			t	trigger	2026-07-23 13:14:37.058812
 1782	2026-07-24	income	cash	零售单	200.00		1585	LS202607246484			t	trigger	2026-07-24 02:35:07.460793
 1783	2026-07-24	income	cash	零售单	58.50		1586	LS202607249486			t	trigger	2026-07-24 09:20:12.621069
+1784	2026-07-25	income	cash	零售单	27.00		1587	LS202607253127			t	trigger	2026-07-25 04:50:42.838089
+1785	2026-07-25	income	cash	零售单	230.00		1588	LS202607256649			t	trigger	2026-07-25 04:51:37.057397
+1786	2026-07-25	expense	cash	付款单	340.00	科尔沁奶食品	847	FK202607254225	公司支出账户	采购单PO2026072516553064920审核自动生成	t	trigger	2026-07-25 08:56:38.329001
+1787	2026-07-25	expense	payable	采购单	340.00	科尔沁奶食品	626	PO2026072516553064920	公司支出账户		t	trigger	2026-07-25 08:56:38.368262
+1788	2026-07-25	expense	cash	付款单	50.00	格日勒	848	FK202607253741	公司支出账户	采购单PO2026072516564211084审核自动生成	t	trigger	2026-07-25 08:57:13.545703
+1789	2026-07-25	expense	payable	采购单	50.00	格日勒	627	PO2026072516564211084	公司支出账户		t	trigger	2026-07-25 08:57:13.54909
+1790	2026-07-26	income	cash	零售单	87.00		1589	LS202607265356			t	trigger	2026-07-26 12:39:22.100423
+1791	2026-07-26	income	cash	零售单	32.00		1590	LS202607262487			t	trigger	2026-07-26 12:39:59.054124
+1792	2026-07-26	income	cash	零售单	126.00		1591	LS202607266578			t	trigger	2026-07-26 13:56:54.488448
+1793	2026-07-27	income	cash	零售单	10.00		1592	LS202607272832			t	trigger	2026-07-27 03:33:20.985995
+1794	2026-07-27	income	cash	零售单	48.00		1593	LS202607272474			t	trigger	2026-07-27 03:34:28.657847
+1795	2026-07-27	income	cash	零售单	1200.00		1594	LS202607278626			t	trigger	2026-07-27 03:37:45.061857
+1796	2026-07-27	income	cash	零售单	42.00		1595	LS202607274181			t	trigger	2026-07-27 14:41:28.718468
+1797	2026-07-27	expense	cash	付款单	155.00	科尔沁奶食品	849	FK202607274653	公司支出账户	采购单PO2026072722424871143审核自动生成	t	trigger	2026-07-27 14:43:23.236654
+1798	2026-07-27	expense	payable	采购单	155.00	科尔沁奶食品	628	PO2026072722424871143	公司支出账户		t	trigger	2026-07-27 14:43:23.251218
+1799	2026-07-27	expense	cash	付款单	230.00	佳赫糕点	850	FK202607271839	公司支出账户	采购单PO2026072722545606423审核自动生成	t	trigger	2026-07-27 15:00:09.929189
+1800	2026-07-27	expense	payable	采购单	230.00	佳赫糕点	629	PO2026072722545606423	公司支出账户		t	trigger	2026-07-27 15:00:09.932199
+1801	2026-07-28	income	cash	零售单	29.00		1596	LS202607288806			t	trigger	2026-07-28 01:07:17.007814
+1802	2026-07-28	expense	cash	付款单	35.00	杂/采购商	851	FK202607286134	公司支出账户	采购单PO2026072813523477436审核自动生成	t	trigger	2026-07-28 05:53:03.247222
+1803	2026-07-28	expense	payable	采购单	35.00	杂/采购商	630	PO2026072813523477436	公司支出账户		t	trigger	2026-07-28 05:53:03.250725
+1804	2026-07-31	income	cash	零售单	5.00		1597	LS202607316897			t	trigger	2026-07-31 04:25:35.466944
+1805	2026-07-31	income	cash	零售单	45.00		1598	LS202607319623			t	trigger	2026-07-31 04:26:02.278361
+1806	2026-07-31	income	cash	零售单	108.00		1599	LS202607313118			t	trigger	2026-07-31 04:26:53.963634
+1807	2026-07-31	expense	cash	付款单	100.00	奥特尔奶食品店	852	FK202607312872	公司支出账户	采购单PO2026073113412688991审核自动生成	t	trigger	2026-07-31 05:41:55.896071
+1808	2026-07-31	expense	payable	采购单	100.00	奥特尔奶食品店	631	PO2026073113412688991	公司支出账户		t	trigger	2026-07-31 05:41:55.899494
+1809	2026-08-01	income	cash	零售单	122.00		1600	LS202608017855			t	trigger	2026-08-01 03:58:07.734603
+1810	2026-08-01	income	cash	零售单	75.00		1601	LS202608017103			t	trigger	2026-08-01 03:59:28.835725
+1811	2026-08-01	income	cash	零售单	80.00		1602	LS202608011907			t	trigger	2026-08-01 04:00:10.63967
+1812	2026-08-01	income	cash	零售单	22.00		1603	LS202608019776			t	trigger	2026-08-01 09:53:26.249894
+1813	2026-08-01	income	cash	零售单	25.80		1604	LS202608014811			t	trigger	2026-08-01 11:54:31.437497
+1814	2026-08-01	income	cash	零售单	45.00		1605	LS202608017253			t	trigger	2026-08-01 11:54:41.202205
+1815	2026-08-02	income	cash	零售单	21.70		1606	LS202608026070			t	trigger	2026-08-02 04:39:45.237172
+1816	2026-08-02	income	cash	零售单	14.00		1607	LS202608021469			t	trigger	2026-08-02 12:19:06.332862
+1817	2026-08-03	income	cash	零售单	34.00		1610	LS202608032015			t	trigger	2026-08-03 08:56:48.346502
+1819	2026-07-23	income	receivable	销售合同	232.00	赤峰小徐	423	HT20260803002		[NO:HT20260803002]	t	trigger	2026-08-03 09:12:33.719694
+1820	2026-06-22	expense	payable	采购单	1200.00	孟克河	608	PO2026062215312473851	公司支出账户		t	trigger	2026-08-03 09:16:51.236588
+1823	2026-08-03	income	cash	零售单	15.00		1611	LS202608031216			t	trigger	2026-08-03 09:46:04.784749
+1824	2026-08-03	income	cash	零售单	10.00		1609	LS202608036441			t	trigger	2026-08-03 09:46:22.443988
+1825	2026-08-02	income	cash	零售单	18.00		1608	LS202608038407			t	trigger	2026-08-03 09:46:31.81943
+1826	2026-08-03	income	cash	零售单	14.00		1612	LS202608036648			t	trigger	2026-08-03 09:52:31.049208
+1827	2026-08-03	income	receivable	销售合同	1902.00	阿斯娜	422	HT20260803001		[NO:HT20260803001]	t	trigger	2026-08-03 09:55:21.417922
+1828	2026-08-03	income	cash	零售单	30.00		1613	LS202608034322			t	trigger	2026-08-03 10:40:05.476989
+1829	2026-08-04	expense	cash	付款单	200.00	巴音珠萨朗	853	FK202608041853	公司支出账户	采购单PO2026080410450844175审核自动生成	t	trigger	2026-08-04 02:46:24.001614
+1830	2026-08-04	expense	payable	采购单	200.00	巴音珠萨朗	632	PO2026080410450844175	公司支出账户		t	trigger	2026-08-04 02:46:24.016318
+1831	2026-08-03	income	cash	收款单	1902.00		247	SK202608046984	公司收入账号	合同收款 #422	t	trigger	2026-08-04 02:46:41.985103
+1832	2026-08-04	income	cash	零售单	450.00		1614	LS202608048795			t	trigger	2026-08-04 05:29:46.845926
+1833	2026-08-04	income	cash	零售单	12.00		1615	LS202608047656			t	trigger	2026-08-04 06:10:16.765873
+1834	2026-08-04	expense	cash	付款单	25.00	杂/采购商	854	FK202608044953	公司支出账户	采购单PO2026080414192605390审核自动生成	t	trigger	2026-08-04 06:20:18.233752
+1835	2026-08-04	expense	payable	采购单	25.00	杂/采购商	633	PO2026080414192605390	公司支出账户		t	trigger	2026-08-04 06:20:18.237504
+1836	2026-08-05	expense	cash	付款单	52.00	锡盟艾润萨利SC	855	FK202608059888	公司支出账户	40元样品费+12元快递费	t	trigger	2026-08-05 04:54:31.469137
+1837	2026-08-05	expense	cash	付款单	260.00	400电话号码购买	856	FK202608059665	公司支出账户		t	trigger	2026-08-05 04:55:52.845891
+1838	2026-08-05	expense	cash	付款单	170.00	奥都奶食品	857	FK202608058789	公司支出账户	采购单PO202608051256008232审核自动生成	t	trigger	2026-08-05 04:56:35.06424
+1839	2026-08-05	expense	payable	采购单	170.00	奥都奶食品	634	PO202608051256008232	公司支出账户		t	trigger	2026-08-05 04:56:35.068146
+1840	2026-08-05	expense	cash	付款单	330.00	科尔沁奶食品	858	FK202608053328	公司支出账户	采购单PO2026080512564475657审核自动生成	t	trigger	2026-08-05 04:57:48.472891
+1841	2026-08-05	expense	payable	采购单	330.00	科尔沁奶食品	635	PO2026080512564475657	公司支出账户		t	trigger	2026-08-05 04:57:48.475441
+1842	2026-06-04	income	cash	收款单	1260.00		248	SK202608053586	公司收入账号	合同收款 #289	t	trigger	2026-08-05 04:58:17.541558
+1843	2026-08-05	income	cash	零售单	150.00		1616	LS202608057311			t	trigger	2026-08-05 05:30:18.55044
+1844	2026-08-08	income	cash	零售单	110.00		1617	LS202608085098			t	trigger	2026-08-08 03:11:16.183897
+1845	2026-08-08	income	cash	零售单	40.00		1618	LS202608082769			t	trigger	2026-08-08 03:12:11.483767
+1846	2026-08-08	income	cash	零售单	10.00		1619	LS202608083667			t	trigger	2026-08-08 03:14:54.646416
+1847	2026-08-08	income	cash	零售单	20.50		1620	LS202608089905			t	trigger	2026-08-08 03:17:27.642901
+1848	2026-08-08	income	cash	零售单	30.00		1621	LS202608083685			t	trigger	2026-08-08 03:17:43.594106
+1849	2026-08-08	income	cash	零售单	12.00		1622	LS202608082511			t	trigger	2026-08-08 03:18:07.878941
+1850	2026-08-08	income	cash	零售单	50.00		1623	LS202608087267			t	trigger	2026-08-08 03:18:32.010046
+1851	2026-08-08	income	cash	零售单	65.00		1624	LS202608087168			t	trigger	2026-08-08 03:19:01.442439
+1852	2026-08-08	expense	cash	付款单	100.00	旧苏木蒙古果子	859	FK202608084820	公司支出账户	采购单PO2026080811193335543审核自动生成	t	trigger	2026-08-08 03:20:40.536984
+1853	2026-08-08	expense	payable	采购单	100.00	旧苏木蒙古果子	636	PO2026080811193335543	公司支出账户		t	trigger	2026-08-08 03:20:40.539902
+1854	2026-08-08	expense	cash	付款单	224.00	乌日汗奶食品店	860	FK202608082446	公司支出账户	采购单PO2026080811204731280审核自动生成	t	trigger	2026-08-08 03:24:05.130018
+1855	2026-08-08	expense	payable	采购单	224.00	乌日汗奶食品店	637	PO2026080811204731280	公司支出账户		t	trigger	2026-08-08 03:24:05.135357
+1856	2026-08-07	expense	cash	付款单	180.00	科尔沁奶食品	861	FK202608088300	公司支出账户	采购单PO2026080811241759999审核自动生成	t	trigger	2026-08-08 03:24:52.203741
+1857	2026-08-07	expense	payable	采购单	144.00	科尔沁奶食品	638	PO2026080811241759999	公司支出账户		t	trigger	2026-08-08 03:24:52.205891
+1858	2026-07-31	expense	cash	付款单	1625.00	临时工/苏叶	862	FK202608084930	公司支出账户		t	trigger	2026-08-08 03:29:09.200553
+1859	2026-07-30	expense	cash	付款单	400.00	优如包装	863	FK202608081937	公司支出账户	采购单PO2026080812110973613审核自动生成	t	trigger	2026-08-08 04:13:10.337774
+1860	2026-07-30	expense	payable	采购单	400.00	优如包装	639	PO2026080812110973613	公司支出账户		t	trigger	2026-08-08 04:13:10.340201
+1861	2026-07-27	expense	cash	付款单	1807.00	广州维记	864	FK202608086934	公司支出账户	采购单PO2026080812270330052审核自动生成	t	trigger	2026-08-08 04:28:27.823797
+1862	2026-07-27	expense	payable	采购单	1807.00	广州维记	640	PO2026080812270330052	公司支出账户		t	trigger	2026-08-08 04:28:27.827151
+1863	2026-08-08	income	cash	零售单	30.00		1625	LS202608087302			t	trigger	2026-08-08 15:07:50.445725
+1864	2026-06-26	expense	payable	采购单	1281.70	阿斯娜	641	PO2026080914190562870	公司支出账户		t	trigger	2026-08-09 06:24:23.92288
+1865	2026-08-01	income	receivable	销售合同	118.00	阿斯娜	424	HT20260809001		[NO:HT20260809001]	t	trigger	2026-08-09 06:42:21.222483
+1866	2026-07-15	income	receivable	销售合同	1607.00	阿斯娜	425	HT20260809002		[NO:HT20260809002]	t	trigger	2026-08-09 07:09:35.825345
+1867	2026-08-07	income	receivable	销售合同	1002.40	阿斯娜	426	HT20260809003		[NO:HT20260809003]	t	trigger	2026-08-09 07:15:23.85318
+1868	2026-08-09	income	receivable	销售合同	517.00	阿斯娜	427	HT20260809004		[NO:HT20260809004]	t	trigger	2026-08-09 12:41:44.799292
+1869	2026-08-09	income	cash	零售单	40.00		1626	LS202608098758			t	trigger	2026-08-09 13:00:01.692787
+1870	2026-08-09	income	cash	零售单	12.00		1627	LS202608096448			t	trigger	2026-08-09 13:00:22.332213
+1871	2026-08-09	income	receivable	销售合同	641.62	阿斯娜	428	HT20260809005		[NO:HT20260809005]	t	trigger	2026-08-09 14:55:32.763112
+1872	2026-08-06	income	receivable	销售合同	477.00	阿斯娜	429	HT20260809006		[NO:HT20260809006]	t	trigger	2026-08-09 15:01:04.123953
+1873	2026-08-10	income	cash	零售单	134.00		1628	LS202608105988			t	trigger	2026-08-10 07:28:45.944067
+1874	2026-08-10	expense	cash	付款单	170.00	科尔沁奶食品	865	FK202608105154	公司支出账户	采购单PO2026081016075140866审核自动生成	t	trigger	2026-08-10 08:08:35.860565
+1875	2026-08-10	expense	payable	采购单	170.00	科尔沁奶食品	642	PO2026081016075140866	公司支出账户		t	trigger	2026-08-10 08:08:35.863552
+1876	2026-08-10	income	cash	零售单	84.00		1629	LS202608108565			t	trigger	2026-08-10 12:13:45.342671
+1877	2026-08-10	income	cash	零售单	58.00		1630	LS202608104324			t	trigger	2026-08-10 14:18:07.118421
+1878	2026-08-11	income	cash	零售单	36.60		1631	LS202608118902			t	trigger	2026-08-11 02:29:35.182835
+1879	2026-08-11	income	cash	零售单	25.00		1632	LS202608115818			t	trigger	2026-08-11 15:21:01.656544
+1880	2026-08-11	income	receivable	销售合同	400.00	阿斯娜	430	HT20260811001		[NO:HT20260811001]	t	trigger	2026-08-11 15:23:24.424882
+1881	2026-08-11	income	cash	零售单	320.00		1633	LS202608112725			t	trigger	2026-08-11 15:26:21.150594
+1883	2026-08-12	income	cash	零售单	126.00		1634	LS202608122477			t	trigger	2026-08-12 08:39:23.541358
+1884	2026-08-12	expense	cash	付款单	120.00	阿润查干	866	FK202608126850	公司支出账户	采购单PO2026081217071848182审核自动生成	t	trigger	2026-08-12 09:08:05.967476
+1885	2026-08-12	expense	payable	采购单	120.00	阿润查干	644	PO2026081217071848182	公司支出账户		t	trigger	2026-08-12 09:08:05.97093
+1886	2026-08-12	expense	cash	付款单	50.00	科尔沁奶食品	867	FK202608124240	公司支出账户	采购单PO2026081217080930540审核自动生成	t	trigger	2026-08-12 09:08:42.203833
+1887	2026-08-12	expense	payable	采购单	50.00	科尔沁奶食品	645	PO2026081217080930540	公司支出账户		t	trigger	2026-08-12 09:08:42.207518
+1888	2026-08-12	income	cash	零售单	25.00		1635	LS202608122374			t	trigger	2026-08-12 12:58:16.363138
+1889	2026-08-13	income	cash	零售单	50.00		1636	LS202608138873			t	trigger	2026-08-13 02:19:10.527978
+1890	2026-08-13	income	cash	零售单	32.00		1637	LS202608135573			t	trigger	2026-08-13 02:20:14.038958
+1891	2026-08-13	income	cash	零售单	25.00		1638	LS202608133948			t	trigger	2026-08-13 02:33:53.656174
+1892	2026-08-15	income	cash	零售单	20.00		1639	LS202608152902			t	trigger	2026-08-15 05:06:22.829088
+1893	2026-08-17	income	cash	零售单	24.00		1640	LS202608177577			t	trigger	2026-08-17 04:36:05.497245
+1894	2026-08-17	expense	cash	付款单	200.00	科尔沁奶食品	868	FK202608177507	公司支出账户	采购单PO2026081713040762130审核自动生成	t	trigger	2026-08-17 05:04:38.709318
+1895	2026-08-17	expense	payable	采购单	200.00	科尔沁奶食品	646	PO2026081713040762130	公司支出账户		t	trigger	2026-08-17 05:04:38.719906
+1896	2026-08-17	expense	cash	付款单	180.00	科尔沁奶食品	869	FK202608179766	公司支出账户	采购单PO2026081713044459412审核自动生成	t	trigger	2026-08-17 05:05:05.859878
+1897	2026-08-17	expense	payable	采购单	180.00	科尔沁奶食品	647	PO2026081713044459412	公司支出账户		t	trigger	2026-08-17 05:05:05.862558
+1898	2026-08-17	expense	cash	付款单	550.00	那牧尔乳制品厂/纯净之源	870	FK202608179687	公司支出账户	采购单PO202608171305095272审核自动生成	t	trigger	2026-08-17 05:08:15.426384
+1899	2026-08-17	expense	payable	采购单	550.00	那牧尔乳制品厂/纯净之源	648	PO202608171305095272	公司支出账户		t	trigger	2026-08-17 05:08:15.429348
+1900	2026-08-17	expense	cash	付款单	1710.00	永巨茶业	871	FK202608171409	公司支出账户	采购单PO2026081713093466727审核自动生成	t	trigger	2026-08-17 05:11:00.361238
+1901	2026-08-17	expense	payable	采购单	1710.00	永巨茶业	649	PO2026081713093466727	公司支出账户		t	trigger	2026-08-17 05:11:00.364423
+1902	2026-08-17	expense	cash	付款单	170.00	奥都奶食品	872	FK202608171519	公司支出账户	采购单PO202608171311176209审核自动生成	t	trigger	2026-08-17 05:11:37.862157
+1903	2026-08-17	expense	payable	采购单	170.00	奥都奶食品	650	PO202608171311176209	公司支出账户		t	trigger	2026-08-17 05:11:37.86507
+1904	2026-08-17	income	cash	零售单	23.00		1641	LS202608173816			t	trigger	2026-08-17 07:24:12.825572
+1905	2026-08-17	income	cash	零售单	22.00		1642	LS202608175583			t	trigger	2026-08-17 13:28:44.341147
+1906	2026-08-17	income	cash	零售单	33.50		1643	LS202608171713			t	trigger	2026-08-17 14:05:09.084598
+1907	2026-08-18	income	cash	零售单	490.00		1644	LS202608181296			t	trigger	2026-08-18 02:28:14.64588
+1908	2026-08-18	income	cash	零售单	254.00		1646	LS202608188432			t	trigger	2026-08-18 03:57:31.052235
+1909	2026-08-18	income	cash	零售单	26.00		1647	LS202608187531			t	trigger	2026-08-18 03:57:44.831604
+1910	2026-08-18	income	receivable	销售合同	200.00	赤峰小徐	431	HT20260818001		[NO:HT20260818001]	t	trigger	2026-08-18 04:45:55.670091
+1911	2026-08-18	income	cash	收款单	11792.22		249	SK202608189054	公司收入账号		t	trigger	2026-08-18 05:18:09.660715
+1912	2026-08-18	income	cash	零售单	13.00		1648	LS202608182814			t	trigger	2026-08-18 13:59:35.432472
+1913	2026-08-21	income	cash	零售单	73.00		1649	LS202608212023			t	trigger	2026-08-21 12:28:39.022646
+1914	2026-08-22	expense	cash	付款单	85.00	科尔沁奶食品	873	FK202608224293	公司支出账户	采购单PO2026082210465932867审核自动生成	t	trigger	2026-08-22 02:47:37.760863
+1915	2026-08-22	expense	payable	采购单	85.00	科尔沁奶食品	651	PO2026082210465932867	公司支出账户		t	trigger	2026-08-22 02:47:37.795585
+1916	2026-08-22	expense	cash	付款单	100.00	奥特尔奶食品店	874	FK202608227693	公司支出账户	采购单PO2026082211521113294审核自动生成	t	trigger	2026-08-22 03:53:40.221372
+1917	2026-08-22	expense	payable	采购单	100.00	奥特尔奶食品店	652	PO2026082211521113294	公司支出账户		t	trigger	2026-08-22 03:53:40.261485
+1918	2026-08-13	expense	cash	付款单	155.00	巴音珠萨朗	875	FK202608222006	公司支出账户	采购单PO2026082211534364880审核自动生成	t	trigger	2026-08-22 03:55:29.794186
+1919	2026-08-13	expense	payable	采购单	155.00	巴音珠萨朗	653	PO2026082211534364880	公司支出账户		t	trigger	2026-08-22 03:55:29.797517
+1920	2026-08-22	income	cash	零售单	177.00		1650	LS202608224541			t	trigger	2026-08-22 03:59:05.783176
+1921	2026-08-22	expense	cash	付款单	300.00	临时工/游牧文化产业园费用	876	FK202608227903	公司支出账户		t	trigger	2026-08-22 03:59:43.5512
+1922	2026-08-23	income	cash	零售单	300.00		1651	LS202608235303			t	trigger	2026-08-23 03:16:27.013194
+1923	2026-08-23	income	cash	零售单	66.00		1652	LS202608238609			t	trigger	2026-08-23 11:37:17.106218
+1924	2026-08-23	income	cash	零售单	7.00		1653	LS202608232819			t	trigger	2026-08-23 14:02:18.390564
 \.
 
 
@@ -9638,85 +10509,338 @@ COPY public.ledger_flow (id, date, type, flow_category, source, amount, contact_
 --
 
 COPY public.mini_coupons (id, name, type, discount_value, min_order, validity_days, total_count, claimed_count, status, start_at, end_at, created_at, points_cost) FROM stdin;
-4	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 05:29:35.798758	\N	2026-06-04 05:29:35.798758	0
 2	生日特权券	birthday	15.00	50.00	7	-1	0	1	2026-06-03 05:26:26.480137	\N	2026-06-03 05:26:26.480137	0
-29	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
-101	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-102	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-103	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-106	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
-107	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
-108	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
-109	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
-112	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
-113	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
-114	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
-115	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
-118	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
-119	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
+26	新客满减券·满100减10	new_user	10.00	100.00	30	-1	8	1	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
+27	新客满减券·满300减20	new_user	20.00	300.00	30	-1	8	1	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
 19	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-05 04:05:56.578398	\N	2026-06-05 04:05:56.578398	0
-120	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
-121	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
-124	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+4	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 05:29:35.798758	\N	2026-06-04 05:29:35.798758	0
 23	积分兑换券¥5	points_exchange	5.00	30.00	30	-1	0	1	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	100
 24	积分兑换券¥10	points_exchange	10.00	60.00	30	-1	0	1	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	200
 25	积分兑换券¥20	points_exchange	20.00	100.00	30	-1	0	1	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	500
-125	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
-126	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
-127	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
-32	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
-33	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
-130	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
-131	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
-132	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
-71	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
+29	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
+155	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
+156	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
+157	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
+160	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+161	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+162	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+330	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+390	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
+128	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
+112	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
+543	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+147	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
+153	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
+91	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+97	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+539	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+102	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
+103	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
+135	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+140	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
 74	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-75	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-80	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-81	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-86	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-87	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-93	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-98	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-99	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-104	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
+371	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
 105	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
 110	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
+425	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+276	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+455	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+562	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+114	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
+423	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+468	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+616	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+385	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+106	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
+329	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+526	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+528	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+391	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
+394	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+395	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+396	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+397	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+418	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+78	抽奖券·满50减5	lottery	5.00	50.00	7	-1	1	1	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
+576	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+419	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+439	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+182	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 05:37:16.781378	\N	2026-06-11 05:37:16.781378	0
+617	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+618	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+120	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
+121	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
+124	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+79	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
+422	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+476	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+467	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+63	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
+346	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+10	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 10:56:41.431093	\N	2026-06-04 10:56:41.431093	0
+12	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 12:48:31.884419	\N	2026-06-04 12:48:31.884419	0
+14	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 03:44:40.41902	\N	2026-06-05 03:44:40.41902	0
+538	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+452	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+373	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
+389	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
+22	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
+42	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
+293	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+294	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+295	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+298	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
+372	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
+386	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
+615	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+524	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+525	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+536	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+291	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+296	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
+297	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
+314	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+315	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+327	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+338	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+339	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+344	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+345	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+436	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+15	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 03:47:50.283907	\N	2026-06-05 03:47:50.283907	0
+152	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
+417	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+420	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+72	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
+437	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+66	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
+341	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+342	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+500	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+381	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+434	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+8	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 10:36:16.262187	\N	2026-06-04 10:36:16.262187	0
+546	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+183	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 05:37:16.781378	\N	2026-06-11 05:37:16.781378	0
+230	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
+231	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
+248	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+421	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+122	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+477	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+482	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
+249	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+254	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+255	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+272	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+435	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+382	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+60	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
+48	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
+123	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+343	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+139	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+100	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
+380	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+250	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+59	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
+257	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+258	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+259	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+274	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+73	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
+76	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
+77	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
+82	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+20	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
+30	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
+328	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+141	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
+529	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+587	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+588	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+49	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
+136	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+560	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+561	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+464	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+465	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+144	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
+368	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
+331	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+438	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
+631	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
+107	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
+275	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+101	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
+369	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
+427	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+61	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
+318	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+319	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+586	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+64	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
+65	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
+3	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 05:29:35.798758	\N	2026-06-04 05:29:35.798758	0
+5	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 05:41:36.376943	\N	2026-06-04 05:41:36.376943	0
+7	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 10:36:16.262187	\N	2026-06-04 10:36:16.262187	0
+9	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 10:56:41.431093	\N	2026-06-04 10:56:41.431093	0
+13	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 03:44:40.41902	\N	2026-06-05 03:44:40.41902	0
+572	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+573	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+584	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+585	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+158	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+273	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+614	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+537	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+68	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
+347	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+348	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+88	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+629	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
+630	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
+40	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
+540	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+541	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
+11	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 12:48:31.884419	\N	2026-06-04 12:48:31.884419	0
+514	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+589	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
+148	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
+56	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
+113	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
+58	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
+129	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
+137	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+138	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+393	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+46	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
+142	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
+89	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+90	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+94	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+1	新客专享券	new_user	6.00	0.00	30	-1	8	1	2026-06-03 05:26:26.480137	\N	2026-06-03 05:26:26.480137	0
+542	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+51	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
+54	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
+55	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
+146	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
+62	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
+426	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+118	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
+119	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
+456	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+457	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+317	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+517	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+501	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+512	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+277	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
+39	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
+31	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
+34	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
+253	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+256	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
+134	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
+424	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
+466	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+159	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+164	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
+18	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:05:56.578398	\N	2026-06-05 04:05:56.578398	0
+619	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
+628	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
+292	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+16	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 03:47:50.283907	\N	2026-06-05 03:47:50.283907	0
+453	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+565	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+416	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
+563	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+564	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
+340	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
+387	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
+392	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
+454	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
+21	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
+575	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+57	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
+28	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
+67	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
+69	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
+544	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+545	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+547	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
+165	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
+6	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 05:41:36.376943	\N	2026-06-04 05:41:36.376943	0
+47	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
+70	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
+92	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+349	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
+370	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
+52	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
+53	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
+95	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+96	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+527	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
+469	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
+478	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+479	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+480	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+481	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
+484	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
+485	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
+486	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
+487	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
+502	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+108	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
+109	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
+503	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+50	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
+104	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 08:54:52.888849	\N	2026-06-10 08:54:52.888849	0
 111	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
 116	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
 117	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 10:46:13.970315	\N	2026-06-10 10:46:13.970315	0
-122	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
-123	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
-128	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
-129	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
-136	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-137	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-138	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-139	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-142	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
-143	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
-144	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
+577	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+83	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+84	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+85	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+483	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
 145	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
-148	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
-26	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	1	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
-27	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	1	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
 35	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
 38	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
 133	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
 149	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
+251	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+36	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
+37	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
+252	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
+290	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
+326	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
+41	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
+388	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
 150	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
 151	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
 154	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-155	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-156	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-157	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-78	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-79	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-160	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
-161	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
-162	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
+143	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
+574	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
+43	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
+115	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 10:19:32.624695	\N	2026-06-10 10:19:32.624695	0
+125	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
 163	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
 166	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
+17	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 04:05:56.578398	\N	2026-06-05 04:05:56.578398	0
+383	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+384	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
+504	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+505	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
+44	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
+45	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
+316	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
+515	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+516	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+513	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
+299	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
+300	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
+301	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
 167	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
 168	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
 169	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
@@ -9728,275 +10852,22 @@ COPY public.mini_coupons (id, name, type, discount_value, min_order, validity_da
 233	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
 234	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
 235	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
-250	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-251	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-252	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-36	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
-37	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
-253	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-256	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-257	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-258	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-259	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-274	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-275	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-135	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-140	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
-141	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:39:00.533709	\N	2026-06-10 12:39:00.533709	0
-146	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
-147	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 12:42:49.278334	\N	2026-06-10 12:42:49.278334	0
-153	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-158	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
-159	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 15:20:50.61319	\N	2026-06-10 15:20:50.61319	0
-164	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
-165	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 02:01:57.30896	\N	2026-06-11 02:01:57.30896	0
-182	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 05:37:16.781378	\N	2026-06-11 05:37:16.781378	0
-183	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 05:37:16.781378	\N	2026-06-11 05:37:16.781378	0
-230	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
-231	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-11 19:37:04.24384	\N	2026-06-11 19:37:04.24384	0
-248	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-249	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 05:03:16.916797	\N	2026-06-13 05:03:16.916797	0
-254	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-255	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 06:53:13.183679	\N	2026-06-13 06:53:13.183679	0
-272	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-273	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-277	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-292	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-39	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
-42	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
-293	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-294	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-295	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-298	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-299	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-300	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-301	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-276	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:16:37.647791	\N	2026-06-13 08:16:37.647791	0
-316	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-317	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-318	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-319	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-328	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-329	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-330	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-331	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-340	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-341	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-342	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-343	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-346	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-347	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-348	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-349	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-370	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-371	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-372	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-373	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-382	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-383	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-384	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-385	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-40	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
-41	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 07:41:32.890819	\N	2026-06-05 07:41:32.890819	0
-388	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-389	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-390	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-391	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-394	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-395	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-396	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-397	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-418	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-291	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-296	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-297	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 08:36:32.214722	\N	2026-06-13 08:36:32.214722	0
-314	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-315	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:26:58.998746	\N	2026-06-13 09:26:58.998746	0
-327	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-338	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-339	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 09:46:56.154397	\N	2026-06-13 09:46:56.154397	0
-344	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-345	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-13 10:21:05.231718	\N	2026-06-13 10:21:05.231718	0
-368	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-369	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-14 09:18:02.15949	\N	2026-06-14 09:18:02.15949	0
-380	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-381	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 15:45:05.030934	\N	2026-06-15 15:45:05.030934	0
-386	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-387	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 19:17:24.668502	\N	2026-06-15 19:17:24.668502	0
-392	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-393	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-15 20:57:44.235015	\N	2026-06-15 20:57:44.235015	0
-43	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
-46	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
-416	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-417	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-420	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-421	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-424	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-425	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-426	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-427	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-436	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-437	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-438	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-419	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 05:36:33.257995	\N	2026-06-20 05:36:33.257995	0
-439	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-454	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-455	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-456	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-457	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-466	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-467	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-468	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-469	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-478	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-479	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-480	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-481	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-484	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-485	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-486	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-487	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-502	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-503	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-504	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-505	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-514	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-44	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
-45	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:09:59.605326	\N	2026-06-05 08:09:59.605326	0
-515	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-516	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-517	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-526	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-527	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-528	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-529	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-538	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-539	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-540	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-541	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-423	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-434	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-435	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:12:38.039869	\N	2026-06-20 06:12:38.039869	0
-453	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-464	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-465	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 06:34:36.961033	\N	2026-06-20 06:34:36.961033	0
-476	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-477	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:03:51.215173	\N	2026-06-20 07:03:51.215173	0
-482	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-483	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:29:28.666686	\N	2026-06-20 07:29:28.666686	0
-500	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-501	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:35:51.376884	\N	2026-06-20 07:35:51.376884	0
-512	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-513	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:38:50.825592	\N	2026-06-20 07:38:50.825592	0
-50	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
-577	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-586	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-587	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-588	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-589	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-616	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-617	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-618	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-6	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 05:41:36.376943	\N	2026-06-04 05:41:36.376943	0
-8	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 10:36:16.262187	\N	2026-06-04 10:36:16.262187	0
-10	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 10:56:41.431093	\N	2026-06-04 10:56:41.431093	0
-12	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-04 12:48:31.884419	\N	2026-06-04 12:48:31.884419	0
-14	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 03:44:40.41902	\N	2026-06-05 03:44:40.41902	0
-16	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 03:47:50.283907	\N	2026-06-05 03:47:50.283907	0
-18	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:05:56.578398	\N	2026-06-05 04:05:56.578398	0
-21	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
-22	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
-28	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:34:43.719115	\N	2026-06-05 04:34:43.719115	0
-544	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-545	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-546	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-547	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-562	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-563	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-564	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-565	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-574	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-575	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-57	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
-60	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
-61	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
-64	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
-65	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
-3	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 05:29:35.798758	\N	2026-06-04 05:29:35.798758	0
-5	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 05:41:36.376943	\N	2026-06-04 05:41:36.376943	0
-7	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 10:36:16.262187	\N	2026-06-04 10:36:16.262187	0
-9	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 10:56:41.431093	\N	2026-06-04 10:56:41.431093	0
-13	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 03:44:40.41902	\N	2026-06-05 03:44:40.41902	0
-15	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 03:47:50.283907	\N	2026-06-05 03:47:50.283907	0
-17	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 04:05:56.578398	\N	2026-06-05 04:05:56.578398	0
-20	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-05 04:12:30.647413	\N	2026-06-05 04:12:30.647413	0
-30	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
-31	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
-34	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 07:25:01.91075	\N	2026-06-05 07:25:01.91075	0
-134	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 12:37:19.179208	\N	2026-06-10 12:37:19.179208	0
-152	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 13:00:35.908722	\N	2026-06-10 13:00:35.908722	0
-290	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 08:30:23.61335	\N	2026-06-13 08:30:23.61335	0
-326	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-13 09:29:29.634363	\N	2026-06-13 09:29:29.634363	0
-422	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:02:29.726942	\N	2026-06-20 06:02:29.726942	0
-452	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 06:24:48.787238	\N	2026-06-20 06:24:48.787238	0
-560	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-561	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 13:41:28.161892	\N	2026-06-22 13:41:28.161892	0
-572	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-573	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-584	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-585	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-07-04 09:04:46.083785	\N	2026-07-04 09:04:46.083785	0
-614	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-615	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-524	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-525	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 07:53:31.606944	\N	2026-06-20 07:53:31.606944	0
-536	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-537	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-20 08:16:46.638433	\N	2026-06-20 08:16:46.638433	0
-542	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-51	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
-54	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
-55	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
-58	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
-59	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 07:25:37.588141	\N	2026-06-07 07:25:37.588141	0
-62	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
-63	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 07:38:37.092624	\N	2026-06-07 07:38:37.092624	0
-66	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
-67	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
-69	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
-72	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
-73	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
-76	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-77	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
-82	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-83	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-84	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-85	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
-68	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-07 11:01:50.285934	\N	2026-06-07 11:01:50.285934	0
-88	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-89	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-90	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-91	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
-94	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-95	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-96	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-97	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-100	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
-543	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-22 13:14:13.610015	\N	2026-06-22 13:14:13.610015	0
-576	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-22 14:07:00.306561	\N	2026-06-22 14:07:00.306561	0
-1	新客专享券	new_user	6.00	0.00	30	-1	1	1	2026-06-03 05:26:26.480137	\N	2026-06-03 05:26:26.480137	0
-619	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-22 02:58:40.988751	\N	2026-07-22 02:58:40.988751	0
-628	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
-629	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
-630	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
-631	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
-11	新客专享券	new_user	6.00	0.00	30	-1	1	0	2026-06-04 12:48:31.884419	\N	2026-06-04 12:48:31.884419	0
-47	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
-70	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
-92	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
-48	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
-49	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:14:18.369305	\N	2026-06-05 08:14:18.369305	0
-52	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
-53	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 08:23:06.66464	\N	2026-06-05 08:23:06.66464	0
-56	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 08:39:46.511827	\N	2026-06-05 08:39:46.511827	0
+126	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+127	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-10 12:22:52.46646	\N	2026-06-10 12:22:52.46646	0
+32	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
+33	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-05 04:50:30.051735	\N	2026-06-05 04:50:30.051735	0
+130	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
+131	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
+132	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-10 12:35:30.513215	\N	2026-06-10 12:35:30.513215	0
+71	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-07 11:05:18.476653	\N	2026-06-07 11:05:18.476653	0
+75	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:08:27.914607	\N	2026-06-09 04:08:27.914607	0
+80	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+81	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:23:21.152978	\N	2026-06-09 04:23:21.152978	0
+86	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+87	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 04:38:36.585559	\N	2026-06-09 04:38:36.585559	0
+93	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-09 13:29:00.10218	\N	2026-06-09 13:29:00.10218	0
+98	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
+99	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-06-10 03:44:51.081725	\N	2026-06-10 03:44:51.081725	0
 626	新客满减券·满100减10	new_user	10.00	100.00	30	-1	1	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
 627	新客满减券·满300减20	new_user	20.00	300.00	30	-1	1	0	2026-07-24 04:02:52.245377	\N	2026-07-24 04:02:52.245377	0
 \.
@@ -10007,6 +10878,7 @@ COPY public.mini_coupons (id, name, type, discount_value, min_order, validity_da
 --
 
 COPY public.mini_favorites (id, user_id, goods_id, created_at) FROM stdin;
+1	8	992	2026-07-29 10:48:43.720377+00
 \.
 
 
@@ -10014,8 +10886,8 @@ COPY public.mini_favorites (id, user_id, goods_id, created_at) FROM stdin;
 -- Data for Name: mini_order_items; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.mini_order_items (id, order_id, goods_id, goods_name, spec, price, qty) FROM stdin;
-1	2	3085	小米锅巴110g		16.60	1
+COPY public.mini_order_items (id, order_id, goods_id, goods_name, spec, price, qty, seller_type, seller_distributor_id, promotion_rate_snapshot, platform_fee_rate_snapshot, platform_fee_amount, seller_receivable_amount) FROM stdin;
+1	2	3085	小米锅巴110g		16.60	1	official	0	0.00	0.00	0.00	0.00
 \.
 
 
@@ -10023,9 +10895,9 @@ COPY public.mini_order_items (id, order_id, goods_id, goods_name, spec, price, q
 -- Data for Name: mini_orders; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.mini_orders (id, order_no, user_id, total, address, remark, status, paid_at, created_at, deleted_at, total_amount, original_amount, discount, points_used, express_company, tracking_no, shipped_at, distributor_code, commission, commission_settled, confirmed_at, wx_transaction_id, delivery_type, store_id, store_name, store_address, commission_retry_count, commission_last_error, coupon_id, coupon_deduct) FROM stdin;
-1	TEST1781095148	1	0.00	{"city": "呼和浩特", "name": "测试", "phone": "13800138000", "detail": "测试街道1号", "district": "回民区", "province": "内蒙古"}	测试订单	5	2026-06-10 12:39:08.13431	2026-06-10 12:39:08.13431	\N	99.00	\N	1.00	0			\N		0.00	f	\N		0	0			0		0	0.00
-2	MP202607248095	3	0.00	{"city": "", "name": "格格", "phone": "17747344571", "detail": "前进路275号牧区纯坊官方品牌店", "district": "", "province": "内蒙古自治区赤峰市阿鲁科尔沁旗"}		4	2026-07-24 09:25:21.42807	2026-07-24 09:24:54.23376	\N	16.60	16.60	1.00	0			\N		0.00	t	\N	4200003207202607247025742814	0	0			0		0	0.00
+COPY public.mini_orders (id, order_no, user_id, total, address, remark, status, paid_at, created_at, deleted_at, total_amount, original_amount, discount, points_used, express_company, tracking_no, shipped_at, distributor_code, commission, commission_settled, confirmed_at, wx_transaction_id, delivery_type, store_id, store_name, store_address, commission_retry_count, commission_last_error, coupon_id, coupon_deduct, payment_expires_at, cancel_reason, price_adjusted_from, price_adjustment_note, price_adjusted_at, price_change_requested) FROM stdin;
+1	TEST1781095148	1	0.00	{"city": "呼和浩特", "name": "测试", "phone": "13800138000", "detail": "测试街道1号", "district": "回民区", "province": "内蒙古"}	测试订单	5	2026-06-10 12:39:08.13431	2026-06-10 12:39:08.13431	\N	99.00	\N	1.00	0			\N		0.00	f	\N		0	0			0		0	0.00	\N		\N		\N	f
+2	MP202607248095	3	0.00	{"city": "", "name": "格格", "phone": "17747344571", "detail": "前进路275号牧区纯坊官方品牌店", "district": "", "province": "内蒙古自治区赤峰市阿鲁科尔沁旗"}		4	2026-07-24 09:25:21.42807	2026-07-24 09:24:54.23376	\N	16.60	16.60	1.00	0			\N		0.00	t	\N	4200003207202607247025742814	0	0			0		0	0.00	\N		\N		\N	f
 \.
 
 
@@ -10044,6 +10916,9 @@ COPY public.mini_points_goods_redemptions (id, user_id, goods_id, goods_name, po
 COPY public.mini_points_log (id, user_id, points, type, remark, order_id, created_at) FROM stdin;
 1	3	5	earn	盲盒抽奖	\N	2026-07-24 07:19:06.136001
 2	3	166	earn	消费送积分	2	2026-07-24 09:25:21.45739
+3	8	5	earn	每日签到（连签1天）	\N	2026-07-29 10:49:39.125535
+4	4	5	earn	每日签到（连签1天）	\N	2026-07-29 13:53:51.754484
+5	10	5	earn	每日签到（连签1天）	\N	2026-08-03 11:00:39.293113
 \.
 
 
@@ -10120,140 +10995,63 @@ COPY public.mini_search_log (id, keyword, cnt, updated_at) FROM stdin;
 
 
 --
+-- Data for Name: mini_service_messages; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.mini_service_messages (id, session_id, role, source, content, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: mini_service_sessions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+COPY public.mini_service_sessions (id, user_id, client_key, product_id, product_name, product_snapshot, status, human_requested_at, created_at, updated_at, expires_at) FROM stdin;
+1	\N	wx_1785311540910_sgodu1zfbb	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 07:52:21.101871	2026-07-29 07:52:21.101871	2027-01-25 07:52:21.101871
+2	\N	wx_1785311541966_cp1bz8d8bj	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 07:52:22.165363	2026-07-29 07:52:22.165363	2027-01-25 07:52:22.165363
+3	\N	wx_1785311542454_g7zxzwhouu	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 07:52:22.660879	2026-07-29 07:52:22.660879	2027-01-25 07:52:22.660879
+4	8	wx_1785322123733_f9de7stk0o	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 10:48:43.922596	2026-07-29 10:48:43.922596	2027-01-25 10:48:43.922596
+5	\N	wx_1785322125249_8z1lxgn83s	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 10:48:45.439895	2026-07-29 10:48:45.439895	2027-01-25 10:48:45.439895
+6	\N	wx_1785322125023_zqlz9tpgw4	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 10:48:45.570081	2026-07-29 10:48:45.570081	2027-01-25 10:48:45.570081
+7	\N	wx_1785330867309_zx3nj0rrlo	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 13:14:27.480837	2026-07-29 13:14:27.480837	2027-01-25 13:14:27.480837
+8	\N	wx_1785330868144_c24dwymmxi	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 13:14:28.317507	2026-07-29 13:14:28.317507	2027-01-25 13:14:28.317507
+9	\N	wx_1785330868344_udpiqv3uv5	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "3盒", "type": "product", "price": 159}	ai	\N	2026-07-29 13:14:28.527526	2026-07-29 13:14:28.527526	2027-01-25 13:14:28.527526
+10	\N	wx_1785330907065_1juokjdcgm	992	牧区奶豆腐/盒装/成品	{"id": "992", "name": "牧区奶豆腐/盒装/成品", "spec": "1盒", "type": "product", "price": 58}	ai	\N	2026-07-29 13:15:07.629669	2026-07-29 13:15:09.001311	2027-01-25 13:15:09.001311
+11	\N	wx_1785330868144_c24dwymmxi	0		{}	ai	\N	2026-07-29 13:15:40.518534	2026-07-29 13:15:40.518534	2027-01-25 13:15:40.518534
+12	\N	wx_1785330907065_1juokjdcgm	0		{}	ai	\N	2026-07-29 13:16:14.330511	2026-07-29 13:16:14.330511	2027-01-25 13:16:14.330511
+\.
+
+
+--
 -- Data for Name: mini_user_coupons; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_at, order_id, claimed_at) FROM stdin;
-1	3	1	0	2026-08-23 07:07:42.191	\N	\N	2026-07-24 07:07:42.193419
-2	3	3	0	2026-08-23 07:07:42.209	\N	\N	2026-07-24 07:07:42.209873
-3	3	5	0	2026-08-23 07:07:42.213	\N	\N	2026-07-24 07:07:42.214095
-4	3	7	0	2026-08-23 07:07:42.217	\N	\N	2026-07-24 07:07:42.218107
-5	3	9	0	2026-08-23 07:07:42.236	\N	\N	2026-07-24 07:07:42.23736
-6	3	11	0	2026-08-23 07:07:42.24	\N	\N	2026-07-24 07:07:42.241294
-7	3	13	0	2026-08-23 07:07:42.244	\N	\N	2026-07-24 07:07:42.245168
-8	3	15	0	2026-08-23 07:07:42.248	\N	\N	2026-07-24 07:07:42.249189
-9	3	17	0	2026-08-23 07:07:42.253	\N	\N	2026-07-24 07:07:42.253916
-10	3	20	0	2026-08-23 07:07:42.257	\N	\N	2026-07-24 07:07:42.258121
-11	3	26	0	2026-08-23 07:07:42.261	\N	\N	2026-07-24 07:07:42.261922
-12	3	27	0	2026-08-23 07:07:42.265	\N	\N	2026-07-24 07:07:42.265787
-13	3	30	0	2026-08-23 07:07:42.268	\N	\N	2026-07-24 07:07:42.269736
-14	3	31	0	2026-08-23 07:07:42.272	\N	\N	2026-07-24 07:07:42.273661
-15	3	34	0	2026-08-23 07:07:42.277	\N	\N	2026-07-24 07:07:42.277898
-16	3	35	0	2026-08-23 07:07:42.28	\N	\N	2026-07-24 07:07:42.281624
-17	3	38	0	2026-08-23 07:07:42.284	\N	\N	2026-07-24 07:07:42.285554
-18	3	39	0	2026-08-23 07:07:42.289	\N	\N	2026-07-24 07:07:42.289881
-19	3	42	0	2026-08-23 07:07:42.293	\N	\N	2026-07-24 07:07:42.293766
-20	3	43	0	2026-08-23 07:07:42.296	\N	\N	2026-07-24 07:07:42.297607
-21	3	46	0	2026-08-23 07:07:42.3	\N	\N	2026-07-24 07:07:42.3016
-22	3	47	0	2026-08-23 07:07:42.305	\N	\N	2026-07-24 07:07:42.305922
-23	3	50	0	2026-08-23 07:07:42.309	\N	\N	2026-07-24 07:07:42.309845
-24	3	51	0	2026-08-23 07:07:42.312	\N	\N	2026-07-24 07:07:42.313796
-25	3	54	0	2026-08-23 07:07:42.316	\N	\N	2026-07-24 07:07:42.317686
-26	3	55	0	2026-08-23 07:07:42.32	\N	\N	2026-07-24 07:07:42.321738
-27	3	58	0	2026-08-23 07:07:42.324	\N	\N	2026-07-24 07:07:42.325651
-28	3	59	0	2026-08-23 07:07:42.329	\N	\N	2026-07-24 07:07:42.330176
-29	3	62	0	2026-08-23 07:07:42.333	\N	\N	2026-07-24 07:07:42.334031
-30	3	63	0	2026-08-23 07:07:42.337	\N	\N	2026-07-24 07:07:42.337886
-31	3	66	0	2026-08-23 07:07:42.34	\N	\N	2026-07-24 07:07:42.341762
-32	3	67	0	2026-08-23 07:07:42.345	\N	\N	2026-07-24 07:07:42.345792
-33	3	70	0	2026-08-23 07:07:42.349	\N	\N	2026-07-24 07:07:42.350039
-34	3	71	0	2026-08-23 07:07:42.353	\N	\N	2026-07-24 07:07:42.354646
-35	3	74	0	2026-08-23 07:07:42.358	\N	\N	2026-07-24 07:07:42.358979
-36	3	75	0	2026-08-23 07:07:42.362	\N	\N	2026-07-24 07:07:42.362869
-37	3	80	0	2026-08-23 07:07:42.366	\N	\N	2026-07-24 07:07:42.366859
-38	3	81	0	2026-08-23 07:07:42.37	\N	\N	2026-07-24 07:07:42.370992
-39	3	86	0	2026-08-23 07:07:42.374	\N	\N	2026-07-24 07:07:42.375266
-40	3	87	0	2026-08-23 07:07:42.378	\N	\N	2026-07-24 07:07:42.379737
-41	3	92	0	2026-08-23 07:07:42.383	\N	\N	2026-07-24 07:07:42.383881
-42	3	93	0	2026-08-23 07:07:42.387	\N	\N	2026-07-24 07:07:42.388491
-43	3	98	0	2026-08-23 07:07:42.392	\N	\N	2026-07-24 07:07:42.39305
-44	3	99	0	2026-08-23 07:07:42.396	\N	\N	2026-07-24 07:07:42.3969
-45	3	104	0	2026-08-23 07:07:42.4	\N	\N	2026-07-24 07:07:42.401326
-46	3	105	0	2026-08-23 07:07:42.405	\N	\N	2026-07-24 07:07:42.406171
-47	3	110	0	2026-08-23 07:07:42.415	\N	\N	2026-07-24 07:07:42.41665
-48	3	111	0	2026-08-23 07:07:42.419	\N	\N	2026-07-24 07:07:42.420778
-49	3	116	0	2026-08-23 07:07:42.423	\N	\N	2026-07-24 07:07:42.424779
-50	3	117	0	2026-08-23 07:07:42.428	\N	\N	2026-07-24 07:07:42.429032
-51	3	122	0	2026-08-23 07:07:42.432	\N	\N	2026-07-24 07:07:42.43292
-52	3	123	0	2026-08-23 07:07:42.436	\N	\N	2026-07-24 07:07:42.436889
-53	3	128	0	2026-08-23 07:07:42.441	\N	\N	2026-07-24 07:07:42.441896
-54	3	129	0	2026-08-23 07:07:42.445	\N	\N	2026-07-24 07:07:42.445973
-55	3	134	0	2026-08-23 07:07:42.449	\N	\N	2026-07-24 07:07:42.450114
-56	3	135	0	2026-08-23 07:07:42.453	\N	\N	2026-07-24 07:07:42.454381
-57	3	140	0	2026-08-23 07:07:42.457	\N	\N	2026-07-24 07:07:42.458131
-58	3	141	0	2026-08-23 07:07:42.461	\N	\N	2026-07-24 07:07:42.462185
-59	3	146	0	2026-08-23 07:07:42.466	\N	\N	2026-07-24 07:07:42.466862
-60	3	147	0	2026-08-23 07:07:42.47	\N	\N	2026-07-24 07:07:42.470975
-61	3	152	0	2026-08-23 07:07:42.474	\N	\N	2026-07-24 07:07:42.474874
-62	3	153	0	2026-08-23 07:07:42.477	\N	\N	2026-07-24 07:07:42.478754
-63	3	158	0	2026-08-23 07:07:42.482	\N	\N	2026-07-24 07:07:42.482764
-64	3	159	0	2026-08-23 07:07:42.485	\N	\N	2026-07-24 07:07:42.48675
-65	3	164	0	2026-08-23 07:07:42.49	\N	\N	2026-07-24 07:07:42.4908
-66	3	165	0	2026-08-23 07:07:42.533	\N	\N	2026-07-24 07:07:42.534988
-67	3	182	0	2026-08-23 07:07:42.539	\N	\N	2026-07-24 07:07:42.540495
-68	3	183	0	2026-08-23 07:07:42.544	\N	\N	2026-07-24 07:07:42.54498
-69	3	230	0	2026-08-23 07:07:42.548	\N	\N	2026-07-24 07:07:42.549106
-70	3	231	0	2026-08-23 07:07:42.552	\N	\N	2026-07-24 07:07:42.552823
-71	3	248	0	2026-08-23 07:07:42.555	\N	\N	2026-07-24 07:07:42.556678
-72	3	249	0	2026-08-23 07:07:42.559	\N	\N	2026-07-24 07:07:42.560676
-73	3	254	0	2026-08-23 07:07:42.564	\N	\N	2026-07-24 07:07:42.564909
-74	3	255	0	2026-08-23 07:07:42.568	\N	\N	2026-07-24 07:07:42.568872
-75	3	272	0	2026-08-23 07:07:42.571	\N	\N	2026-07-24 07:07:42.573019
-76	3	273	0	2026-08-23 07:07:42.576	\N	\N	2026-07-24 07:07:42.576818
-77	3	290	0	2026-08-23 07:07:42.579	\N	\N	2026-07-24 07:07:42.580828
-78	3	291	0	2026-08-23 07:07:42.584	\N	\N	2026-07-24 07:07:42.585045
-79	3	296	0	2026-08-23 07:07:42.588	\N	\N	2026-07-24 07:07:42.588828
-80	3	297	0	2026-08-23 07:07:42.591	\N	\N	2026-07-24 07:07:42.592722
-81	3	314	0	2026-08-23 07:07:42.596	\N	\N	2026-07-24 07:07:42.59689
-82	3	315	0	2026-08-23 07:07:42.6	\N	\N	2026-07-24 07:07:42.600855
-83	3	326	0	2026-08-23 07:07:42.604	\N	\N	2026-07-24 07:07:42.604859
-84	3	327	0	2026-08-23 07:07:42.608	\N	\N	2026-07-24 07:07:42.609157
-85	3	338	0	2026-08-23 07:07:42.612	\N	\N	2026-07-24 07:07:42.612977
-86	3	339	0	2026-08-23 07:07:42.616	\N	\N	2026-07-24 07:07:42.617145
-87	3	344	0	2026-08-23 07:07:42.62	\N	\N	2026-07-24 07:07:42.621444
-88	3	345	0	2026-08-23 07:07:42.624	\N	\N	2026-07-24 07:07:42.625343
-89	3	368	0	2026-08-23 07:07:42.634	\N	\N	2026-07-24 07:07:42.634982
-90	3	369	0	2026-08-23 07:07:42.645	\N	\N	2026-07-24 07:07:42.646611
-91	3	380	0	2026-08-23 07:07:42.65	\N	\N	2026-07-24 07:07:42.651441
-92	3	381	0	2026-08-23 07:07:42.655	\N	\N	2026-07-24 07:07:42.655982
-93	3	386	0	2026-08-23 07:07:42.659	\N	\N	2026-07-24 07:07:42.660052
-94	3	387	0	2026-08-23 07:07:42.663	\N	\N	2026-07-24 07:07:42.663897
-95	3	392	0	2026-08-23 07:07:42.666	\N	\N	2026-07-24 07:07:42.667796
-96	3	393	0	2026-08-23 07:07:42.671	\N	\N	2026-07-24 07:07:42.672077
-97	3	416	0	2026-08-23 07:07:42.675	\N	\N	2026-07-24 07:07:42.676566
-98	3	417	0	2026-08-23 07:07:42.679	\N	\N	2026-07-24 07:07:42.680523
-99	3	422	0	2026-08-23 07:07:42.683	\N	\N	2026-07-24 07:07:42.684442
-100	3	423	0	2026-08-23 07:07:42.687	\N	\N	2026-07-24 07:07:42.688532
-101	3	434	0	2026-08-23 07:07:42.694	\N	\N	2026-07-24 07:07:42.694918
-102	3	435	0	2026-08-23 07:07:42.698	\N	\N	2026-07-24 07:07:42.69899
-103	3	452	0	2026-08-23 07:07:42.702	\N	\N	2026-07-24 07:07:42.703016
-104	3	453	0	2026-08-23 07:07:42.706	\N	\N	2026-07-24 07:07:42.707296
-105	3	464	0	2026-08-23 07:07:42.712	\N	\N	2026-07-24 07:07:42.713232
-106	3	465	0	2026-08-23 07:07:42.716	\N	\N	2026-07-24 07:07:42.717409
-107	3	476	0	2026-08-23 07:07:42.72	\N	\N	2026-07-24 07:07:42.721353
-108	3	477	0	2026-08-23 07:07:42.736	\N	\N	2026-07-24 07:07:42.737164
-109	3	482	0	2026-08-23 07:07:42.74	\N	\N	2026-07-24 07:07:42.74119
-110	3	483	0	2026-08-23 07:07:42.744	\N	\N	2026-07-24 07:07:42.745549
-111	3	500	0	2026-08-23 07:07:42.748	\N	\N	2026-07-24 07:07:42.74933
-112	3	501	0	2026-08-23 07:07:42.752	\N	\N	2026-07-24 07:07:42.753622
-113	3	512	0	2026-08-23 07:07:42.757	\N	\N	2026-07-24 07:07:42.758309
-114	3	513	0	2026-08-23 07:07:42.761	\N	\N	2026-07-24 07:07:42.76229
-115	3	524	0	2026-08-23 07:07:42.765	\N	\N	2026-07-24 07:07:42.766321
-116	3	525	0	2026-08-23 07:07:42.769	\N	\N	2026-07-24 07:07:42.770513
-117	3	536	0	2026-08-23 07:07:42.773	\N	\N	2026-07-24 07:07:42.774732
-118	3	537	0	2026-08-23 07:07:42.778	\N	\N	2026-07-24 07:07:42.779223
-119	3	542	0	2026-08-23 07:07:42.782	\N	\N	2026-07-24 07:07:42.783593
-120	3	543	0	2026-08-23 07:07:42.791	\N	\N	2026-07-24 07:07:42.792295
-121	3	560	0	2026-08-23 07:07:42.796	\N	\N	2026-07-24 07:07:42.797176
-122	3	561	0	2026-08-23 07:07:42.834	\N	\N	2026-07-24 07:07:42.83548
-123	3	572	0	2026-08-23 07:07:42.839	\N	\N	2026-07-24 07:07:42.840188
-124	3	573	0	2026-08-23 07:07:42.843	\N	\N	2026-07-24 07:07:42.844729
-125	3	584	0	2026-08-23 07:07:42.848	\N	\N	2026-07-24 07:07:42.849138
-126	3	585	0	2026-08-23 07:07:42.852	\N	\N	2026-07-24 07:07:42.853773
-127	3	614	0	2026-08-23 07:07:42.857	\N	\N	2026-07-24 07:07:42.857809
-128	3	615	0	2026-08-23 07:07:42.861	\N	\N	2026-07-24 07:07:42.861893
-129	3	626	0	2026-08-23 07:07:42.865	\N	\N	2026-07-24 07:07:42.866082
-130	3	627	0	2026-08-23 07:07:42.87	\N	\N	2026-07-24 07:07:42.870824
+COPY public.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_at, order_id, claimed_at, coupon_type) FROM stdin;
+131	4	26	0	2026-08-25 11:41:25.511	\N	\N	2026-07-26 11:41:25.511125	new_user
+132	4	27	0	2026-08-25 11:41:25.528	\N	\N	2026-07-26 11:41:25.527851	new_user
+133	4	1	0	2026-08-25 11:41:25.534	\N	\N	2026-07-26 11:41:25.533731	new_user
+144	8	26	0	2026-08-28 10:48:34.85	\N	\N	2026-07-29 10:48:34.852144	new_user
+145	8	27	0	2026-08-28 10:48:34.863	\N	\N	2026-07-29 10:48:34.864721	new_user
+146	8	1	0	2026-08-28 10:48:34.869	\N	\N	2026-07-29 10:48:34.871111	new_user
+147	9	26	0	2026-08-31 12:24:18.389	\N	\N	2026-08-01 12:24:18.391226	new_user
+148	9	27	0	2026-08-31 12:24:18.402	\N	\N	2026-08-01 12:24:18.403058	new_user
+149	9	1	0	2026-08-31 12:24:18.407	\N	\N	2026-08-01 12:24:18.407253	new_user
+143	4	78	2	2026-08-02 12:53:30.007	\N	\N	2026-07-26 12:53:29.996407	lottery
+1	3	1	0	2026-08-23 07:07:42.191	\N	\N	2026-07-24 07:07:42.193419	new_user
+134	5	26	0	2026-08-25 11:56:37.513	\N	\N	2026-07-26 11:56:37.512484	new_user
+135	5	27	0	2026-08-25 11:56:37.518	\N	\N	2026-07-26 11:56:37.518033	new_user
+136	5	1	0	2026-08-25 11:56:37.524	\N	\N	2026-07-26 11:56:37.523132	new_user
+137	6	26	0	2026-08-25 12:09:38.049	\N	\N	2026-07-26 12:09:38.049264	new_user
+138	6	27	0	2026-08-25 12:09:38.055	\N	\N	2026-07-26 12:09:38.054558	new_user
+139	6	1	0	2026-08-25 12:09:38.06	\N	\N	2026-07-26 12:09:38.059698	new_user
+11	3	26	0	2026-08-23 07:07:42.261	\N	\N	2026-07-24 07:07:42.261922	new_user
+12	3	27	0	2026-08-23 07:07:42.265	\N	\N	2026-07-24 07:07:42.265787	new_user
+140	7	26	0	2026-08-25 12:14:49.596	\N	\N	2026-07-26 12:14:49.595634	new_user
+141	7	27	0	2026-08-25 12:14:49.601	\N	\N	2026-07-26 12:14:49.600951	new_user
+142	7	1	0	2026-08-25 12:14:49.606	\N	\N	2026-07-26 12:14:49.605939	new_user
+150	10	26	0	2026-09-02 11:00:35.336	\N	\N	2026-08-03 11:00:35.337003	new_user
+151	10	27	0	2026-09-02 11:00:35.341	\N	\N	2026-08-03 11:00:35.342118	new_user
+152	10	1	0	2026-09-02 11:00:35.346	\N	\N	2026-08-03 11:00:35.346394	new_user
 \.
 
 
@@ -10263,7 +11061,14 @@ COPY public.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_a
 
 COPY public.mini_users (id, openid, phone, name, created_at, deleted_at, points, total_spent, level, vip_expire_at, birth_month, birth_day, distributor_code) FROM stdin;
 1	dev_test_openid	\N	测试用户	2026-06-10 12:37:46.184704	\N	0	0.00	0	\N	\N	\N	
-3	oOD123X9kr9RtclqLEI0rroZRox8	17747344571	17747344571	2026-07-24 07:07:42.127422	\N	176	16.60	0	\N	\N	\N	
+5	oOD123VqggAjcQn67sovQ9mIwDfU	18586265352	18586265352	2026-07-26 11:56:37.423327	\N	5	0.00	0	\N	\N	\N	
+6	oOD123Yd7ACYNXnbsR8jm_LPnizo	18747637511	18747637511	2026-07-26 12:09:38.039992	\N	0	0.00	0	\N	\N	\N	
+7	oOD123aM8BZqdR2S2w8ZarQGetwI	18847120907	18847120907	2026-07-26 12:14:49.561304	\N	5	0.00	0	\N	\N	\N	
+3	oOD123X9kr9RtclqLEI0rroZRox8	17747344571	17747344571	2026-07-24 07:07:42.127422	\N	181	16.60	0	\N	\N	\N	
+8	oOD123VYZ1MDI4ZNj1CAPhltmF98	18924071446	18924071446	2026-07-29 10:48:34.814745	\N	5	0.00	0	\N	\N	\N	
+4	oOD123TQ7RJOLHkAL6QO1pwA0J1Q	17547770871	17547770871	2026-07-26 11:41:25.484442	\N	10	0.00	0	\N	\N	\N	
+9	oOD123Xa792OC9w1f0DBq0r2JrRs	16604813140	16604813140	2026-08-01 12:24:18.355716	\N	0	0.00	0	\N	\N	\N	
+10	oOD123a5KEaA765C1AgCF-yBoZes	15771377338	15771377338	2026-08-03 11:00:35.060755	\N	5	0.00	0	\N	\N	\N	
 \.
 
 
@@ -10287,6 +11092,21 @@ COPY public.mini_video_comments (id, video_id, user_id, content, created_at, dis
 13	5	0	物流挺快的，包装也很用心	2026-07-24 04:02:52.354342	草原阿嬷
 14	5	0	草原的味道真的不一样，纯天然！	2026-07-24 04:02:52.35643	内蒙古买家
 15	5	0	奶酪真的很香，家里小孩特别喜欢	2026-07-24 04:02:52.358602	奶酪爱好者
+16	6	0	草原的味道真的不一样，纯天然！	2026-07-25 11:20:18.115839	草原阿嬷
+17	6	0	支持国产好品牌，一直回购！	2026-07-25 11:20:18.202682	内蒙古买家
+18	6	0	第一次买，直接被种草了	2026-07-25 11:20:18.205462	奶酪爱好者
+19	7	0	草原的味道真的不一样，纯天然！	2026-07-25 11:20:18.21253	草原阿嬷
+20	7	0	奶酪真的很香，家里小孩特别喜欢	2026-07-25 11:20:18.215115	内蒙古买家
+21	7	0	物流挺快的，包装也很用心	2026-07-25 11:20:18.21759	奶酪爱好者
+22	8	0	奶酪真的很香，家里小孩特别喜欢	2026-07-25 11:29:58.457602	草原阿嬷
+23	8	0	第一次买，直接被种草了	2026-07-25 11:29:58.460159	内蒙古买家
+24	8	0	草原的味道真的不一样，纯天然！	2026-07-25 11:29:58.462034	奶酪爱好者
+25	10	0	物流挺快的，包装也很用心	2026-07-25 11:37:38.128992	草原阿嬷
+26	10	0	买过好几次了，品质很稳定👍	2026-07-25 11:37:38.213253	内蒙古买家
+27	10	0	奶酪真的很香，家里小孩特别喜欢	2026-07-25 11:37:38.219223	奶酪爱好者
+28	9	0	草原的味道真的不一样，纯天然！	2026-07-25 11:37:38.237306	草原阿嬷
+29	9	0	奶酪真的很香，家里小孩特别喜欢	2026-07-25 11:37:38.239614	内蒙古买家
+30	9	0	支持国产好品牌，一直回购！	2026-07-25 11:37:38.241837	奶酪爱好者
 \.
 
 
@@ -10302,12 +11122,14 @@ COPY public.mini_video_likes (id, video_id, user_id, created_at) FROM stdin;
 -- Data for Name: mini_videos; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.mini_videos (id, title, description, video_url, cover_url, goods_id, like_count, comment_count, view_count, sort, status, created_at) FROM stdin;
-3	蒙古青砖奶茶	制作美味时刻	https://nomaderp.pages.dev/media/videos/1784649171543_vu1b11.mp4		996	0	3	51	11	1	2026-07-21 15:52:54.796954
-2	蒙超联赛现场亮相	牧区纯坊内蒙古特产精选品牌	https://nomaderp.pages.dev/media/videos/1780896510754_akr3bf.mp4		996	0	3	43	0	1	2026-06-08 05:34:18.500551
-4	达人｜分享		https://nomaderp.pages.dev/media/videos/1784730859814_djndpy.mp4	https://nomaderp.pages.dev/media/covers/1784731058067_kb7og2.jpg	996	0	3	12	0	1	2026-07-22 14:35:05.583322
-1	数字游牧 | 游走在世界的奶酪	来自草原的味道，跟着我们一起游牧吧	https://nomaderp.pages.dev/videos/product_video_1.mp4		0	0	3	127	2	1	2026-06-04 03:02:11.107541
-5	达人 ｜ 分享		https://nomaderp.pages.dev/media/videos/1784731736062_2w2um6.mp4	https://nomaderp.pages.dev/media/covers/1784731739272_5x0gz6.jpg	0	0	3	20	10	1	2026-07-22 14:49:00.836575
+COPY public.mini_videos (id, title, description, video_url, cover_url, goods_id, like_count, comment_count, view_count, sort, status, created_at, content_type, content, images, source_url) FROM stdin;
+2	蒙超联赛现场亮相	牧区纯坊内蒙古特产精选品牌	https://nomaderp.pages.dev/media/videos/1780896510754_akr3bf.mp4		996	0	3	58	0	1	2026-06-08 05:34:18.500551	video		[]	
+3	蒙古青砖奶茶	制作美味时刻	https://nomaderp.pages.dev/media/videos/1784649171543_vu1b11.mp4		996	0	3	166	11	1	2026-07-21 15:52:54.796954	video		[]	
+4	达人｜分享		https://nomaderp.pages.dev/media/videos/1784730859814_djndpy.mp4	https://nomaderp.pages.dev/media/covers/1784731058067_kb7og2.jpg	996	0	3	31	0	1	2026-07-22 14:35:05.583322	video		[]	
+7	草原儿女从小吃到大的营养奶食品	奶品营养家 · 牧区纯坊		https://nomaderp.pages.dev/media/covers/1784979365056_p5sgw6.jpg	0	0	3	29	110	1	2026-07-25 11:20:18.014384	article		["https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWyY3CAjsLLCiah6rOxsz9anwCoxXK0GRAgLOs5Sg7v2HwdibI7jNNtmibA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWynz5u4u2ua0ZU4e6WCqvzuxLySFzWAJSFba0uG04JVDfWwsM8BT4BA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWr9e4M6FqKIqRtsvNpK5HicutRux4LGy0tT1zoH8l4uQ8kaJKykIHTPA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWWpAibLIjyQpBvxbopR5Y9yQvt94Egiam2njSXNdcJeibBfaGhwmZkwO1w%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWdGgXOiby1kdCCStajmL49VDmWUOiacibcldf7nn6eZpGJS6kSWHIeadpg%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWiaTAeGG5BbdZmlL3qh1Ie2EVSLvicMic5XHcBgj59t1sIOPibp1MdN4JJg%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWom5szcYmn5ic69X5ygPHsPL2YnmYa7M7CWDXHuBToDh97plIU0ClBIQ%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWbKso7Xs9nNdeFTb91O3ia1lpYkx6giauyyNp4gsUKnrZ5dVzKIU9ZJCQ%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWxiasUOl0300w0gteRWWLV2hT1pHDLGasVZuz8FQyOfib1IwJfHtKtMHg%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWHOzWZqSh4ic5qWNAroI4W9ddy44CG5ZGpo7O2icxs34xzy23Cq6WgPcQ%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWeWPLaa39B3EohBss7icrmplHLnLLvyBmI5LxV9rIXVOUftpNZ09sQIg%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWNh1iaUAvkzs32eKDomxgkfqFqZA0q4N8iaEEQ3Y4VE5uQ3dbIl8k5Y8g%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWBNu72qLCxBhy0j2NwvrxTiaJXsgrvmkGkaToibGPdw1IXR0PA8Jq4e5w%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcW4Qh8ib5E1osWaKxSB2QWZzaDSQu6WXnja9HXJ7m1gGangBtE2SjRIPw%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcW6nST85VdCV6uS2ibyfeOmDz63kW593ibibCWyXvmWbzT1MFERFddeovMA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWX4wmw79zjjncWdPicMjLvvZl2rwBdiccRXhL0iapQhpOibjdwsSZHW4RdA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcW2vwOic6T2zeAuMQ1VEHEjMQqAO0VnzeFhQ6w2XWq3qz5H2jq4Sm1BNA%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWbIiaajGUOwaiac3dndGia8rbALoQdibzW8Mwm8fY5jPmlWQW14HfLiceicFw%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWzzqib82WeasnynG7VNUebMYXMnwiaUViaF0nEJ8lT5ic68Nu5X2daLBGxw%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWX9h0K0vJhe1880fCEXrteu3Sv3cLPVLHuyhKj2eW6rgyYC9XxTGOicw%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWN6qJLVn1fB94iba3HupL9V2dibVkl50kJ0Hic2xZxGWFj1BUE0fttchUQ%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWBQHZCL6iaGMSNms3VjNYFbM3fcnxRicEtPUF5FibH227QVaX0Zsq7vUYQ%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S37zYy14RhdE2T13hvMypcWILibyYs7DZY6u6nBqb7Q0kTYtuGHl3ibNCdChnia7j2DUSvcZqaJXNxPg%2F640%3Fwx_fmt%3Djpeg", "https://erp-server-xsji.onrender.com/miniapi/article-image?url=https%3A%2F%2Fmmbiz.qpic.cn%2Fmmbiz_jpg%2FeOl7PcZd7S1dIqDJXky2fDLC3icpyzC9h6KNkM93CaW2hqnIZibukyonJqW9rEdTZo0YgID1qqsHgHXp3embKtBA%2F640%3Fwx_fmt%3Djpeg"]	https://mp.weixin.qq.com/s/JeyRlj9GhCuMkui_XCJg4g
+1	数字游牧 | 游走在世界的奶酪	来自草原的味道，跟着我们一起游牧吧	https://nomaderp.pages.dev/videos/product_video_1.mp4		0	0	3	156	2	1	2026-06-04 03:02:11.107541	video		[]	
+5	达人 ｜ 分享		https://nomaderp.pages.dev/media/videos/1784731736062_2w2um6.mp4	https://nomaderp.pages.dev/media/covers/1784731739272_5x0gz6.jpg	0	0	3	44	10	1	2026-07-22 14:49:00.836575	video		[]	
+6	发现｜了不起的家乡特产	奶豆腐、奶条、青砖茶与风干牛肉，一次认识来自草原的家乡味道。		https://nomaderp.pages.dev/media/covers/1784978586592_b8jhkm.jpg	0	0	3	23	120	1	2026-07-25 11:20:18.014384	article	有些味道来自时间，有些味道来自土地。奶豆腐慢慢蒸制，奶条保留鲜奶本味，青砖茶用热水一泡就香，风干牛肉则收藏着黄金纬度的风与阳光。\\n\\n左右滑动图片，一起发现这些值得被看见的家乡特产。	["https://nomaderp.pages.dev/media/covers/1784978586592_b8jhkm.jpg", "https://nomaderp.pages.dev/media/covers/1784978596721_k7fug2.jpg", "https://nomaderp.pages.dev/media/covers/1784978599407_zurfpr.jpg", "https://nomaderp.pages.dev/media/covers/1784978600545_276qyb.jpg", "https://nomaderp.pages.dev/media/covers/1784978599250_0mn7cc.jpg", "https://nomaderp.pages.dev/media/covers/1784978600234_5holkb.jpg"]	
 \.
 
 
@@ -10331,804 +11153,834 @@ COPY public.operation_logs (id, admin_id, admin_name, action, ip, created_at, sh
 -- Data for Name: pay_receipt; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.pay_receipt (id, receipt_no, order_sn, contact_type, contact_name, amount, pay_date, fund_id, fund_name, remark, status, created_at, deleted_at, category, shop_id) FROM stdin;
-51	FK202603293286		other	包装支出	4300.00	2026-02-01	7	公司支出账户	乌海文旅集团包装印刷费用	1	2026-03-29 15:37:31.828773	\N		1
-52	FK202603296295		other	购物袋/小/中/大/奶皮真空袋/各100张	54.00	2026-02-01	7	公司支出账户	购物袋/小/中/大/奶皮真空袋/各100张	1	2026-03-29 15:37:32.734334	\N		1
-53	FK202603298127		other	民族印刷厂	16.00	2026-01-08	7	公司支出账户	乌海文旅集团集团打印	1	2026-03-29 15:37:33.677508	\N		1
-54	FK202603293993		other	路费/收费站	43.00	2026-01-08	7	公司支出账户	乌海文旅集团/合同文件/ 打样礼盒	1	2026-03-29 15:37:34.609582	\N		1
-55	FK202603294726		other	店面	360.00	2026-01-05	7	公司支出账户	店面	1	2026-03-29 15:37:35.616719	\N		1
-56	FK202603296408		other	劳务费	719.00	2026-01-05	7	公司支出账户	劳务费	1	2026-03-29 15:37:36.519705	\N		1
-57	FK202603295513		other	店面	405.00	2025-12-28	8	孟根	编织筐。10个250元\n地毯。155元	1	2026-03-29 15:37:38.346429	\N		1
-50	FK202603299243		other	一个安全灯，两个灭火器	205.00	2026-02-10	7	公司支出账户	一个安全灯，两个灭火器	1	2026-03-29 15:37:29.949765	\N		1
-58	FK202603299673		other	店面	145.00	2025-12-28	8	孟根	地毯36➕麻绳20=56元\n试营业字打印4元\n发财树80元\n推拉贴 5元	1	2026-03-29 15:37:39.350547	\N		1
-59	FK202603294846		other	店面	3500.00	2025-12-28	8	孟根	店面	1	2026-03-29 15:37:40.345208	\N		1
-60	FK202603299527		other	那牧尔乳制品厂/纯净之源	20.00	2025-12-16	7	公司支出账户	拉货	1	2026-03-29 15:37:41.252526	\N		1
-61	FK202603295590		other	那牧尔乳制品厂/纯净之源	487.60	2025-12-05	7	公司支出账户	奶果子内袋包装费/42.92公斤/1公斤11.36元。	1	2026-03-29 15:37:42.148896	\N		1
-62	FK202603296675		other	店面	150.00	2025-12-04	7	公司支出账户	店面	1	2026-03-29 15:37:43.177797	\N		1
-63	FK202603295685		other	店面	600.00	2025-12-04	7	公司支出账户	店面	1	2026-03-29 15:37:44.150817	\N		1
-64	FK202603293583		other	拼多多/随机店采购	38.90	2025-12-04	7	公司支出账户	计算器	1	2026-03-29 15:37:45.062344	\N		1
-65	FK202603293606		other	店面	400.00	2025-12-04	7	公司支出账户	要了分断式的	1	2026-03-29 15:37:45.972017	\N		1
-66	FK202603294619		other	店面	180.00	2025-12-04	7	公司支出账户	三个货架+地板贴	1	2026-03-29 15:37:46.873213	\N		1
-67	FK202603294511		other	包装支出	400.00	2025-12-04	7	公司支出账户	打样费两次，定制打货5000以上会扣除。	1	2026-03-29 15:37:47.925845	\N		1
-68	FK202603293178		other	店面	31.30	2025-11-26	7	公司支出账户	店面	1	2026-03-29 15:37:48.900549	\N		1
-69	FK202603295676		other	店面	2800.00	2025-11-22	8	孟根	店面	1	2026-03-29 15:37:49.906692	\N		1
-70	FK202603293376		other	店面	113.00	2025-11-21	7	公司支出账户	店面	1	2026-03-29 15:37:50.855229	\N		1
-71	FK202603298255		other	店面	4000.00	2025-11-20	8	孟根	两个2米6	1	2026-03-29 15:37:51.782917	\N		1
-72	FK202603299758		other	店面	20.38	2025-11-20	7	公司支出账户	店面	1	2026-03-29 15:37:52.682326	\N		1
-73	FK202603292372		other	店面	1574.00	2025-11-17	8	孟根	店面	1	2026-03-29 15:37:53.622949	\N		1
-74	FK202603292865		other	店面	2800.45	2025-11-14	8	孟根	店面	1	2026-03-29 15:37:54.884444	\N		1
-75	FK202603295589		other	店面	65.20	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:37:55.770361	\N		1
-76	FK202603296838		other	店面	300.00	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:37:56.664712	\N		1
-77	FK202603293766		other	店面	1000.00	2025-11-16	7	公司支出账户	总额5000	1	2026-03-29 15:37:57.622223	\N		1
-78	FK202603297328		other	店面	1410.00	2025-11-16	7	公司支出账户	卫生间隔断60+安装三相电闸180+安装灯/插排/230/水龙头/90+地板贴安装/卫生850	1	2026-03-29 15:37:58.872661	\N		1
-79	FK202603292919		other	店面	399.00	2025-11-07	7	公司支出账户	已开票/三相电线	1	2026-03-29 15:37:59.793984	\N		1
-81	FK202603292739		other	店面	1600.00	2025-11-16	7	公司支出账户	张静海/水暖/大白/隔断	1	2026-03-29 15:38:01.690294	\N		1
-82	FK202603299527		other	店面	5000.00	2025-11-11	8	孟根	张静海/水暖/大白/隔断/部分尾款	1	2026-03-29 15:38:02.57709	\N		1
-83	FK202603296344		other	其他支出	796.00	2025-11-01	9	乌日力格	其他支出	1	2026-03-29 15:38:04.41024	\N		1
-84	FK202603292934		other	店面	518.80	2025-11-01	8	孟根	店面	1	2026-03-29 15:38:05.340346	\N		1
-85	FK202603296825		other	店面	3400.00	2025-11-01	8	孟根	共计6400/已结清	1	2026-03-29 15:38:06.289758	\N		1
-86	FK202603297905		other	店面	700.00	2025-11-01	8	孟根	店面	1	2026-03-29 15:38:07.179161	\N		1
-87	FK202603291825		other	其他支出	1500.00	2025-11-01	9	乌日力格	共计2500， 还欠1000元	1	2026-03-29 15:38:08.105727	\N		1
-88	FK202603291967		other	店面	25.00	2025-10-28	9	乌日力格	钉子/发泡剂	1	2026-03-29 15:38:09.015514	\N		1
-89	FK202603295096		other	店面	5000.00	2025-10-26	9	乌日力格	总金额/预付款	1	2026-03-29 15:38:10.05528	\N		1
-90	FK202603292233		other	店面	350.00	2025-10-24	9	乌日力格	店面	1	2026-03-29 15:38:10.96623	\N		1
-91	FK202603291623		other	店面	540.00	2025-10-26	9	乌日力格	店面	1	2026-03-29 15:38:11.858102	\N		1
-92	FK202603294894		other	其他支出	800.00	2025-10-23	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:14.074908	\N		1
-93	FK202603292505		other	其他支出	660.00	2025-10-26	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:14.980808	\N		1
-94	FK202603294981		other	其他支出	10000.00	2025-10-26	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:15.91545	\N		1
-95	FK202603294962		other	店面	286.00	2025-10-14	8	孟根	店面	1	2026-03-29 15:38:16.81842	\N		1
-96	FK202603295262		other	店面	3000.00	2025-10-13	8	孟根	店面	1	2026-03-29 15:38:17.725993	\N		1
-97	FK202603295739		other	劳务费	400.00	2025-10-12	9	乌日力格	仓库货品点数	1	2026-03-29 15:38:18.608155	\N		1
-98	FK202603298495		other	其他支出	18000.00	2025-10-09	8	孟根		1	2026-03-29 15:38:19.526667	\N		1
-99	FK202604018180	CG202603318815	supplier	银河包装	200.93	2025-09-30	17	银河包装	采购单CG202603318815审核自动生成	1	2026-04-01 01:38:12.893047	2026-04-03 07:19:16.654718		1
-100	FK202604015785	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	18	盛大印刷	采购单CG202603313025审核自动生成	1	2026-04-01 01:38:50.706638	2026-04-03 07:19:18.004867		1
-101	FK202604011140	CG202603319057	supplier	银河包装	66.60	2025-09-30	17	银河包装	采购单CG202603319057审核自动生成	1	2026-04-01 01:38:52.913764	2026-04-03 07:19:19.386888		1
-102	FK202604013099	CG202603312326	supplier	银河包装	9.10	2025-09-30	17	银河包装	采购单CG202603312326审核自动生成	1	2026-04-01 01:38:57.015091	2026-04-03 07:19:20.73531		1
-103	FK202604018250	CG202603314925	supplier	盛大印刷	0.96	2025-09-30	18	盛大印刷	采购单CG202603314925审核自动生成	1	2026-04-01 01:38:59.508483	2026-04-03 07:19:22.113541		1
-104	FK202604011382	CG202603314472	supplier	淘宝紫辰包装	10.20	2025-09-30	19	淘宝紫辰包装	采购单CG202603314472审核自动生成	1	2026-04-01 01:39:02.327739	2026-04-03 07:19:23.489413		1
-105	FK202604015811	CG202603311551	supplier	银河包装	206.16	2025-09-30	17	银河包装	采购单CG202603311551审核自动生成	1	2026-04-01 01:39:06.244886	2026-04-03 07:19:24.911268		1
-107	FK202604013243	CG202603312835	supplier	盛大印刷	5.20	2025-09-30	18	盛大印刷	采购单CG202603312835审核自动生成	1	2026-04-01 01:39:13.134032	2026-04-03 07:19:27.783098		1
-108	FK202604018847	CG202603317171	supplier	淘宝紫辰包装	49.50	2025-09-30	19	淘宝紫辰包装	采购单CG202603317171审核自动生成	1	2026-04-01 01:39:16.528492	2026-04-03 07:19:29.211545		1
-109	FK202604013111	CG202603319135	supplier	盛大印刷	1.74	2025-09-30	18	盛大印刷	采购单CG202603319135审核自动生成	1	2026-04-01 01:39:18.805024	2026-04-03 07:19:30.603405		1
-110	FK202604017364	CG202603315123	supplier	盛大印刷	0.39	2025-09-30	18	盛大印刷	采购单CG202603315123审核自动生成	1	2026-04-01 01:39:22.096162	2026-04-03 07:19:31.962418		1
-111	FK202604015079	CG202603316376	supplier	盛大印刷	1469.00	2025-09-30	18	盛大印刷	采购单CG202603316376审核自动生成	1	2026-04-01 01:39:25.256777	2026-04-03 07:19:33.387331		1
-80	FK202603296019		other	店面	300.00	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:38:00.775247	2026-04-06 12:20:43.723697		1
-106	FK202604013579	CG202603313713	supplier	沈阳东源包材厂	2381.12	2025-09-30	20	沈阳东源包材厂	采购单CG202603313713审核自动生成	1	2026-04-01 01:39:09.313881	2026-04-01 01:39:29.0358		1
-153	FK202604018256	CG202603319137	supplier	淘宝/杂	925.00	2025-12-01	38	淘宝/杂	采购单CG202603319137审核自动生成	1	2026-04-01 01:41:16.468216	2026-04-03 07:18:14.41419		1
-152	FK202604014306	CG202603318843	supplier	翁牛特旗奶果子	2146.00	2025-11-30	26	翁牛特旗奶果子	采购单CG202603318843审核自动生成	1	2026-04-01 01:41:14.390363	2026-04-03 07:18:22.760887		1
-146	FK202604019236	CG202603317098	supplier	拼多多/木勺	159.90	2025-11-16	24	拼多多/木勺	采购单CG202603317098审核自动生成	1	2026-04-01 01:40:55.650516	2026-04-03 07:18:26.989771		1
-147	FK202604016107	CG202603318383	supplier	拼多多/热缩膜	245.49	2025-11-16	25	拼多多/热缩膜	采购单CG202603318383审核自动生成	1	2026-04-01 01:40:58.367347	2026-04-03 07:18:28.497809		1
-148	FK202604017052	CG202603312758	supplier	拼多多/随机店采购	38.00	2025-11-16	36	拼多多/随机店采购	采购单CG202603312758审核自动生成	1	2026-04-01 01:41:04.453555	2026-04-03 07:18:30.043011		1
-149	FK202604011960	CG202603315962	supplier	拼多多/随机店采购	2800.00	2025-11-16	36	拼多多/随机店采购	采购单CG202603315962审核自动生成	1	2026-04-01 01:41:07.558097	2026-04-03 07:18:31.507104		1
-150	FK202604016657	CG202603318653	supplier	盛大印刷	594.69	2025-11-16	18	盛大印刷	采购单CG202603318653审核自动生成	1	2026-04-01 01:41:10.173399	2026-04-03 07:18:32.943452		1
-151	FK202604019307	CG202603316610	supplier	民族印刷厂	96.00	2025-11-16	37	民族印刷厂	采购单CG202603316610审核自动生成	1	2026-04-01 01:41:12.272136	2026-04-03 07:18:34.31649		1
-144	FK202604011832	CG202603313230	supplier	广州维记	1817.00	2025-11-07	28	广州维记	采购单CG202603313230审核自动生成	1	2026-04-01 01:40:50.464208	2026-04-03 07:18:38.620609		1
-141	FK202604014150	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	23	山东锦食食品	采购单CG202603319388审核自动生成	1	2026-04-01 01:40:43.84265	2026-04-03 07:18:40.002558		1
-142	FK202604014436	CG202603313284	supplier	阿旗北方	46.80	2025-11-01	35	阿旗北方	采购单CG202603313284审核自动生成	1	2026-04-01 01:40:45.904882	2026-04-03 07:18:41.470368		1
-143	FK202604017261	CG202603313108	supplier	山东锦食食品	242.08	2025-11-01	23	山东锦食食品	采购单CG202603313108审核自动生成	1	2026-04-01 01:40:47.962681	2026-04-03 07:18:43.292892		1
-140	FK202604016241	CG202603316946	supplier	阿旗北方	16.50	2025-10-31	35	阿旗北方	采购单CG202603316946审核自动生成	1	2026-04-01 01:40:41.690931	2026-04-03 07:18:44.672007		1
-138	FK202604018495	CG202603315309	supplier	广州维记	1820.00	2025-10-26	28	广州维记	采购单CG202603315309审核自动生成	1	2026-04-01 01:40:36.758715	2026-04-03 07:18:46.060243		1
-139	FK202604011913	CG202603317037	supplier	锡盟艾润萨利SC	470.00	2025-10-26	34	锡盟艾润萨利SC	采购单CG202603317037审核自动生成	1	2026-04-01 01:40:39.439772	2026-04-03 07:18:47.575431		1
-137	FK202604016318	CG202603316258	supplier	淘宝欧信	1700.00	2025-10-22	33	淘宝欧信	采购单CG202603316258审核自动生成	1	2026-04-01 01:40:34.536977	2026-04-03 07:18:49.107985		1
-135	FK202604016325	CG202603311175	supplier	恩赫奶制品厂	284.40	2025-10-20	29	恩赫奶制品厂	采购单CG202603311175审核自动生成	1	2026-04-01 01:40:28.771078	2026-04-03 07:18:50.503666		1
-136	FK202604014635	CG202603318976	supplier	恩赫奶制品厂	82.80	2025-10-20	29	恩赫奶制品厂	采购单CG202603318976审核自动生成	1	2026-04-01 01:40:32.327963	2026-04-03 07:18:51.911061		1
-133	FK202604017117	CG202603315878	supplier	巴音珠萨朗	422.56	2025-10-12	31	巴音珠萨朗	采购单CG202603315878审核自动生成	1	2026-04-01 01:40:24.014476	2026-04-03 07:18:54.688686		1
-134	FK202604011589	CG202603314185	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603314185审核自动生成	1	2026-04-01 01:40:26.127408	2026-04-03 07:18:56.066786		1
-132	FK202604014808	CG202603313258	supplier	优如包装	7500.01	2025-10-11	30	优如包装	采购单CG202603313258审核自动生成	1	2026-04-01 01:40:21.276956	2026-04-03 07:18:57.458423		1
-131	FK202604016517	CG202603313299	supplier	恩赫奶制品厂	270.00	2025-10-10	29	恩赫奶制品厂	采购单CG202603313299审核自动生成	1	2026-04-01 01:40:18.1797	2026-04-03 07:18:58.915023		1
-130	FK202604013994	CG202603315174	supplier	广州维记	1455.00	2025-10-09	28	广州维记	采购单CG202603315174审核自动生成	1	2026-04-01 01:40:15.336029	2026-04-03 07:19:00.304005		1
-129	FK202604018125	CG202603319414	supplier	永巨茶业	2825.04	2025-10-06	27	永巨茶业	采购单CG202603319414审核自动生成	1	2026-04-01 01:40:13.193463	2026-04-03 07:19:01.718664		1
-120	FK202604012669	CG202603317526	supplier	山东锦食食品	151.10	2025-10-01	23	山东锦食食品	采购单CG202603317526审核自动生成	1	2026-04-01 01:39:48.768357	2026-04-03 07:19:03.392451		1
-121	FK202604016749	CG202603311612	supplier	拼多多/木勺	63.96	2025-10-01	24	拼多多/木勺	采购单CG202603311612审核自动生成	1	2026-04-01 01:39:52.128942	2026-04-03 07:19:05.219475		1
-122	FK202604011719	CG202603314707	supplier	盛大印刷	360.00	2025-10-01	18	盛大印刷	采购单CG202603314707审核自动生成	1	2026-04-01 01:39:54.175968	2026-04-03 07:19:06.725836		1
-123	FK202604016851	CG202603319038	supplier	拼多多/热缩膜	100.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603319038审核自动生成	1	2026-04-01 01:39:56.255488	2026-04-03 07:19:08.201024		1
-124	FK202604016444	CG202603318635	supplier	银河包装	400.00	2025-10-01	17	银河包装	采购单CG202603318635审核自动生成	1	2026-04-01 01:39:59.411552	2026-04-03 07:19:09.599567		1
-125	FK202604015306	CG202603315898	supplier	拼多多/热缩膜	50.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603315898审核自动生成	1	2026-04-01 01:40:03.360724	2026-04-03 07:19:10.982432		1
-126	FK202604016097	CG202603316864	supplier	翁牛特旗奶果子	456.00	2025-10-01	26	翁牛特旗奶果子	采购单CG202603316864审核自动生成	1	2026-04-01 01:40:05.362188	2026-04-03 07:19:12.421716		1
-127	FK202604014237	CG202603318624	supplier	拼多多/热缩膜	100.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603318624审核自动生成	1	2026-04-01 01:40:08.007076	2026-04-03 07:19:13.887462		1
-128	FK202604017123	CG202603316040	supplier	翁牛特旗奶果子	360.00	2025-10-01	26	翁牛特旗奶果子	采购单CG202603316040审核自动生成	1	2026-04-01 01:40:10.089919	2026-04-03 07:19:15.263438		1
-113	FK202604018373	CG202603313713	supplier	银河包装	6580.05	2025-09-30	17	银河包装	采购单CG202603313713审核自动生成	1	2026-04-01 01:39:30.061788	2026-04-03 07:19:26.397598		1
-114	FK202604011522	CG202603318956	supplier	银河包装	5751.26	2025-09-30	17	银河包装	采购单CG202603318956审核自动生成	1	2026-04-01 01:39:32.652907	2026-04-03 07:19:37.79197		1
-115	FK202604018781	CG202603317717	supplier	盛大印刷	66.66	2025-09-30	18	盛大印刷	采购单CG202603317717审核自动生成	1	2026-04-01 01:39:35.941341	2026-04-03 07:19:39.279109		1
-116	FK202604017246	CG202603317878	supplier	淘宝紫辰包装	56.10	2025-09-30	19	淘宝紫辰包装	采购单CG202603317878审核自动生成	1	2026-04-01 01:39:38.187143	2026-04-03 07:19:40.661807		1
-117	FK202604016322	CG202603312052	supplier	淘宝紫辰包装	3.40	2025-09-30	19	淘宝紫辰包装	采购单CG202603312052审核自动生成	1	2026-04-01 01:39:40.908867	2026-04-03 07:19:42.513085		1
-118	FK202604012933	CG202603313843	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	22	淘宝/江苏永发玻璃制品厂	采购单CG202603313843审核自动生成	1	2026-04-01 01:39:42.982645	2026-04-03 07:19:43.959866		1
-119	FK202604018921	CG202603312503	supplier	盛大印刷	970.45	2025-09-30	18	盛大印刷	采购单CG202603312503审核自动生成	1	2026-04-01 01:39:45.01742	2026-04-03 07:19:45.400299		1
-197	FK202604019062	CG202603319789	supplier	巴音珠萨朗	310.20	2025-12-28	31	巴音珠萨朗	采购单CG202603319789审核自动生成	1	2026-04-01 01:43:12.17361	2026-04-03 07:16:13.985995		1
-190	FK202604011395	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-25	40	科尔沁奶食品	采购单CG202603318798审核自动生成	1	2026-04-01 01:42:54.876223	2026-04-03 07:16:17.273886		1
-191	FK202604018174	CG202603313911	supplier	阿润查干	182.00	2025-12-25	44	阿润查干	采购单CG202603313911审核自动生成	1	2026-04-01 01:42:57.009303	2026-04-03 07:16:18.824076		1
-192	FK202604013249	CG202603315570	supplier	纯净奶食品	2310.00	2025-12-25	39	纯净奶食品	采购单CG202603315570审核自动生成	1	2026-04-01 01:42:59.16655	2026-04-03 07:16:20.263095		1
-193	FK202604011462	CG202603318561	supplier	盛大印刷	47.80	2025-12-25	18	盛大印刷	采购单CG202603318561审核自动生成	1	2026-04-01 01:43:01.29454	2026-04-03 07:16:21.642641		1
-194	FK202604019416	CG202603311750	supplier	盛大印刷	33.50	2025-12-25	18	盛大印刷	采购单CG202603311750审核自动生成	1	2026-04-01 01:43:04.008618	2026-04-03 07:16:23.01622		1
-195	FK202604018267	CG202603316305	supplier	盛大印刷	43.20	2025-12-25	18	盛大印刷	采购单CG202603316305审核自动生成	1	2026-04-01 01:43:06.20373	2026-04-03 07:16:24.402341		1
-189	FK202604012522	CG202603319237	supplier	科尔沁奶食品	150.00	2025-12-24	40	科尔沁奶食品	采购单CG202603319237审核自动生成	1	2026-04-01 01:42:52.814758	2026-04-03 07:16:32.027608		1
-188	FK202604016991	CG202603319917	supplier	纯净奶食品	325.00	2025-12-21	39	纯净奶食品	采购单CG202603319917审核自动生成	1	2026-04-01 01:42:50.677649	2026-04-03 07:16:34.977931		1
-187	FK202604015923	CG202603315281	supplier	奥都奶食品	352.00	2025-12-19	43	奥都奶食品	采购单CG202603315281审核自动生成	1	2026-04-01 01:42:47.829625	2026-04-03 07:16:38.193774		1
-184	FK202604016923	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	42	杂/采购商	采购单CG202603316981审核自动生成	1	2026-04-01 01:42:41.557755	2026-04-03 07:16:41.110618		1
-185	FK202604012626	CG202603319402	supplier	纯净奶食品	971.50	2025-12-17	39	纯净奶食品	采购单CG202603319402审核自动生成	1	2026-04-01 01:42:43.610873	2026-04-03 07:16:42.5846		1
-186	FK202604015250	CG202603312070	supplier	科尔沁奶食品	555.00	2025-12-17	40	科尔沁奶食品	采购单CG202603312070审核自动生成	1	2026-04-01 01:42:45.651256	2026-04-03 07:16:46.269405		1
-182	FK202604017883	CG202603314778	supplier	巴音珠萨朗	184.00	2025-12-16	31	巴音珠萨朗	采购单CG202603314778审核自动生成	1	2026-04-01 01:42:36.288167	2026-04-03 07:16:52.74749		1
-183	FK202604017363	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	29	恩赫奶制品厂	采购单CG202603312913审核自动生成	1	2026-04-01 01:42:38.373525	2026-04-03 07:16:54.346084		1
-180	FK202604011200	CG202603318036	supplier	科尔沁奶食品	235.00	2025-12-14	40	科尔沁奶食品	采购单CG202603318036审核自动生成	1	2026-04-01 01:42:30.545034	2026-04-03 07:16:58.914365		1
-179	FK202604018898	CG202603317045	supplier	奥都奶食品	128.00	2025-12-13	43	奥都奶食品	采购单CG202603317045审核自动生成	1	2026-04-01 01:42:28.230427	2026-04-03 07:17:05.121889		1
-177	FK202604018982	CG202603315371	supplier	纯净奶食品	272.00	2025-12-12	39	纯净奶食品	采购单CG202603315371审核自动生成	1	2026-04-01 01:42:24.007646	2026-04-03 07:17:08.356939		1
-178	FK202604017371	CG202603316227	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603316227审核自动生成	1	2026-04-01 01:42:26.082986	2026-04-03 07:17:09.900895		1
-171	FK202604019173	CG202603319340	supplier	科尔沁奶食品	526.00	2025-12-10	40	科尔沁奶食品	采购单CG202603319340审核自动生成	1	2026-04-01 01:42:05.954276	2026-04-03 07:17:14.485616		1
-172	FK202604019180	CG202603319006	supplier	恩赫奶制品厂	554.40	2025-12-10	29	恩赫奶制品厂	采购单CG202603319006审核自动生成	1	2026-04-01 01:42:08.172811	2026-04-03 07:17:16.004413		1
-173	FK202604014518	CG202603316651	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	32	那牧尔乳制品厂/纯净之源	采购单CG202603316651审核自动生成	1	2026-04-01 01:42:13.66642	2026-04-03 07:17:17.49641		1
-174	FK202604013723	CG202603319218	supplier	盛大印刷	963.00	2025-12-10	18	盛大印刷	采购单CG202603319218审核自动生成	1	2026-04-01 01:42:16.635108	2026-04-03 07:17:19.011959		1
-175	FK202604018696	CG202603313799	supplier	广州维记	3380.00	2025-12-10	28	广州维记	采购单CG202603313799审核自动生成	1	2026-04-01 01:42:19.555994	2026-04-03 07:17:20.533593		1
-176	FK202604015823	CG202603318375	supplier	杂/采购商	21.00	2025-12-10	42	杂/采购商	采购单CG202603318375审核自动生成	1	2026-04-01 01:42:21.705565	2026-04-03 07:17:21.963676		1
-168	FK202604018602	CG202603316236	supplier	科尔沁奶食品	48.00	2025-12-09	40	科尔沁奶食品	采购单CG202603316236审核自动生成	1	2026-04-01 01:41:59.393029	2026-04-03 07:17:32.178304		1
-169	FK202604017222	CG202603316781	supplier	科尔沁奶食品	25.00	2025-12-09	40	科尔沁奶食品	采购单CG202603316781审核自动生成	1	2026-04-01 01:42:01.523198	2026-04-03 07:17:33.63455		1
-170	FK202604016141	CG202603317747	supplier	科尔沁奶食品	751.00	2025-12-09	40	科尔沁奶食品	采购单CG202603317747审核自动生成	1	2026-04-01 01:42:03.898543	2026-04-03 07:17:35.235499		1
-166	FK202604015143	CG202603313199	supplier	奥都奶食品	240.00	2025-12-07	43	奥都奶食品	采购单CG202603313199审核自动生成	1	2026-04-01 01:41:54.348768	2026-04-03 07:17:41.283428		1
-167	FK202604013094	CG202603319564	supplier	优如包装	4400.01	2025-12-07	30	优如包装	采购单CG202603319564审核自动生成	1	2026-04-01 01:41:57.235093	2026-04-03 07:17:42.674919		1
-161	FK202604011706	CG202603316877	supplier	拼多多/随机店采购	124.62	2025-12-05	36	拼多多/随机店采购	采购单CG202603316877审核自动生成	1	2026-04-01 01:41:38.386878	2026-04-03 07:17:45.546872		1
-162	FK202604014459	CG202603314856	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	32	那牧尔乳制品厂/纯净之源	采购单CG202603314856审核自动生成	1	2026-04-01 01:41:41.026047	2026-04-03 07:17:46.949182		1
-163	FK202604016827	CG202603317215	supplier	科尔沁奶食品	166.00	2025-12-05	40	科尔沁奶食品	采购单CG202603317215审核自动生成	1	2026-04-01 01:41:45.288989	2026-04-03 07:17:48.391457		1
-164	FK202604018384	CG202603319826	supplier	杂/采购商	107.00	2025-12-05	42	杂/采购商	采购单CG202603319826审核自动生成	1	2026-04-01 01:41:48.83886	2026-04-03 07:17:49.783647		1
-165	FK202604018763	CG202603318627	supplier	纯净奶食品	2805.00	2025-12-05	39	纯净奶食品	采购单CG202603318627审核自动生成	1	2026-04-01 01:41:51.072492	2026-04-03 07:17:51.218347		1
-157	FK202604017722	CG202603315629	supplier	科尔沁奶食品	154.00	2025-12-04	40	科尔沁奶食品	采购单CG202603315629审核自动生成	1	2026-04-01 01:41:26.840692	2026-04-03 07:17:59.921538		1
-158	FK202604012895	CG202603318249	supplier	纯净奶食品	772.00	2025-12-04	39	纯净奶食品	采购单CG202603318249审核自动生成	1	2026-04-01 01:41:29.522396	2026-04-03 07:18:01.375517		1
-159	FK202604017309	CG202603319829	supplier	浙江金矿包装	2199.50	2025-12-04	41	浙江金矿包装	采购单CG202603319829审核自动生成	1	2026-04-01 01:41:32.277023	2026-04-03 07:18:02.811214		1
-160	FK202604018129	CG202603314585	supplier	盛大印刷	743.93	2025-12-04	18	盛大印刷	采购单CG202603314585审核自动生成	1	2026-04-01 01:41:35.007562	2026-04-03 07:18:04.244688		1
-156	FK202604016700	CG202603311756	supplier	纯净奶食品	2359.60	2025-12-03	39	纯净奶食品	采购单CG202603311756审核自动生成	1	2026-04-01 01:41:24.199965	2026-04-03 07:18:11.509509		1
-155	FK202604014767	CG202603318017	supplier	淘宝紫辰包装	70.40	2025-12-01	19	淘宝紫辰包装	采购单CG202603318017审核自动生成	1	2026-04-01 01:41:20.969887	2026-04-03 07:18:17.197988		1
-238	FK202604019797	CG202603315671	supplier	科尔沁奶食品	95.00	2026-02-09	40	科尔沁奶食品	采购单CG202603315671审核自动生成	1	2026-04-01 01:44:54.821814	2026-04-03 07:15:15.569715		1
-239	FK202604015419	CG202603319839	supplier	科尔沁奶食品	158.00	2026-02-09	40	科尔沁奶食品	采购单CG202603319839审核自动生成	1	2026-04-01 01:44:57.569663	2026-04-03 07:15:16.906497		1
-237	FK202604016038	CG202603319631	supplier	小米厂家阿旗	573.00	2026-02-08	54	小米厂家阿旗	采购单CG202603319631审核自动生成	1	2026-04-01 01:44:51.799054	2026-04-03 07:15:18.261093		1
-235	FK202604012938	CG202603312071	supplier	兴安盟杭盖奶制品厂	380.00	2026-02-04	48	兴安盟杭盖奶制品厂	采购单CG202603312071审核自动生成	1	2026-04-01 01:44:47.285814	2026-04-03 07:15:19.59042		1
-236	FK202604015192	CG202603317293	supplier	科尔沁奶食品	50.00	2026-02-04	40	科尔沁奶食品	采购单CG202603317293审核自动生成	1	2026-04-01 01:44:49.345322	2026-04-03 07:15:20.905987		1
-232	FK202604013766	CG202603315234	supplier	科尔沁奶食品	1163.00	2026-02-01	40	科尔沁奶食品	采购单CG202603315234审核自动生成	1	2026-04-01 01:44:39.423911	2026-04-03 07:15:22.289994		1
-233	FK202604018130	CG202603317843	supplier	雷记炒货	100.00	2026-02-01	46	雷记炒货	采购单CG202603317843审核自动生成	1	2026-04-01 01:44:41.779744	2026-04-03 07:15:23.615326		1
-234	FK202604014630	CG202603314313	supplier	阿润查干	200.00	2026-02-01	44	阿润查干	采购单CG202603314313审核自动生成	1	2026-04-01 01:44:44.644908	2026-04-03 07:15:25.08079		1
-228	FK202604017460	CG202603312948	supplier	科尔沁奶食品	140.00	2026-01-27	40	科尔沁奶食品	采购单CG202603312948审核自动生成	1	2026-04-01 01:44:29.404755	2026-04-03 07:15:26.416967		1
-229	FK202604011694	CG202603314311	supplier	额吉伊德	161.00	2026-01-27	51	额吉伊德	采购单CG202603314311审核自动生成	1	2026-04-01 01:44:31.470749	2026-04-03 07:15:27.842345		1
-230	FK202604012704	CG202603312096	supplier	奥特尔奶食品店	526.00	2026-01-27	52	奥特尔奶食品店	采购单CG202603312096审核自动生成	1	2026-04-01 01:44:33.606618	2026-04-03 07:15:29.236294		1
-231	FK202604016749	CG202603317619	supplier	沈阳包装	2785.97	2026-01-27	53	沈阳包装	采购单CG202603317619审核自动生成	1	2026-04-01 01:44:35.628175	2026-04-03 07:15:30.581958		1
-227	FK202604016116	CG202603319664	supplier	科尔沁奶食品	400.00	2026-01-24	40	科尔沁奶食品	采购单CG202603319664审核自动生成	1	2026-04-01 01:44:27.321937	2026-04-03 07:15:31.947779		1
-221	FK202604016206	CG202603318926	supplier	科尔沁奶食品	80.00	2026-01-20	40	科尔沁奶食品	采购单CG202603318926审核自动生成	1	2026-04-01 01:44:11.43905	2026-04-03 07:15:33.556766		1
-222	FK202604013982	CG202603312795	supplier	扎旗吉十奶制品	90.00	2026-01-20	49	扎旗吉十奶制品	采购单CG202603312795审核自动生成	1	2026-04-01 01:44:13.533008	2026-04-03 07:15:34.900742		1
-223	FK202604019969	CG202603319171	supplier	阿齐图/巴林右旗	1470.00	2026-01-20	50	阿齐图/巴林右旗	采购单CG202603319171审核自动生成	1	2026-04-01 01:44:15.67895	2026-04-03 07:15:36.289962		1
-224	FK202604011889	CG202603313509	supplier	糖炮	140.00	2026-01-20	47	糖炮	采购单CG202603313509审核自动生成	1	2026-04-01 01:44:18.069209	2026-04-03 07:15:37.667009		1
-225	FK202604019990	CG202603315006	supplier	杂/采购商	49.36	2026-01-20	42	杂/采购商	采购单CG202603315006审核自动生成	1	2026-04-01 01:44:22.175997	2026-04-03 07:15:39.043958		1
-226	FK202604013286	CG202603311425	supplier	拼多多/热缩膜	140.00	2026-01-20	25	拼多多/热缩膜	采购单CG202603311425审核自动生成	1	2026-04-01 01:44:24.242406	2026-04-03 07:15:40.428344		1
-219	FK202604011585	CG202603318254	supplier	科尔沁奶食品	147.00	2026-01-19	40	科尔沁奶食品	采购单CG202603318254审核自动生成	1	2026-04-01 01:44:06.978223	2026-04-03 07:15:41.778045		1
-220	FK202604016875	CG202603311119	supplier	那牧尔乳制品厂/纯净之源	6364.00	2026-01-19	32	那牧尔乳制品厂/纯净之源	采购单CG202603311119审核自动生成	1	2026-04-01 01:44:09.401491	2026-04-03 07:15:43.098645		1
-217	FK202604013213	CG202603314014	supplier	兴安盟杭盖奶制品厂	190.00	2026-01-17	48	兴安盟杭盖奶制品厂	采购单CG202603314014审核自动生成	1	2026-04-01 01:44:02.273945	2026-04-03 07:15:44.473876		1
-218	FK202604016904	CG202603317632	supplier	科尔沁奶食品	378.00	2026-01-17	40	科尔沁奶食品	采购单CG202603317632审核自动生成	1	2026-04-01 01:44:04.867441	2026-04-03 07:15:45.902781		1
-214	FK202604015180	CG202603317919	supplier	阿润查干	680.00	2026-01-16	44	阿润查干	采购单CG202603317919审核自动生成	1	2026-04-01 01:43:53.518477	2026-04-03 07:15:47.265393		1
-215	FK202604013966	CG202603317814	supplier	糖炮	240.00	2026-01-16	47	糖炮	采购单CG202603317814审核自动生成	1	2026-04-01 01:43:55.53165	2026-04-03 07:15:48.630679		1
-216	FK202604018882	CG202603311710	supplier	永巨茶业	3310.00	2026-01-16	27	永巨茶业	采购单CG202603311710审核自动生成	1	2026-04-01 01:43:57.742593	2026-04-03 07:15:49.988077		1
-210	FK202604018813	CG202603315468	supplier	科尔沁奶食品	50.00	2026-01-11	40	科尔沁奶食品	采购单CG202603315468审核自动生成	1	2026-04-01 01:43:45.25821	2026-04-03 07:15:51.347658		1
-211	FK202604018227	CG202603312889	supplier	浙江金矿包装	611.76	2026-01-11	41	浙江金矿包装	采购单CG202603312889审核自动生成	1	2026-04-01 01:43:47.403954	2026-04-03 07:15:52.714868		1
-212	FK202604019908	CG202603319582	supplier	雷记炒货	200.00	2026-01-11	46	雷记炒货	采购单CG202603319582审核自动生成	1	2026-04-01 01:43:49.406824	2026-04-03 07:15:54.039993		1
-213	FK202604016600	CG202603313858	supplier	科尔沁奶食品	48.00	2026-01-11	40	科尔沁奶食品	采购单CG202603313858审核自动生成	1	2026-04-01 01:43:51.481076	2026-04-03 07:15:55.377825		1
-208	FK202604017105	CG202603313876	supplier	山东锦食食品	687.00	2026-01-09	23	山东锦食食品	采购单CG202603313876审核自动生成	1	2026-04-01 01:43:41.052815	2026-04-03 07:15:56.729876		1
-207	FK202604014153	CG202603319112	supplier	科尔沁奶食品	713.00	2026-01-07	40	科尔沁奶食品	采购单CG202603319112审核自动生成	1	2026-04-01 01:43:38.34387	2026-04-03 07:15:59.450502		1
-205	FK202604011134	CG202603312353	supplier	科尔沁奶食品	220.00	2026-01-06	40	科尔沁奶食品	采购单CG202603312353审核自动生成	1	2026-04-01 01:43:33.171388	2026-04-03 07:16:00.787214		1
-206	FK202604016135	CG202603316269	supplier	巴音珠萨朗	854.00	2026-01-06	31	巴音珠萨朗	采购单CG202603316269审核自动生成	1	2026-04-01 01:43:35.306984	2026-04-03 07:16:02.703639		1
-203	FK202604013348	CG202603311038	supplier	纯净奶食品	60.00	2026-01-03	39	纯净奶食品	采购单CG202603311038审核自动生成	1	2026-04-01 01:43:27.035093	2026-04-03 07:16:04.136992		1
-204	FK202604016807	CG202603315470	supplier	茁硕乐/牛肉干	980.00	2026-01-03	45	茁硕乐/牛肉干	采购单CG202603315470审核自动生成	1	2026-04-01 01:43:30.191728	2026-04-03 07:16:05.570681		1
-201	FK202604016715	CG202603318600	supplier	纯净奶食品	1396.00	2026-01-01	39	纯净奶食品	采购单CG202603318600审核自动生成	1	2026-04-01 01:43:21.605999	2026-04-03 07:16:06.935162		1
-202	FK202604011094	CG202603317448	supplier	纯净奶食品	424.40	2026-01-01	39	纯净奶食品	采购单CG202603317448审核自动生成	1	2026-04-01 01:43:24.38902	2026-04-03 07:16:08.303711		1
-200	FK202604017400	CG202603318172	supplier	奥都奶食品	315.00	2025-12-31	43	奥都奶食品	采购单CG202603318172审核自动生成	1	2026-04-01 01:43:18.465915	2026-04-03 07:16:09.656415		1
-199	FK202604014858	CG202603313512	supplier	永巨茶业	1388.00	2025-12-29	27	永巨茶业	采购单CG202603313512审核自动生成	1	2026-04-01 01:43:16.305868	2026-04-03 07:16:11.117957		1
-198	FK202604014698	CG202603315199	supplier	科尔沁奶食品	75.00	2025-12-28	40	科尔沁奶食品	采购单CG202603315199审核自动生成	1	2026-04-01 01:43:14.232411	2026-04-03 07:16:15.664024		1
-145	FK202604014235	CG202603311066	supplier	巴音珠萨朗	357.00	2025-11-16	31	巴音珠萨朗	采购单CG202603311066审核自动生成	1	2026-04-01 01:40:53.545062	2026-04-01 01:45:20.652233		1
-251	FK202604016208	CG202603318570	supplier	科尔沁奶食品	75.00	2026-03-01	40	科尔沁奶食品	采购单CG202603318570审核自动生成	1	2026-04-01 01:45:25.881319	2026-04-03 07:14:55.581558		1
-253	FK202604016278	CG202603318189	supplier	科尔沁奶食品	50.00	2026-03-01	40	科尔沁奶食品	采购单CG202603318189审核自动生成	1	2026-04-01 01:45:30.253505	2026-04-03 07:14:58.393279		1
-254	FK202604018888	CG202603319515	supplier	科尔沁奶食品	220.00	2026-03-01	40	科尔沁奶食品	采购单CG202603319515审核自动生成	1	2026-04-01 01:45:32.353841	2026-04-03 07:14:59.78019		1
-249	FK202604017159	CG202603311066	supplier	兴安盟杭盖奶制品厂	380.00	2026-02-27	48	兴安盟杭盖奶制品厂	采购单CG202603311066审核自动生成	1	2026-04-01 01:45:21.70952	2026-04-03 07:15:01.191776		1
-248	FK202604011010	CG202603318392	supplier	德吉奶食品	270.00	2026-02-26	57	德吉奶食品	采购单CG202603318392审核自动生成	1	2026-04-01 01:45:19.595205	2026-04-03 07:15:02.626075		1
-244	FK202604018036	CG202603318133	supplier	格日勒	100.00	2026-02-23	56	格日勒	采购单CG202603318133审核自动生成	1	2026-04-01 01:45:07.885988	2026-04-03 07:15:03.969551		1
-245	FK202604017425	CG202603311777	supplier	科尔沁奶食品	850.00	2026-02-23	40	科尔沁奶食品	采购单CG202603311777审核自动生成	1	2026-04-01 01:45:10.68822	2026-04-03 07:15:05.332853		1
-246	FK202604015509	CG202603314534	supplier	科尔沁奶食品	450.00	2026-02-23	40	科尔沁奶食品	采购单CG202603314534审核自动生成	1	2026-04-01 01:45:14.861715	2026-04-03 07:15:06.753739		1
-247	FK202604014007	CG202603318524	supplier	科尔沁奶食品	858.00	2026-02-23	40	科尔沁奶食品	采购单CG202603318524审核自动生成	1	2026-04-01 01:45:17.554042	2026-04-03 07:15:08.23627		1
-243	FK202604016007	CG202603315370	supplier	科尔沁奶食品	965.00	2026-02-14	40	科尔沁奶食品	采购单CG202603315370审核自动生成	1	2026-04-01 01:45:05.833117	2026-04-03 07:15:09.673528		1
-242	FK202604017496	CG202603312202	supplier	科尔沁奶食品	145.00	2026-02-12	40	科尔沁奶食品	采购单CG202603312202审核自动生成	1	2026-04-01 01:45:03.738678	2026-04-03 07:15:11.02385		1
-241	FK202604012245	CG202603315780	supplier	乌日汗奶食品店	90.00	2026-02-10	55	乌日汗奶食品店	采购单CG202603315780审核自动生成	1	2026-04-01 01:45:01.70066	2026-04-03 07:15:13.98126		1
-281	FK202604015842	CG202603303089	supplier	纯净奶食品	272.00	2025-12-12	39	纯净奶食品	采购单CG202603303089审核自动生成	1	2026-04-01 01:46:44.020407	2026-04-03 07:17:11.468227		1
-282	FK202604014099	CG202603308349	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603308349审核自动生成	1	2026-04-01 01:46:46.289007	2026-04-03 07:17:12.894446		1
-275	FK202604013429	CG202603305241	supplier	科尔沁奶食品	526.00	2025-12-10	40	科尔沁奶食品	采购单CG202603305241审核自动生成	1	2026-04-01 01:46:26.775216	2026-04-03 07:17:23.45995		1
-277	FK202604015130	CG202603305271	supplier	恩赫奶制品厂	554.40	2025-12-10	29	恩赫奶制品厂	采购单CG202603305271审核自动生成	1	2026-04-01 01:46:31.019276	2026-04-03 07:17:24.973312		1
-278	FK202604011297	CG202603304022	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	32	那牧尔乳制品厂/纯净之源	采购单CG202603304022审核自动生成	1	2026-04-01 01:46:35.835926	2026-04-03 07:17:26.391713		1
-279	FK202604015853	CG202603302325	supplier	盛大印刷	963.00	2025-12-10	18	盛大印刷	采购单CG202603302325审核自动生成	1	2026-04-01 01:46:38.320582	2026-04-03 07:17:27.859483		1
-280	FK202604015128	CG202603309418	supplier	广州维记	3380.00	2025-12-10	28	广州维记	采购单CG202603309418审核自动生成	1	2026-04-01 01:46:41.301841	2026-04-03 07:17:29.331817		1
-272	FK202604019112	CG202603304854	supplier	科尔沁奶食品	48.00	2025-12-09	40	科尔沁奶食品	采购单CG202603304854审核自动生成	1	2026-04-01 01:46:18.672395	2026-04-03 07:17:36.713291		1
-273	FK202604017103	CG202603305554	supplier	科尔沁奶食品	25.00	2025-12-09	40	科尔沁奶食品	采购单CG202603305554审核自动生成	1	2026-04-01 01:46:22.533389	2026-04-03 07:17:38.13569		1
-274	FK202604015313	CG202603301508	supplier	科尔沁奶食品	751.00	2025-12-09	40	科尔沁奶食品	采购单CG202603301508审核自动生成	1	2026-04-01 01:46:24.602742	2026-04-03 07:17:39.84945		1
-271	FK202604014371	CG202603306172	supplier	奥都奶食品	240.00	2025-12-07	43	奥都奶食品	采购单CG202603306172审核自动生成	1	2026-04-01 01:46:16.491938	2026-04-03 07:17:44.118353		1
-266	FK202604016975	CG202603301177	supplier	拼多多/随机店采购	124.62	2025-12-05	36	拼多多/随机店采购	采购单CG202603301177审核自动生成	1	2026-04-01 01:46:02.896362	2026-04-03 07:17:52.686554		1
-267	FK202604015872	CG202603304977	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	32	那牧尔乳制品厂/纯净之源	采购单CG202603304977审核自动生成	1	2026-04-01 01:46:06.943886	2026-04-03 07:17:54.086443		1
-268	FK202604016222	CG202603308245	supplier	科尔沁奶食品	166.00	2025-12-05	40	科尔沁奶食品	采购单CG202603308245审核自动生成	1	2026-04-01 01:46:10.003717	2026-04-03 07:17:55.639621		1
-269	FK202604012137	CG202603302270	supplier	杂/采购商	107.00	2025-12-05	42	杂/采购商	采购单CG202603302270审核自动生成	1	2026-04-01 01:46:12.099928	2026-04-03 07:17:57.037447		1
-270	FK202604015233	CG202603309410	supplier	纯净奶食品	2805.00	2025-12-05	39	纯净奶食品	采购单CG202603309410审核自动生成	1	2026-04-01 01:46:14.264776	2026-04-03 07:17:58.496059		1
-261	FK202604017681	CG202603306057	supplier	科尔沁奶食品	154.00	2025-12-04	40	科尔沁奶食品	采购单CG202603306057审核自动生成	1	2026-04-01 01:45:50.40781	2026-04-03 07:18:05.68004		1
-263	FK202604019397	CG202603302397	supplier	纯净奶食品	772.00	2025-12-04	39	纯净奶食品	采购单CG202603302397审核自动生成	1	2026-04-01 01:45:56.325333	2026-04-03 07:18:07.112314		1
-264	FK202604013112	CG202603309473	supplier	浙江金矿包装	2199.50	2025-12-04	41	浙江金矿包装	采购单CG202603309473审核自动生成	1	2026-04-01 01:45:58.501206	2026-04-03 07:18:08.562014		1
-265	FK202604016521	CG202603308185	supplier	盛大印刷	743.93	2025-12-04	18	盛大印刷	采购单CG202603308185审核自动生成	1	2026-04-01 01:46:00.623185	2026-04-03 07:18:10.059778		1
-262	FK202604018375	CG202603304535	supplier	纯净奶食品	2359.60	2025-12-03	39	纯净奶食品	采购单CG202603304535审核自动生成	1	2026-04-01 01:45:52.634137	2026-04-03 07:18:13.056365		1
-257	FK202604011854	CG202603306534	supplier	淘宝/杂	925.00	2025-12-01	38	淘宝/杂	采购单CG202603306534审核自动生成	1	2026-04-01 01:45:39.667756	2026-04-03 07:18:18.606514		1
-258	FK202604016004	CG202603305508	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	22	淘宝/江苏永发玻璃制品厂	采购单CG202603305508审核自动生成	1	2026-04-01 01:45:42.238113	2026-04-03 07:18:20.003731		1
-260	FK202604011264	CG202603306186	supplier	淘宝紫辰包装	70.40	2025-12-01	19	淘宝紫辰包装	采购单CG202603306186审核自动生成	1	2026-04-01 01:45:48.324139	2026-04-03 07:18:21.386151		1
-259	FK202604017564	CG202603308801	supplier	翁牛特旗奶果子	2146.00	2025-11-30	26	翁牛特旗奶果子	采购单CG202603308801审核自动生成	1	2026-04-01 01:45:45.155217	2026-04-03 07:18:24.123852		1
-255	FK202604011190	CG202603305055	supplier	盛大印刷	594.69	2025-11-16	18	盛大印刷	采购单CG202603305055审核自动生成	1	2026-04-01 01:45:34.439908	2026-04-03 07:18:35.767907		1
-256	FK202604014073	CG202603308739	supplier	民族印刷厂	96.00	2025-11-16	37	民族印刷厂	采购单CG202603308739审核自动生成	1	2026-04-01 01:45:37.593769	2026-04-03 07:18:37.192043		1
-276	FK202604014194	CG202603307063	supplier	恩赫奶制品厂	82.80	2025-10-20	29	恩赫奶制品厂	采购单CG202603307063审核自动生成	1	2026-04-01 01:46:28.891642	2026-04-03 07:18:53.278992		1
-250	FK202604015137	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	40	科尔沁奶食品	采购单CG202603311089审核自动生成	1	2026-04-01 01:45:23.856617	2026-04-03 07:14:54.199572		1
-252	FK202604012489	CG202603319830	supplier	科尔沁奶食品	50.00	2026-03-01	40	科尔沁奶食品	采购单CG202603319830审核自动生成	1	2026-04-01 01:45:28.089377	2026-04-03 07:14:57.033915		1
-240	FK202604012314	CG202603314546	supplier	科尔沁奶食品	50.00	2026-02-10	40	科尔沁奶食品	采购单CG202603314546审核自动生成	1	2026-04-01 01:44:59.623702	2026-04-03 07:15:12.407439		1
-209	FK202604013486	CG202603319904	supplier	翁牛特旗奶果子	3653.00	2026-01-09	26	翁牛特旗奶果子	采购单CG202603319904审核自动生成	1	2026-04-01 01:43:43.095785	2026-04-03 07:15:58.083105		1
-196	FK202604019320	CG202603314661	supplier	科尔沁奶食品	75.00	2025-12-28	40	科尔沁奶食品	采购单CG202603314661审核自动生成	1	2026-04-01 01:43:09.636583	2026-04-03 07:16:12.490306		1
-295	FK202604016820	CG202603309125	supplier	科尔沁奶食品	140.00	2025-12-25	40	科尔沁奶食品	采购单CG202603309125审核自动生成	1	2026-04-01 01:47:19.059171	2026-04-03 07:16:25.817507		1
-296	FK202604017481	CG202603305256	supplier	阿润查干	182.00	2025-12-25	44	阿润查干	采购单CG202603305256审核自动生成	1	2026-04-01 01:47:21.187135	2026-04-03 07:16:27.382517		1
-297	FK202604011768	CG202603309411	supplier	纯净奶食品	2310.00	2025-12-25	39	纯净奶食品	采购单CG202603309411审核自动生成	1	2026-04-01 01:47:23.394509	2026-04-03 07:16:28.941515		1
-298	FK202604011336	CG202603308630	supplier	盛大印刷	47.80	2025-12-25	18	盛大印刷	采购单CG202603308630审核自动生成	1	2026-04-01 01:47:25.587548	2026-04-03 07:16:30.536043		1
-294	FK202604018875	CG202603309170	supplier	科尔沁奶食品	150.00	2025-12-24	40	科尔沁奶食品	采购单CG202603309170审核自动生成	1	2026-04-01 01:47:16.880385	2026-04-03 07:16:33.509401		1
-293	FK202604012208	CG202603309920	supplier	纯净奶食品	325.00	2025-12-21	39	纯净奶食品	采购单CG202603309920审核自动生成	1	2026-04-01 01:47:14.825594	2026-04-03 07:16:36.55016		1
-292	FK202604016041	CG202603302336	supplier	奥都奶食品	352.00	2025-12-19	43	奥都奶食品	采购单CG202603302336审核自动生成	1	2026-04-01 01:47:12.663084	2026-04-03 07:16:39.677529		1
-289	FK202604014005	CG202603304928	supplier	杂/采购商	144.00	2025-12-17	42	杂/采购商	采购单CG202603304928审核自动生成	1	2026-04-01 01:47:04.936531	2026-04-03 07:16:48.181333		1
-290	FK202604013430	CG202603304184	supplier	纯净奶食品	971.50	2025-12-17	39	纯净奶食品	采购单CG202603304184审核自动生成	1	2026-04-01 01:47:06.987186	2026-04-03 07:16:49.586304		1
-291	FK202604019147	CG202603301141	supplier	科尔沁奶食品	555.00	2025-12-17	40	科尔沁奶食品	采购单CG202603301141审核自动生成	1	2026-04-01 01:47:09.467944	2026-04-03 07:16:51.288747		1
-287	FK202604013753	CG202603303596	supplier	巴音珠萨朗	184.00	2025-12-16	31	巴音珠萨朗	采购单CG202603303596审核自动生成	1	2026-04-01 01:46:59.117911	2026-04-03 07:16:55.948185		1
-288	FK202604019634	CG202603308467	supplier	恩赫奶制品厂	216.00	2025-12-16	29	恩赫奶制品厂	采购单CG202603308467审核自动生成	1	2026-04-01 01:47:02.525231	2026-04-03 07:16:57.483212		1
-181	FK202604011922	CG202603312951	supplier	那牧尔乳制品厂/纯净之源	390.00	2025-12-14	32	那牧尔乳制品厂/纯净之源	采购单CG202603312951审核自动生成	1	2026-04-01 01:42:33.627987	2026-04-03 07:17:00.467733		1
-285	FK202604016446	CG202603308629	supplier	科尔沁奶食品	235.00	2025-12-14	40	科尔沁奶食品	采购单CG202603308629审核自动生成	1	2026-04-01 01:46:53.540287	2026-04-03 07:17:02.048094		1
-286	FK202604012753	CG202603306282	supplier	那牧尔乳制品厂/纯净之源	390.00	2025-12-14	32	那牧尔乳制品厂/纯净之源	采购单CG202603306282审核自动生成	1	2026-04-01 01:46:56.085938	2026-04-03 07:17:03.64797		1
-284	FK202604019917	CG202603309372	supplier	奥都奶食品	128.00	2025-12-13	43	奥都奶食品	采购单CG202603309372审核自动生成	1	2026-04-01 01:46:51.402299	2026-04-03 07:17:06.616484		1
-283	FK202604019983	CG202603302265	supplier	杂/采购商	21.00	2025-12-10	42	杂/采购商	采购单CG202603302265审核自动生成	1	2026-04-01 01:46:48.625627	2026-04-03 07:17:30.727893		1
-154	FK202604015500	CG202603318201	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	22	淘宝/江苏永发玻璃制品厂	采购单CG202603318201审核自动生成	1	2026-04-01 01:41:18.694416	2026-04-03 07:18:15.803099		1
-112	FK202604015407	CG202603319788	supplier	沈阳乾兴包装	254.80	2025-09-30	21	沈阳乾兴包装	采购单CG202603319788审核自动生成	1	2026-04-01 01:39:27.994738	2026-04-03 07:19:34.811598		1
-300	FK202604041165	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:45:57.06077	2026-04-04 12:49:47.5441	purchase	1
-301	FK202604049121	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:50:21.62358	2026-04-04 12:51:00.526805	purchase	1
-302	FK202604045413	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:51:25.209935	2026-04-04 12:57:57.427467	purchase	1
-303	FK202604046150	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:58:42.522174	2026-04-04 13:06:49.002884	purchase	1
-304	FK202604042240	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 13:07:34.13384	2026-04-04 13:12:14.257491	purchase	1
-307	FK202604049011	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	9	乌日力格	采购单CG202603311089审核自动生成	1	2026-04-04 13:37:50.721226	2026-04-04 13:58:53.595917	purchase	1
-306	FK202604049491	CG202603318570	supplier	科尔沁奶食品	75.00	2026-03-01	9	乌日力格	采购单CG202603318570审核自动生成	1	2026-04-04 13:37:39.271404	2026-04-04 13:59:01.683938	purchase	1
-308	FK202604045651	CG202603319830	supplier	科尔沁奶食品	50.00	2026-03-01	5	道力干记录付款单	采购单CG202603319830审核自动生成	1	2026-04-04 13:45:42.056521	2026-04-04 13:59:09.087059	purchase	1
-309	FK202604042178	CG202603318189	supplier	科尔沁奶食品	50.00	2026-03-01	5	道力干记录付款单	采购单CG202603318189审核自动生成	1	2026-04-04 13:53:01.504581	2026-04-04 13:59:17.055499	purchase	1
-305	FK202604046611	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 13:12:46.387104	2026-04-04 14:06:29.30596	purchase	1
-299	FK202604047597	CG202603318815	supplier	银河包装	200.93	2025-09-30	7	公司支出账户	采购单CG202603318815审核自动生成	1	2026-04-04 07:57:41.630746	2026-04-04 14:26:15.293457	purchase	1
-310	FK202604041592	CG202603319631	supplier	小米厂家阿旗	573.00	2026-02-08	5	道力干记录付款单	采购单CG202603319631审核自动生成	1	2026-04-04 14:29:21.484991	2026-04-04 14:29:37.49582	purchase	1
-312	FK202604059982	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 03:53:18.858353	2026-04-05 03:54:44.9855	purchase	1
-311	FK202604045516	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	9	乌日力格	采购单CG202603311089审核自动生成	1	2026-04-04 15:44:51.577345	2026-04-05 03:56:21.690025	purchase	1
-313	FK202604056349	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 03:54:58.38881	2026-04-05 04:01:16.283837	purchase	1
-315	FK202604065621	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-06 08:21:06.561862	2026-04-06 09:04:30.976454	purchase	1
-316	FK202604067715	CG202603317523	supplier		27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 08:21:09.959164	2026-04-06 08:37:37.33408		1
-314	FK202604058735	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 04:01:42.625916	2026-04-06 09:04:23.812317	purchase	1
-318	FK202604064058	CG202603311054	supplier		200.93	2025-09-30	9	乌日力格	采购单付款 #502	1	2026-04-06 09:14:43.414846	\N		1
-317	FK202604063361	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-06 09:14:37.517324	2026-04-06 09:16:11.930492	purchase	1
-319	FK202604068231	CG202603317523	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 09:16:50.774624	2026-04-06 09:25:33.28618		1
-321	FK202604068626	CG202603317523	supplier		27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 11:40:29.153483	\N		1
-320	FK202604064313	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-06 11:40:26.700608	2026-04-06 12:13:52.389049	purchase	1
-322	FK202604069329	CG202603319057	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单CG202603319057审核自动生成	1	2026-04-06 12:25:24.255635	2026-04-06 12:58:01.016122	purchase	1
-323	FK202604064663	CG202603312326	supplier	银河包装	9.10	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-06 12:57:26.350609	2026-04-06 14:52:20.558981	purchase	1
-326	FK202604063504		supplier	银河包装	1.10	2026-04-06	9	乌日力格		1	2026-04-06 14:59:32.045263	2026-04-06 15:30:41.217742		1
-327	FK202604063257	CG202603312326	supplier	银河包装	1.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-06 15:27:51.997597	2026-04-06 15:53:18.081154		1
-325	FK202604067083		supplier		8.00	2026-04-06	9	乌日力格	采购单付款 #499	1	2026-04-06 14:58:32.458238	2026-04-06 15:53:18.95183		1
-329	FK202604065189		supplier	测试供应商	0.01	2099-01-01	9			1	2026-04-06 16:02:28.033059	2026-04-06 16:02:37.481543		1
-328	FK202604066804	CG202603312326	supplier	银河包装	8.00	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-06 15:56:10.883307	2026-04-09 15:02:05.023611	purchase	1
-330	FK202604096767	CG202603312326	supplier	银河包装	1.10	2026-04-09	7	公司支出账户	采购单付款 #499	1	2026-04-09 05:55:20.196442	2026-04-09 15:02:05.023611		1
-335	FK202604092544	CG202603311551	supplier	银河包装	100.00	2026-04-10	9	乌日力格	采购单付款 #496	1	2026-04-09 16:23:42.236188	2026-04-09 16:49:53.729803		1
-336	FK202604092984	CG202603311551	supplier	银河包装	100.00	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 16:50:35.493164	2026-04-09 17:09:05.994164		1
-334	FK202604091987	CG202603312326	supplier	银河包装	1.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-09 16:10:27.605415	2026-04-11 06:55:27.864002		1
-333	FK202604093338	CG202603312326	supplier	银河包装	8.00	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-09 16:08:57.080312	2026-04-11 06:57:02.364102	purchase	1
-344	FK202604111638	CG202603315123	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单CG202603315123审核自动生成	1	2026-04-11 07:20:16.021036	2026-04-11 07:24:17.848402	purchase	1
-348	FK202604116596	CG202603313713-D488	supplier	银河包装	6580.05	2025-09-30	9	乌日力格	采购单CG202603313713-D488审核自动生成	1	2026-04-11 08:40:45.674261	\N	purchase	1
-349	FK202604119063	CG202603318956	supplier	银河包装	5751.26	2025-09-30	9	乌日力格	采购单CG202603318956审核自动生成	1	2026-04-11 08:41:30.599694	\N	purchase	1
-353	FK202604114800	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单付款 #485	1	2026-04-11 09:13:49.296938	2026-04-11 09:24:38.416203		1
-351	FK202604118030	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单付款 #486	1	2026-04-11 09:09:21.439828	2026-04-11 09:24:39.271927		1
-338	FK202604098601	CG202603311551	supplier	银河包装	106.16	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 17:11:46.829845	2026-05-17 08:13:27.887708		1
-324	FK202604064498	CG202603318723	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单CG202603318723审核自动生成	1	2026-04-06 12:58:17.649258	\N	purchase	1
-331	FK202604099708	CG202603312257	supplier	盛大印刷	0.96	2025-09-30	9	乌日力格	采购单CG202603312257审核自动生成	1	2026-04-09 14:44:17.357395	\N	purchase	1
-339	FK202604115655	CG202603319033	supplier	银河包装	9.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-11 06:59:47.027293	\N		1
-363	FK202604126828	CG202603311647	supplier	优如包装	5250.01	2026-04-12	8	孟根	采购单付款 #469	1	2026-04-12 02:57:17.371319	2026-04-12 03:42:26.682648		1
-370	FK202604124084		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格		1	2026-04-12 03:25:39.608785	2026-04-12 03:47:47.585437		1
-371	FK202604127599		supplier	拼多多/热缩膜	250.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:48:51.237594	2026-04-12 03:49:40.347632		1
-372	FK202604129424		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:50:36.8525	2026-04-12 03:56:48.500046		1
-374	FK202604126611		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:57:44.486303	2026-04-12 04:03:08.941333		1
-375	FK202604121586		supplier	拼多多/热缩膜	250.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:04:00.259349	2026-04-12 04:04:51.882134		1
-376	FK202604128194		supplier	拼多多/热缩膜	200.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:05:43.152671	2026-04-12 04:06:27.353767		1
-377	FK202604124033		supplier	拼多多/热缩膜	120.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:07:13.808629	2026-04-12 04:07:39.276606		1
-382	FK202604121425	CG202603312995	other	阿旗北方	3.90	2025-10-31	9	乌日力格	采购单据支出 #461	1	2026-04-12 11:49:03.232807	2026-04-12 12:01:10.789035		1
-383	FK202604126191	CG202603312995	other	阿旗北方	3.90	2025-10-31	9	乌日力格	采购单据支出 #461	1	2026-04-12 12:01:25.46005	2026-04-12 12:01:37.970929		1
-384	FK202604137531	CG202603312995	other	采购单据支出	3.90	2026-04-13	9	乌日力格	采购单据支出 #461	1	2026-04-13 14:00:06.63083	2026-04-15 03:36:18.069244		1
-385	FK202604151572	CG202603312995	other	采购单据支出	3.90	2026-04-15	7	公司支出账户	采购单据支出 #461	1	2026-04-15 03:37:02.770139	2026-04-17 04:54:32.347429		1
-386	FK202604179754	CG202603316946	other	阿旗北方	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出	1	2026-04-17 05:44:49.169315	2026-04-17 06:30:10.185816		1
-387	FK202604175935	CG202603316946	other	其他支出	3.90	2025-10-31	9	乌日力格	采购附加费用 #461:单据支出	1	2026-04-17 06:32:19.922874	2026-04-17 07:17:40.307975		1
-388	FK202604174164	CG202603316946	other		3.90	2025-09-30	7	公司支出账户	采购附加费用 #461:单据支出	1	2026-04-17 07:18:26.822381	2026-04-17 08:02:49.204702		1
-389	FK202604171200	CG202603316946	other	圆通运费	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:16:42.111466	2026-04-17 08:30:54.19844		1
-390	FK202604178903	CG202603316946	other		3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:31:52.02562	2026-04-17 08:32:04.25758		1
-391	FK202604174050	CG202603316946	other	运费	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:32:21.745621	2026-04-17 08:32:45.415552		1
-366	FK202604129810	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603319388审核自动生成	1	2026-04-12 03:07:43.23896	2026-04-17 14:39:07.560215	purchase	1
-394	FK202604176190	CG202603319388	other		10.00	2026-04-17	9	乌日力格	采购附加费用 #460:运费 [山东锦食食品]	1	2026-04-17 14:39:55.243252	2026-04-17 14:45:59.092737		1
-393	FK202604179496	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603319388审核自动生成	1	2026-04-17 14:39:42.809757	2026-04-17 14:52:33.925198	purchase	1
-378	FK202604121742		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:08:07.544632	2026-05-17 08:13:23.11645		1
-379	FK202604126903		supplier	翁牛特旗奶果子	816.00	2025-10-01	9	乌日力格	采购单付款 #475 采购单付款 #473	1	2026-04-12 04:29:08.451811	2026-05-17 08:13:24.744465		1
-359	FK202604115814	CG202603312210	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	9	乌日力格	采购单CG202603312210审核自动生成	1	2026-04-11 12:20:53.807524	\N	purchase	1
-406	FK202604258155	CG202603319218	supplier	盛大印刷	96.00	2025-12-10	8	孟根	采购单CG202603319218审核自动生成	1	2026-04-25 03:10:38.901629	2026-04-25 03:11:20.330957	purchase	1
-405	FK202604252468	CG202603315058	supplier	盛大印刷	743.93	2025-12-04	7	公司支出账户	采购单付款 #441	1	2026-04-25 03:09:41.518305	2026-04-25 05:26:24.769807		1
-409	FK202604258668	CG202603316462	supplier	盛大印刷	3.00	2025-10-10	7	公司支出账户	采购单付款 #427	1	2026-04-25 05:35:56.458146	2026-04-25 05:36:48.187712		1
-402	FK202604255502	CG202603318635	supplier	银河包装	400.00	2025-10-01	9	乌日力格	采购单CG202603318635审核自动生成	1	2026-04-25 03:01:06.150845	2026-04-25 11:18:09.097554	purchase	1
-418	FK202604259303	CG202603313985	supplier	浙江金矿包装	19.50	2025-12-04	7	公司支出账户	采购单付款 #442	1	2026-04-25 10:18:57.261411	2026-05-03 01:02:29.197708		1
-417	FK202604255791	CG202603319829	supplier	浙江金矿包装	2180.00	2025-12-04	8	孟根	采购单CG202603319829审核自动生成	1	2026-04-25 10:18:25.454724	2026-05-03 03:46:10.974902	purchase	1
-428	FK202604258672	CG202604257525	supplier	广州维记	2535.00	2026-04-25	5		采购单付款 #505	1	2026-04-25 10:45:03.232446	2026-05-07 11:45:51.433194		1
-439	FK202604257241	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单CG202603312913审核自动生成	1	2026-04-25 14:40:55.513391	2026-05-07 12:02:07.404866	purchase	1
-436	FK202604253781	CG202603318254	supplier	科尔沁奶食品	147.00	2026-01-19	7	公司支出账户	采购单CG202603318254审核自动生成	1	2026-04-25 11:18:52.122811	2026-05-08 04:37:24.793073	purchase	1
-440	FK202604253550	CG202603314778	supplier	巴音珠萨朗	184.00	2025-12-16	7	公司支出账户	采购单CG202603314778审核自动生成	1	2026-04-25 14:41:44.738111	2026-05-10 04:41:46.01483	purchase	1
-401	FK202604182225	CG202603311425	supplier	拼多多/热缩膜	140.00	2026-01-20	7	公司支出账户	采购单CG202603311425审核自动生成	1	2026-04-18 11:43:47.846885	2026-05-12 01:52:26.93982	purchase	1
-413	FK202604259981	CG202603318843	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单CG202603318843审核自动生成	1	2026-04-25 10:13:36.572588	2026-05-12 05:44:15.741332	purchase	1
-403	FK202604253502	CG202603316610	supplier	民族印刷厂	96.00	2025-11-16	7	公司支出账户	采购单CG202603316610审核自动生成	1	2026-04-25 03:04:52.840902	2026-05-12 09:25:33.813133	purchase	1
-431	FK202604252704	CG202603319655	supplier	优如包装	600.01	2025-12-28	9	乌日力格	采购单付款 #434	1	2026-04-25 11:00:36.46132	2026-05-17 08:13:25.77131		1
-426	FK202604258071	CG202603317632	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单CG202603317632审核自动生成	1	2026-04-25 10:43:57.050698	2026-05-30 09:37:11.674893	purchase	1
-404	FK202604253812	CG202603314437	supplier	盛大印刷	594.69	2025-11-16	7	公司支出账户	采购单CG202603314437审核自动生成	1	2026-04-25 03:07:45.905166	\N	purchase	1
-423	FK202604251665	CG202603316793	supplier	科尔沁奶食品	48.00	2025-12-09	7	公司支出账户	采购单CG202603316793审核自动生成	1	2026-04-25 10:39:37.13055	\N	purchase	1
-424	FK202604253178	CG202603313040	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	采购单CG202603313040审核自动生成	1	2026-04-25 10:41:17.447431	\N	purchase	1
-429	FK202604256663	CG202603316877	supplier	拼多多/随机店采购	24.62	2025-12-05	7	公司支出账户	采购单CG202603316877审核自动生成 [orphan]	1	2026-04-25 10:55:44.38727	\N	purchase	1
-434	FK202604253646	CG202603317638	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	9	乌日力格	采购单CG202603317638审核自动生成	1	2026-04-25 11:08:45.761693	\N	purchase	1
-438	FK202604258780	CG202603314715	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	7	公司支出账户	采购单CG202603314715审核自动生成	1	2026-04-25 11:24:11.519836	\N	purchase	1
-433	FK202604256382	CG202603315874	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单CG202603315874审核自动生成	1	2026-04-25 11:07:06.186023	\N	purchase	1
-445	FK202604255851	CG202603311750	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单CG202603311750审核自动生成	1	2026-04-25 14:58:45.176271	2026-04-25 14:59:06.7697	purchase	1
-450	FK202604269662	PO2026042612572345234	supplier	科尔沁奶食品	440.00	2026-04-26	7	公司支出账户	采购单PO2026042612572345234审核自动生成	1	2026-04-26 04:57:55.206853	\N	purchase	1
-461	FK202604268789	CG202603311119	supplier	那牧尔乳制品厂/纯净之源	3400.00	2026-01-19	8	孟根	采购单CG202603311119审核自动生成	1	2026-04-26 16:06:25.782171	2026-04-26 16:08:18.533245	purchase	1
-462	FK202604266107	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	2964.01	2025-01-19	9	乌日力格	采购单付款 #381	1	2026-04-26 16:07:01.642347	2026-04-26 16:09:08.662392		1
-469	FK202604286899	PO2026042813181255686	supplier	酷简旗舰店/淘宝	570.00	2026-04-28	7	公司支出账户	采购单PO2026042813181255686审核自动生成	1	2026-04-28 05:19:18.003219	\N	purchase	1
-471	FK202604297006	PO2026042915313785163	supplier	科尔沁奶食品	50.00	2026-04-29	7	公司支出账户	采购单PO2026042915313785163审核自动生成	1	2026-04-29 07:33:03.997742	\N	purchase	1
-477	FK202605027559	PO2026050209380807082	supplier	科尔沁奶食品	300.00	2026-05-02	7	公司支出账户	采购单PO2026050209380807082审核自动生成	1	2026-05-02 01:41:06.570844	\N	purchase	1
-476	FK202605026119		supplier	孟克河	1.00	2026-05-02	7	公司支出账户	TEST - DO NOT SAVE	1	2026-05-02 01:36:29.667013	2026-05-02 01:45:14.136454		1
-475	FK202605028614		supplier	测试供应商	500.00	2026-05-02	1	测试账户		1	2026-05-02 01:34:54.027965	2026-05-02 01:45:31.101872		1
-474	FK202605023037		other	阿姨劳工费	500.00	2026-05-02	7	公司支出账户		1	2026-05-02 01:33:39.811576	2026-05-02 01:45:31.559242		1
-473	FK202605027777		other	阿姨劳工费	500.00	2026-05-02	7	公司支出账户		1	2026-05-02 01:33:02.220673	2026-05-02 01:45:32.021834		1
-480	FK202605028074	CG0004368	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	原采购单 CG0004368 (2026-02-09) — 科尔沁奶食品 — 奶豆腐/原味/中/科尔沁×5	1	2026-05-02 07:21:14.093902	2026-05-02 07:32:30.159609		1
-470	FK202604296121	CG202604254206	other	物流	175.00	2026-04-29	7	公司支出账户	采购附加费用 #505:运费 [广州维记]	1	2026-04-29 04:04:04.567385	2026-05-07 11:45:53.481285		1
-449	FK202604259454	CG202603315199	supplier	科尔沁奶食品	75.00	2025-12-28	7	公司支出账户	采购单CG202603315199审核自动生成	1	2026-04-25 15:23:08.408034	2026-05-08 04:20:21.538224	purchase	1
-468	FK202604267249	CG202603319839	supplier	科尔沁奶食品	158.00	2026-02-09	7	公司支出账户	采购单CG202603319839审核自动生成	1	2026-04-26 16:22:42.650847	2026-05-08 04:37:26.934404	purchase	1
-479	FK202605029162		supplier	巴音珠萨朗	207.00	2026-05-02	7	公司支出账户	采购单付款 #404	1	2026-05-02 03:05:55.986801	2026-05-10 03:10:27.255607		1
-451	FK202604267800	CG202603313512	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单CG202603313512审核自动生成	1	2026-04-26 15:29:41.02426	2026-05-10 09:18:18.419324	purchase	1
-458	FK202604266027	CG202603311710	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单CG202603311710审核自动生成	1	2026-04-26 15:56:20.585874	2026-05-10 09:18:19.521947	purchase	1
-453	FK202604262121	CG202603319904	supplier	翁牛特旗奶果子	3653.00	2026-01-09	7	公司支出账户	采购单CG202603319904审核自动生成	1	2026-04-26 15:44:02.9032	2026-05-12 05:49:00.634374	purchase	1
-456	FK202604262239	CG202603312889	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单CG202603312889审核自动生成	1	2026-04-26 15:50:36.80328	2026-05-13 13:03:45.822595	purchase	1
-460	FK202604264134	CG202603317919	supplier	阿润查干	680.00	2026-01-16	7	公司支出账户	采购单CG202603317919审核自动生成	1	2026-04-26 16:03:45.07733	2026-05-13 13:20:50.832557	purchase	1
-442	FK202604251390	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单CG202603316981审核自动生成	1	2026-04-25 14:48:56.696708	2026-05-30 11:57:44.248944	purchase	1
-472	FK202605015880		other	阿姨劳工费	500.00	2026-05-01	9	乌日力格	店面	1	2026-05-01 14:59:10.957065	\N		1
-478	FK202605022800	CG202603319609	supplier	银河包装	400.00	2025-10-22	9	乌日力格	采购单付款 #477	1	2026-05-02 02:16:11.823276	\N		1
-443	FK202604258618	CG202603319956	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	采购单CG202603319956审核自动生成	1	2026-04-25 14:53:50.991626	\N	purchase	1
-444	FK202604251004	CG202603318256	supplier	盛大印刷	43.20	2025-12-25	7	公司支出账户	采购单CG202603318256审核自动生成	1	2026-04-25 14:57:39.061589	\N	purchase	1
-447	FK202604259363	CG202603319749	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单付款 #407	1	2026-04-25 14:59:19.289868	2026-06-15 12:30:55.412647		1
-457	FK202604268562	CG202603319912	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	采购单CG202603319912审核自动生成	1	2026-04-26 15:51:49.494488	\N	purchase	1
-452	FK202604261240	CG202603317071	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	采购单CG202603317071审核自动生成	1	2026-04-26 15:42:46.382447	\N	purchase	1
-454	FK202604267826	CG202603316686	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	采购单CG202603316686审核自动生成	1	2026-04-26 15:48:59.238815	\N	purchase	1
-463	FK202604267256	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	3400.00	2026-01-19	8	孟根	采购单付款 #381	1	2026-04-26 16:08:54.772181	\N		1
-464	FK202604261069	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	2964.01	2026-01-19	9	乌日力格	采购单付款 #381	1	2026-04-26 16:09:29.31285	\N		1
-508	FK202605025753	CG0002608	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	原采购单 CG0002608 (2025-11-16) — 拼多多/随机店采购 — 冷冻柜/冰箱×1	1	2026-05-02 07:21:37.489765	2026-05-02 07:30:40.199627		1
-507	FK202605021740	CG0002609	supplier	盛大印刷	594.70	2025-11-16	7	公司支出账户	原采购单 CG0002609 (2025-11-16) — 盛大印刷 — 标签/不干胶/冻炒米×500、茶包/类腰封纸×2000、黄油脖签×500、新茶专用标签纸×3000	1	2026-05-02 07:21:36.728254	2026-05-02 07:30:40.890073		1
-506	FK202605021560	CG0002610	supplier	民族印刷厂	120.00	2025-11-16	7	公司支出账户	原采购单 CG0002610 (2025-11-16) — 民族印刷厂 — 甜味/标签/不干胶/传统奶豆腐×25、原味/标签/不干胶/传统奶豆腐×25、茶专用/不干胶/标签×60	1	2026-05-02 07:21:35.865741	2026-05-02 07:30:41.543541		1
-505	FK202605021489	CG0002794	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	原采购单 CG0002794 (2025-12-01) — 淘宝/杂 — 塑料手提袋×5000	1	2026-05-02 07:21:35.090493	2026-05-02 07:30:42.265983		1
-504	FK202605024054	CG0002797	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	原采购单 CG0002797 (2025-12-01) — 淘宝/江苏永发玻璃制品厂 — 专瓶/黄油×240、专瓶/黄油渣×120	1	2026-05-02 07:21:34.338162	2026-05-02 07:30:43.112168		1
-503	FK202605025219	CG0002801	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	原采购单 CG0002801 (2025-12-01) — 淘宝紫辰包装 — 真空袋×500	1	2026-05-02 07:21:33.574189	2026-05-02 07:30:43.847585		1
-502	FK202605029475	CG0002847	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	原采购单 CG0002847 (2025-12-04) — 科尔沁奶食品 — 烤奶皮×7	1	2026-05-02 07:21:32.789118	2026-05-02 07:30:44.911697		1
-501	FK202605023980	CG0002853	supplier	浙江金矿包装	2180.00	2025-12-04	8	孟根	原采购单 CG0002853 (2025-12-04) — 浙江金矿包装 — 小/方形/亚克力盒/×240、中/方形/亚克力盒/×258、三角/奶皮千层盒×200、扁盒/亚克力/带内托×300、大/牛薄脆盒/亚克力×246、小/长方/亚克力/乳清奶条盒×183、大/长方/亚克力/待用×180	1	2026-05-02 07:21:31.626138	2026-05-02 07:30:45.625739		1
-500	FK202605026025	CG0002856	supplier	拼多多/随机店采购	124.62	2025-12-05	7	公司支出账户	原采购单 CG0002856 (2025-12-05) — 拼多多/随机店采购 — 专袋/乌日莫/炒米×100、专袋/乌日莫×100	1	2026-05-02 07:21:30.813497	2026-05-02 07:30:46.288238		1
-499	FK202605022634	CG0002863	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	原采购单 CG0002863 (2025-12-05) — 科尔沁奶食品 — 加沙奶豆腐×5、炒米粉/aag×10、炒米海丰×10	1	2026-05-02 07:21:30.054767	2026-05-02 07:30:46.952291		1
-498	FK202605027461	CG0002864	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	原采购单 CG0002864 (2025-12-05) — 杂/采购商 — 白砂糖×2、封口机/真空×1、塑料购物袋×300	1	2026-05-02 07:21:29.289274	2026-05-02 07:30:47.639048		1
-497	FK202605022470	CG0002900	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	原采购单 CG0002900 (2025-12-07) — 奥都奶食品 — 冻炒米/袋装×5、机器乌日末液体×2、手工乌日末液体×10、黄油/半斤×2、黄油/斤×4	1	2026-05-02 07:21:28.525942	2026-05-02 07:30:48.310506		1
-495	FK202605025323	CG0002955	supplier	盛大印刷	960.00	2025-12-10	8	孟根	原采购单 CG0002955 (2025-12-10) — 盛大印刷 — 透专标签/脆香奶条/微甜×500、透专标签/奶皮卷×500、透专标签/冻炒米×500、透专标签/奶酪/原味×500、透专标签/奶酪/甜味×500、透专标签/鲜奶皮×500	1	2026-05-02 07:21:26.95055	2026-05-02 07:30:49.623935		1
-494	FK202605021021	CG0002994	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	原采购单 CG0002994 (2025-12-10) — 杂/采购商 — 白砂糖×6	1	2026-05-02 07:21:25.548854	2026-05-02 07:30:50.281334		1
-493	FK202605021474	CG0003056	supplier	巴音珠萨朗	390.00	2025-12-16	7	公司支出账户	原采购单 CG0003056 (2025-12-16) — 巴音珠萨朗 — 散装/甜味奶条×23	1	2026-05-02 07:21:24.752422	2026-05-02 07:30:50.950781		1
-492	FK202605025689	CG0003074	supplier	杂/采购商	140.00	2025-12-17	7	公司支出账户	原采购单 CG0003074 (2025-12-17) — 杂/采购商 — 红枣×12	1	2026-05-02 07:21:23.974292	2026-05-02 07:32:24.488		1
-491	FK202605028661	CG0003106	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	原采购单 CG0003106 (2025-12-19) — 奥都奶食品 — 冻炒米/散装×13.25、实惠/奶豆腐×5、冻炒米/袋装×10	1	2026-05-02 07:21:23.156602	2026-05-02 07:32:24.943105		1
-490	FK202605029193	CG0003285	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	原采购单 CG0003285 (2025-12-25) — 阿润查干 — 阿润月饼/五仁馅×4、干肉奶茶×4、阿润月饼/奶皮子馅×4、阿润月饼/黄油渣馅×4、阿润月饼/奶豆腐馅×4	1	2026-05-02 07:21:22.380077	2026-05-02 07:32:25.403092		1
-489	FK202605023061	CG0003544	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	原采购单 CG0003544 (2026-01-06) — 科尔沁奶食品 — 烤奶皮×10	1	2026-05-02 07:21:21.603397	2026-05-02 07:32:25.856415		1
-488	FK202605022114	CG0003546	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	原采购单 CG0003546 (2026-01-06) — 巴音珠萨朗 — 散装/甜味奶条×53.4	1	2026-05-02 07:21:20.785179	2026-05-02 07:32:26.310621		1
-487	FK202605026399	CG0003704	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	原采购单 CG0003704 (2026-01-11) — 科尔沁奶食品 — 手工乌日末液体×10	1	2026-05-02 07:21:19.913502	2026-05-02 07:32:26.81389		1
-486	FK202605023999	CG0003707	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	原采购单 CG0003707 (2026-01-11) — 科尔沁奶食品 — 炒米粉/aag×10	1	2026-05-02 07:21:19.149339	2026-05-02 07:32:27.304968		1
-485	FK202605026121	CG0003873	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	原采购单 CG0003873 (2026-01-17) — 科尔沁奶食品 — 烤奶皮×10、手工白花炒米/散装×30	1	2026-05-02 07:21:18.370107	2026-05-02 07:32:27.78325		1
-484	FK202605024490	CG0003944	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	原采购单 CG0003944 (2026-01-20) — 杂/采购商 — 红糖袋/delicious×100	1	2026-05-02 07:21:17.604387	2026-05-02 07:32:28.238329		1
-483	FK202605021701	CG0004043	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	原采购单 CG0004043 (2026-01-24) — 科尔沁奶食品 — 乌日莫糖/散装×5、酸奶炒米糖/散装×5、嚼口脆炒米糖/散装×5、科尔沁/大奶豆腐×5	1	2026-05-02 07:21:16.835564	2026-05-02 07:32:28.691328		1
-482	FK202605023086	CG0004116	supplier	额吉伊德	160.00	2026-01-27	7	公司支出账户	原采购单 CG0004116 (2026-01-27) — 额吉伊德 — 乳清饮料×20、酸奶/额吉伊德×6、乌日莫/袋装×5	1	2026-05-02 07:21:16.042263	2026-05-02 07:32:29.146627		1
-512	FK202605022285	CG0002022	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	原采购单 CG0002022 (2025-10-10) — 恩赫奶制品厂 — 散装/原味奶条×15	1	2026-05-02 07:21:40.654602	2026-05-02 07:30:37.020158		1
-511	FK202605029742	CG0002028	supplier	优如包装	2250.00	2025-10-11	9	乌日力格	原采购单 CG0002028 (2025-10-11) — 优如包装 — 专盒/青砖奶茶外盒×3030	1	2026-05-02 07:21:39.898313	2026-05-02 07:30:37.871275		1
-510	FK202605024711	CG0002219	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	原采购单 CG0002219 (2025-10-26) — 广州维记 — 奶油球×10	1	2026-05-02 07:21:39.098173	2026-05-02 07:30:38.627434		1
-509	FK202605029416	CG0002607	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	原采购单 CG0002607 (2025-11-16) — 拼多多/随机店采购 — 封口机/真空×1	1	2026-05-02 07:21:38.321582	2026-05-02 07:30:39.458325		1
-496	FK202605022721	CG0002914	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	原采购单 CG0002914 (2025-12-09) — 科尔沁奶食品 — 风干牛肉500g大片×2、哈斯乌拉牛肉干500g原味×2、蓝旗绿乳糖惠虹糖×2、蓝旗绿乳糖奶香酥×2、蓝旗绿乳糖果仁酥×2、蓝旗绿乳糖水果×2、蓝旗绿乳糖黄油球×2、蓝旗绿乳糖炼乳×2、嚼口脆炒米糖/散装×1、酸奶炒米糖/散装×1、黄油渣/盒×4、脆奶条/散装/科尔沁×10、真空奶豆腐砖/甜味×2、真空奶豆腐砖/原味×2	1	2026-05-02 07:21:27.741573	2026-05-02 07:30:48.962009		1
-481	FK202605028157	CG0004117	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	原采购单 CG0004117 (2026-01-27) — 奥特尔奶食品店 — 奶粉蒙古国×3、奶皮子粉×4、奶茶粉战粮×2、奶茶粉贡格尔×2、努德勒沁调和茶×2、阿依古丽奶茶专用红茶×2、希日嘎拉奶茶专用茶×2、甜味奶豆腐块儿/大×5、希日嘎拉奶茶专用茶×2	1	2026-05-02 07:21:14.92437	2026-05-02 07:32:29.592692		1
-513	FK202605028539	PO2026050217095594410	supplier	科尔沁奶食品	220.00	2026-05-02	7	公司支出账户	采购单PO2026050217095594410审核自动生成	1	2026-05-02 09:11:21.353554	\N	purchase	1
-515	FK202605027188		other	奶皮真空袋	50.00	2026-05-02	7	公司支出账户		1	2026-05-02 09:14:26.921567	\N		1
-514	FK202605021111	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	采购单付款 #427	1	2026-05-02 09:13:03.352105	2026-05-02 09:15:53.381321		1
-516	FK202605029676	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	运费 #427 (CG0002955)	1	2026-05-02 09:15:53.830031	2026-05-03 00:12:36.797712		1
-522	FK202605038360		supplier	test	1.00	2025-12-10	7	test	test123	1	2026-05-03 00:15:16.410482	\N		1
-523	FK202605037520		supplier	test	1.00	2025-12-10	7	test	test	1	2026-05-03 00:15:52.804207	\N		1
-524	FK202605034056		supplier	test	1.00	2025-12-10	7	test	test123	1	2026-05-03 00:27:16.300907	\N		1
-525	FK202605033036	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:31:25.635062	\N		1
-410	FK202604259330		supplier	盛大印刷	3.00	2025-12-10	9	乌日力格	采购单付款 #427	1	2026-04-25 05:37:46.52362	2026-05-03 00:40:03.342569		1
-517	FK202605032774	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:12:37.278666	2026-05-03 00:40:04.325956		1
-518	FK202605032997	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:13:01.48252	2026-05-03 00:40:05.318314		1
-519	FK202605031573	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:13:30.063852	2026-05-03 00:40:06.302167		1
-520	FK202605038905	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:13:57.866975	2026-05-03 00:40:07.307561		1
-521	FK202605034298	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:14:24.315185	2026-05-03 00:40:08.393707		1
-528	FK202605035691	CG202603319829	other	浙江金矿包装	20.00	2025-12-04	8	孟根	采购附加费用 #442:单据支出 浙江金矿包装	1	2026-05-03 03:48:04.323713	\N		1
-530	FK202605042652	CG202603313487	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	7	公司支出账户	采购单付款 #439	1	2026-05-04 04:46:13.869571	\N		1
-531	FK202605049775	CG202603313170	supplier	恩赫奶制品厂	82.80	2025-12-10	7	公司支出账户	采购单付款 #465	1	2026-05-04 04:46:15.375699	\N		1
-532	FK202605045554	CG202603315869	supplier	奥都奶食品	128.00	2025-12-17	7	公司支出账户	采购单付款 #422	1	2026-05-04 04:46:16.966856	\N		1
-529	FK202605047812	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单付款 #456	1	2026-05-04 04:46:12.237616	2026-05-04 04:50:36.771074		1
-533	FK202605047690	CG202603318804	supplier	科尔沁奶食品	25.00	2025-12-25	7	公司支出账户	采购单付款 #432	1	2026-05-04 04:50:53.028068	\N		1
-534	FK202605045466	CG202603319515	supplier	科尔沁奶食品	235.00	2025-12-25	7	公司支出账户	采购单付款 #421	1	2026-05-04 04:50:54.40143	\N		1
-535	FK202605044707	CG202603311730	supplier	科尔沁奶食品	150.00	2025-12-25	7	公司支出账户	采购单付款 #412	1	2026-05-04 04:50:55.764215	\N		1
-537	FK202605047998	CG202603319644	supplier	盛大印刷	47.80	2025-12-25	7	公司支出账户	采购单付款 #408	1	2026-05-04 04:50:58.561209	\N		1
-539	FK202605042368	CG202603319333	supplier	那牧尔乳制品厂/纯净之源	390.00	2026-01-19	8	孟根	采购单付款 #420	1	2026-05-04 04:51:16.774904	\N		1
-540	FK202605043021	CG202603319344	supplier	纯净奶食品	234.00	2026-02-01	7	公司支出账户	采购单付款 #413	1	2026-05-04 04:51:18.148751	\N		1
-542	FK202605045816	CG202603317285	supplier	纯净奶食品	1396.00	2026-02-01	7	公司支出账户	采购单付款 #400	1	2026-05-04 04:51:20.794141	\N		1
-543	FK202605046571	CG202603316779	supplier	纯净奶食品	60.00	2026-02-01	7	公司支出账户	采购单付款 #398	1	2026-05-04 04:51:22.14902	\N		1
-544	FK202605044861	test	supplier	科尔沁奶食品	158.00	2026-01-01	7	公司支出账户	采购单付款 #362	1	2026-05-04 12:42:54.147235	2026-05-04 12:43:19.686915		1
-546	FK202605049056	CG202603313040	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	采购单付款 #363	1	2026-05-04 12:43:24.32743	2026-05-05 02:12:37.927815		1
-536	FK202605047324	CG202603317218	supplier	科尔沁奶食品	140.00	2025-12-25	7	公司支出账户	采购单付款 #411	1	2026-05-04 04:50:57.173806	2026-05-30 09:16:15.566098		1
-527	FK202605037894	CG202603313985	supplier	浙江金矿包装	2160.00	2025-12-04	8	孟根	采购单CG202603313985审核自动生成	1	2026-05-03 03:47:48.59161	\N		1
-538	FK202605044501	CG202603314468	supplier	纯净奶食品	2000.00	2025-12-31	7	公司支出账户	采购单付款 #409	1	2026-05-04 04:51:15.409653	\N		1
-526	FK202605038713	CG202603316601	supplier	拼多多/随机店采购	100.00	2025-12-05	7	公司支出账户	采购单付款 #440	1	2026-05-03 00:49:37.380792	\N		1
-548	FK202605042716	CG202603312825	supplier	额吉伊德	161.00	2026-01-27	7	公司支出账户	采购单付款 #372	1	2026-05-04 12:43:26.956545	2026-05-05 02:12:39.996172		1
-549	FK202605045208	CG202603317629	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	采购单付款 #374	1	2026-05-04 12:43:28.195831	2026-05-05 02:12:40.980271		1
-550	FK202605042868	CG202603317286	supplier	拼多多/热缩膜	140.00	2026-01-20	7	公司支出账户	采购单付款 #375	1	2026-05-04 12:43:29.449329	2026-05-05 02:12:41.977955		1
-551	FK202605048510	CG202603313356	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	采购单付款 #376	1	2026-05-04 12:43:30.69847	2026-05-05 02:12:43.336285		1
-552	FK202605043818	CG202603318909	supplier	科尔沁奶食品	147.00	2026-01-19	7	公司支出账户	采购单付款 #382	1	2026-05-04 12:43:32.097146	2026-05-05 02:12:44.457256		1
-553	FK202605043288	CG202603319977	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单付款 #383	1	2026-05-04 12:43:33.377145	2026-05-05 02:12:45.435129		1
-554	FK202605041267	CG202603315339	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单付款 #385	1	2026-05-04 12:43:34.712185	2026-05-05 02:12:46.445712		1
-555	FK202605041333	CG202603319425	supplier	糖炮	240.00	2026-01-16	7	公司支出账户	采购单付款 #386	1	2026-05-04 12:43:36.435249	2026-05-05 02:12:47.413656		1
-571	FK202605043827	CG202603317380	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单付款 #418	1	2026-05-04 12:43:57.839758	\N		1
-557	FK202605041063	CG202603316686	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	采购单付款 #388	1	2026-05-04 12:43:39.205641	2026-05-05 02:12:49.425284		1
-558	FK202605049259	CG202603318785	supplier	雷记炒货	200.00	2026-01-11	7	公司支出账户	采购单付款 #389	1	2026-05-04 12:43:40.415954	2026-05-05 02:12:50.479253		1
-559	FK202605049229	CG202603318310	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单付款 #390	1	2026-05-04 12:43:41.646168	2026-05-05 02:12:51.462888		1
-560	FK202605042255	CG202603319912	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	采购单付款 #391	1	2026-05-04 12:43:42.998143	2026-05-05 02:12:52.438008		1
-561	FK202605048037	CG202603319485	supplier	翁牛特旗奶果子	3653.00	2026-01-09	7	公司支出账户	采购单付款 #392	1	2026-05-04 12:43:44.270247	2026-05-05 02:12:53.470483		1
-562	FK202605049298	CG202603313821	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	采购单付款 #395	1	2026-05-04 12:43:45.822226	2026-05-05 02:12:54.428094		1
-563	FK202605041463	CG202603317071	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	采购单付款 #396	1	2026-05-04 12:43:47.196151	2026-05-05 02:12:55.437621		1
-564	FK202605046508	CG202603317188	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单付款 #402	1	2026-05-04 12:43:48.402409	2026-05-05 02:12:56.448759		1
-565	FK202605045163	CG202603311090	supplier	科尔沁奶食品	75.00	2025-12-28	7	公司支出账户	采购单付款 #403	1	2026-05-04 12:43:49.641706	2026-05-05 02:12:57.479492		1
-566	FK202605049470	CG202603318256	supplier	盛大印刷	43.20	2025-12-25	7	公司支出账户	采购单付款 #406	1	2026-05-04 12:43:50.866999	2026-05-05 02:12:59.190176		1
-567	FK202605042371	CG202603319076	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	采购单付款 #410	1	2026-05-04 12:43:52.575727	2026-05-05 02:13:00.196773		1
-568	FK202605046495	CG202603319956	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	采购单付款 #414	1	2026-05-04 12:43:53.79142	2026-05-05 02:13:02.200428		1
-570	FK202605049800	CG202603319778	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单付款 #417	1	2026-05-04 12:43:56.565769	2026-05-05 02:13:05.282029		1
-572	FK202605043372	CG202603311981	supplier	巴音珠萨朗	184.00	2025-12-16	7	公司支出账户	采购单付款 #419	1	2026-05-04 12:44:00.104711	2026-05-05 02:13:07.294895		1
-573	FK202605043630	CG202603314715	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	7	公司支出账户	采购单付款 #423	1	2026-05-04 12:44:01.540029	2026-05-05 02:13:08.25984		1
-574	FK202605046126	CG202603315874	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单付款 #425	1	2026-05-04 12:44:02.985967	2026-05-05 02:13:09.277274		1
-575	FK202605045550	CG202603312275-D426	supplier	广州维记	3380.00	2025-12-10	7	公司支出账户	采购单付款 #426	1	2026-05-04 12:44:04.195301	2026-05-05 02:13:10.359945		1
-576	FK202605043207	CG202603316462	supplier	盛大印刷	960.00	2025-12-10	8	孟根	采购单付款 #427	1	2026-05-04 12:44:06.388103	2026-05-05 02:13:11.365568		1
-577	FK202605041710	CG202603317638	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	9	乌日力格	采购单付款 #428	1	2026-05-04 12:44:07.618605	2026-05-05 02:13:12.795936		1
-578	FK202605043136	CG202603312647	supplier	恩赫奶制品厂	367.20	2025-12-10	9	乌日力格	采购单付款 #429	1	2026-05-04 12:44:09.855883	2026-05-05 02:13:13.775614		1
-579	FK202605046720	CG202603312319	supplier	科尔沁奶食品	526.00	2025-12-10	7	公司支出账户	采购单付款 #430	1	2026-05-04 12:44:11.093802	2026-05-05 02:13:14.754845		1
-580	FK202605049180	CG202603314528	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	采购单付款 #431	1	2026-05-04 12:44:12.364495	2026-05-05 02:13:16.720367		1
-581	FK202605045684	CG202603316793	supplier	科尔沁奶食品	48.00	2025-12-09	7	公司支出账户	采购单付款 #433	1	2026-05-04 12:44:13.573207	2026-05-05 02:13:17.765344		1
-582	FK202605045042	CG202603312552	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	采购单付款 #435	1	2026-05-04 12:44:15.424135	2026-05-05 02:13:18.751758		1
-583	FK202605042205	CG202603319416	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	采购单付款 #437	1	2026-05-04 12:44:16.895238	2026-05-05 02:13:19.76073		1
-584	FK202605045659	CG202603312757	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	采购单付款 #438	1	2026-05-04 12:44:18.111609	2026-05-05 02:13:20.758464		1
-585	FK202605045759	CG202603315058	supplier	盛大印刷	743.89	2025-12-04	7	公司支出账户	采购单付款 #441	1	2026-05-04 12:44:20.407006	2026-05-05 02:13:21.778148		1
-586	FK202605045758	CG202603313985	supplier	浙江金矿包装	2160.00	2025-12-04	8	孟根	采购单付款 #442	1	2026-05-04 12:44:22.737133	2026-05-05 02:13:22.802836		1
-587	FK202605045253	CG202603312047	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	采购单付款 #444	1	2026-05-04 12:44:24.058816	2026-05-05 02:13:23.782272		1
-588	FK202605048309	CG202603319667	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	采购单付款 #446	1	2026-05-04 12:44:25.291368	2026-05-05 02:13:25.133225		1
-589	FK202605046170	CG202603319001	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	采购单付款 #447	1	2026-05-04 12:44:26.632392	2026-05-05 02:13:26.153393		1
-590	FK202605045608	CG202603318178	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	采购单付款 #448	1	2026-05-04 12:44:27.982038	2026-05-05 02:13:27.171362		1
-591	FK202605044674	CG202603318280	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单付款 #449	1	2026-05-04 12:44:29.180837	2026-05-05 02:13:28.20997		1
-592	FK202605045521	CG202603311625	supplier	民族印刷厂	96.00	2025-11-16	7	公司支出账户	采购单付款 #450	1	2026-05-04 12:44:30.398907	2026-05-05 02:13:29.192637		1
-593	FK202605041698	CG202603314437	supplier	盛大印刷	594.69	2025-11-16	7	公司支出账户	采购单付款 #451	1	2026-05-04 12:44:31.743538	2026-05-05 02:13:30.153753		1
-556	FK202605041093	CG202603315149	supplier	阿润查干	680.00	2026-01-16	7	公司支出账户	采购单付款 #387	1	2026-05-04 12:43:37.888865	\N		1
-545	FK202605049734	CG202603317050	supplier	科尔沁奶食品	158.00	2026-02-09	7	公司支出账户	采购单付款 #362	1	2026-05-04 12:43:22.5808	2026-05-05 02:12:33.327681		1
-547	FK202605048157	CG202603319923	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	采购单付款 #371	1	2026-05-04 12:43:25.685332	2026-05-05 02:12:39.000651		1
-569	FK202605041578	CG202603315567	supplier	科尔沁奶食品	555.00	2025-12-17	7	公司支出账户	采购单付款 #415	1	2026-05-04 12:43:55.175932	2026-05-05 02:13:04.23771		1
-594	FK202605041709	CG202603318832	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	采购单付款 #452	1	2026-05-04 12:44:33.084887	2026-05-05 02:13:31.15555		1
-595	FK202605049247	CG202603315329	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	采购单付款 #453	1	2026-05-04 12:44:34.34863	2026-05-05 02:13:32.13482		1
-596	FK202605046455	CG202603315747	supplier	拼多多/热缩膜	245.49	2025-11-16	7	公司支出账户	采购单付款 #454	1	2026-05-04 12:44:35.585065	2026-05-05 02:13:33.135981		1
-597	FK202605045765	CG202603317743	supplier	拼多多/木勺	159.90	2025-11-16	7	公司支出账户	采购单付款 #455	1	2026-05-04 12:44:36.829091	2026-05-05 02:13:34.116565		1
-598	FK202605044821	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单付款 #456	1	2026-05-04 12:44:38.078367	2026-05-05 02:13:35.147682		1
-599	FK202605046365	CG202603314365	supplier	广州维记	1817.00	2025-11-07	7	公司支出账户	采购单付款 #457	1	2026-05-04 12:44:40.031477	2026-05-05 02:13:36.137878		1
-600	FK202605041583	CG202603312155	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单付款 #460	1	2026-05-04 12:44:41.243142	2026-05-05 02:13:37.136424		1
-601	FK202605049507	CG202603314251	supplier	锡盟艾润萨利SC	470.00	2025-10-26	9	乌日力格	采购单付款 #462	1	2026-05-04 12:44:42.450799	2026-05-05 02:13:38.351839		1
-602	FK202605048111	CG202603315155	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	采购单付款 #463	1	2026-05-04 12:44:43.685125	2026-05-05 02:13:39.406051		1
-603	FK202605046766	CG202603312892	supplier	淘宝欧信	1700.00	2025-10-22	9	乌日力格	采购单付款 #464	1	2026-05-04 12:44:45.334997	2026-05-05 02:13:40.452145		1
-604	FK202605045741	CG202603317794	supplier	恩赫奶制品厂	284.40	2025-10-20	9	乌日力格	采购单付款 #466	1	2026-05-04 12:44:46.686768	2026-05-05 02:13:41.495119		1
-605	FK202605047557	CG202603312210	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	9	乌日力格	采购单付款 #467	1	2026-05-04 12:44:47.889443	2026-05-05 02:13:42.555837		1
-606	FK202605045258	CG202603316532	supplier	巴音珠萨朗	420.00	2025-10-12	9	乌日力格	采购单付款 #468	1	2026-05-04 12:46:04.654229	2026-05-05 02:13:43.548513		1
-607	FK202605041699	CG202603313871	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	采购单付款 #470	1	2026-05-04 12:46:06.395955	2026-05-05 02:13:44.536985		1
-608	FK202605049587	CG202603318958	supplier	广州维记	1455.00	2025-10-09	9	乌日力格	采购单付款 #471	1	2026-05-04 12:46:07.701856	2026-05-05 02:13:45.573745		1
-609	FK202605046783	CG202603315163	supplier	永巨茶业	2825.04	2025-10-06	9	乌日力格	采购单付款 #472	1	2026-05-04 12:46:09.429454	2026-05-05 02:13:46.598849		1
-610	FK202605041074	CG202603318243	supplier	盛大印刷	360.00	2025-10-01	9	乌日力格	采购单付款 #479	1	2026-05-04 12:46:10.763226	2026-05-05 02:13:47.60276		1
-611	FK202605044801	CG202603312351	supplier	拼多多/木勺	63.96	2025-10-01	9	乌日力格	采购单付款 #480	1	2026-05-04 12:46:12.364023	2026-05-05 02:13:48.593691		1
-612	FK202605049332	CG202603319598	supplier	山东锦食食品	151.10	2025-10-01	9	乌日力格	采购单付款 #481	1	2026-05-04 12:46:13.638091	2026-05-05 02:13:49.592467		1
-613	FK202605044091	CG202603314842	supplier	盛大印刷	970.45	2025-09-30	9	乌日力格	采购单付款 #482	1	2026-05-04 12:46:14.951187	2026-05-05 02:13:50.860448		1
-614	FK202605047726	CG202603317580	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	9	乌日力格	采购单付款 #483	1	2026-05-04 12:46:16.215746	2026-05-05 02:13:51.865305		1
-615	FK202605041607	CG202603315759	supplier	淘宝紫辰包装	3.40	2025-09-30	9	乌日力格	采购单付款 #484	1	2026-05-04 12:46:17.463213	2026-05-05 02:13:52.856203		1
-616	FK202605046326	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单付款 #485	1	2026-05-04 12:46:18.761831	2026-05-05 02:13:53.864712		1
-617	FK202605048072	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单付款 #486	1	2026-05-04 12:46:20.58428	2026-05-05 02:13:54.921031		1
-618	FK202605042872	CG202603311453	supplier	沈阳乾兴包装	254.80	2025-09-30	9	乌日力格	采购单付款 #489	1	2026-05-04 12:46:22.26543	2026-05-05 02:13:56.247327		1
-619	FK202605041422	CG202603316897	supplier	盛大印刷	1469.00	2025-09-30	9	乌日力格	采购单付款 #490	1	2026-05-04 12:46:23.48806	2026-05-05 02:13:58.250281		1
-620	FK202605041379	CG202603318344	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单付款 #491	1	2026-05-04 12:46:25.298959	2026-05-05 02:13:59.235786		1
-621	FK202605045148	CG202603312374	supplier	盛大印刷	1.74	2025-09-30	9	乌日力格	采购单付款 #492	1	2026-05-04 12:46:26.538395	2026-05-05 02:14:00.256684		1
-622	FK202605043637	CG202603317026	supplier	淘宝紫辰包装	49.50	2025-09-30	9	乌日力格	采购单付款 #493	1	2026-05-04 12:46:27.740744	2026-05-05 02:14:01.272959		1
-623	FK202605048490	CG202603311700	supplier	盛大印刷	5.20	2025-09-30	9	乌日力格	采购单付款 #494	1	2026-05-04 12:46:29.052055	2026-05-05 02:14:02.328809		1
-624	FK202605049147	CG202603314713	supplier	沈阳东源包材厂	2381.12	2025-09-30	9	乌日力格	采购单付款 #495	1	2026-05-04 12:46:30.37295	2026-05-05 02:14:03.382961		1
-625	FK202605046817	CG202603313861	supplier	淘宝紫辰包装	10.20	2025-09-30	9	乌日力格	采购单付款 #497	1	2026-05-04 12:46:32.261715	2026-05-05 02:14:04.392738		1
-626	FK202605047450	CG202603312257	supplier	盛大印刷	0.96	2025-09-30	9	乌日力格	采购单付款 #498	1	2026-05-04 12:46:33.568768	2026-05-05 02:14:05.488718		1
-627	FK202605047665	CG202603318723	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单付款 #500	1	2026-05-04 12:46:34.823562	2026-05-05 02:14:06.4688		1
-628	FK202605075606		other	打印标签/酸马奶标签民族印刷厂	6.00	2026-05-07	9	乌日力格		1	2026-05-07 10:24:19.307038	\N		1
-427	FK202604258031	CG202604254206	supplier	广州维记	2535.00	2026-04-25	5	道力干记录付款单	采购单CG202604254206审核自动生成	1	2026-04-25 10:44:59.737902	2026-05-07 11:45:53.481285	purchase	1
-630	FK202605071505	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单CG202603312913审核自动生成	1	2026-05-07 12:02:40.719854	2026-05-07 12:07:27.766066		1
-631	FK202605103970	PO2026051011090836273	supplier	格日勒	65.00	2026-05-10	7	公司支出账户	采购单PO2026051011090836273审核自动生成	1	2026-05-10 03:10:19.120834	\N	purchase	1
-632	FK202605029162		supplier	巴音珠萨朗	207.00	2026-05-02	7		采购单付款 #419	1	2026-05-10 03:10:28.277717	2026-05-10 06:36:38.411073		1
-635	FK202605109772		supplier	巴音珠萨朗	207.00	2025-12-16	7		采购单付款 #419	1	2026-05-10 06:40:33.060316	2026-05-10 07:13:18.993531		1
-634	FK202605107436		supplier	巴音珠萨朗	207.00	2025-12-28	7		采购单付款 #404	1	2026-05-10 06:36:40.209026	2026-05-10 06:40:51.633262		1
-629	FK202605079112	CG202604257525	supplier	广州维记	2535.00	2026-04-25	7	公司支出账户	采购单CG202604257525审核自动生成	1	2026-05-07 11:47:03.574859	\N	purchase	1
-636	FK202605104774		supplier	巴音珠萨朗	207.00	2025-12-16	7		采购单付款 #419	1	2026-05-10 06:40:52.772908	\N		1
-637	FK202605127603	CG202603318843	supplier	翁牛特旗奶果子	493.00	2025-11-30	9	乌日力格	采购单CG202603318843审核自动生成	1	2026-05-12 05:44:16.778375	2026-05-12 05:49:01.723169	purchase	1
-640	FK202605123666	PO202605121507588787	supplier	科尔沁奶食品	270.00	2026-05-12	7	公司支出账户	采购单PO202605121507588787审核自动生成	1	2026-05-12 07:09:28.639287	\N	purchase	1
-642	FK202605147733	PO2026051417020142768	supplier	科尔沁奶食品	230.00	2026-05-14	9	乌日力格	采购单PO2026051417020142768审核自动生成	1	2026-05-14 09:03:22.540806	\N	purchase	1
-643	FK202605149652	PO2026051417033280041	supplier	奥特尔奶食品店	86.00	2026-05-14	9	乌日力格	采购单PO2026051417033280041审核自动生成	1	2026-05-14 09:07:04.925545	2026-05-14 09:09:29.757841	purchase	1
-644	FK202605142228	PO2026051417033280041	supplier	奥特尔奶食品店	86.00	2026-05-14	9	乌日力格	采购单PO2026051417033280041审核自动生成	1	2026-05-14 09:10:00.573694	\N	purchase	1
-645	FK202605152809	PO202605152018379825	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-05-15	9	乌日力格	采购单PO202605152018379825审核自动生成	1	2026-05-15 12:19:30.492255	\N	purchase	1
-646	FK202605171114	PO202605171512142302	supplier	科尔沁奶食品	350.00	2026-05-17	9	乌日力格	采购单PO202605171512142302审核自动生成	1	2026-05-17 07:13:41.231587	\N	purchase	1
-373	FK202604127583		supplier	优如包装	5250.01	2025-10-11	8	孟根	采购单付款 #469	1	2026-04-12 03:53:03.893213	2026-05-17 08:13:11.287499		1
-337	FK202604092325	CG202603311551	supplier	银河包装	100.00	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 17:10:17.885498	2026-05-17 08:13:26.791708		1
-647	FK202605179826	PO2026051720102927747	supplier	乌日汗奶食品店	120.00	2026-05-17	9	乌日力格	采购单PO2026051720102927747审核自动生成	1	2026-05-17 12:14:28.854375	\N	purchase	1
-648	FK202605186545	PO2026051811051272486	supplier	科尔沁奶食品	350.00	2026-05-18	9	乌日力格	采购单PO2026051811051272486审核自动生成	1	2026-05-18 03:07:30.960191	2026-05-18 11:23:10.342118	purchase	1
-649	FK202605183559	PO2026051811051272486	supplier	科尔沁奶食品	470.00	2026-05-18	9	乌日力格	采购单PO2026051811051272486审核自动生成	1	2026-05-18 11:34:27.808354	\N	purchase	1
-650	FK202605256881	PO2026052519441038959	supplier	苏日钦·酸马奶	600.00	2026-05-25	9	乌日力格	采购单PO2026052519441038959审核自动生成	1	2026-05-25 11:45:22.046053	\N	purchase	1
-651	FK202605259754	PO2026052519452885358	supplier	科尔沁奶食品	50.00	2026-05-25	9	乌日力格	采购单PO2026052519452885358审核自动生成	1	2026-05-25 11:46:01.565088	\N	purchase	1
-652	FK202605255524	PO2026052520315526234	supplier	阿斯娜	688.85	2026-05-25	9	乌日力格	采购单PO2026052520315526234审核自动生成	1	2026-05-25 12:56:13.173052	\N	purchase	1
-653	FK202605281814	PO2026052819011556415	supplier	科尔沁奶食品	130.00	2026-05-28	7	公司支出账户	采购单PO2026052819011556415审核自动生成	1	2026-05-28 11:03:46.903624	\N	purchase	1
-654	FK202605289638	PO2026052822532843653	supplier	科尔沁奶食品	760.00	2026-03-06	7	公司支出账户	采购单PO2026052822532843653审核自动生成	1	2026-05-28 14:58:49.298443	\N	purchase	1
-656	FK202605288304	PO202605282308349665	supplier	科尔沁奶食品	666.00	2026-03-26	7	公司支出账户	采购单PO202605282308349665审核自动生成	1	2026-05-28 15:13:14.182832	\N	purchase	1
-657	FK202605285929	PO2026052823181497925	supplier	那牧尔乳制品厂/纯净之源	60.00	2026-01-22	7	公司支出账户	采购单PO2026052823181497925审核自动生成	1	2026-05-28 15:20:02.95646	\N	purchase	1
-658	FK202605283962	PO2026052823363562242	supplier	科尔沁奶食品	99.00	2026-01-17	7	公司支出账户	采购单PO2026052823363562242审核自动生成	1	2026-05-28 15:39:29.620309	2026-05-28 15:40:52.726465	purchase	1
-659	FK202605283418	PO2026052823443072013	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单PO2026052823443072013审核自动生成	1	2026-05-28 15:46:06.220632	\N	purchase	1
-660	FK202605285627	PO2026052900005420615	supplier	科尔沁奶食品	140.00	2025-12-05	7	公司支出账户	采购单PO2026052900005420615审核自动生成	1	2026-05-28 16:01:59.606724	\N	purchase	1
-661	FK202605287240	PO2026052900105686231	supplier	科尔沁奶食品	226.00	2025-12-04	7	公司支出账户	采购单PO2026052900105686231审核自动生成	1	2026-05-28 16:13:48.433765	\N	purchase	1
-662	FK202605281034	PO2026052900161363619	supplier	科尔沁奶食品	32.00	2025-12-09	7	公司支出账户	采购单PO2026052900161363619审核自动生成	1	2026-05-28 16:17:13.238429	\N	purchase	1
-663	FK202605284524	PO2026052900290123724	supplier	科尔沁奶食品	170.00	2026-02-13	7	公司支出账户	采购单PO2026052900290123724审核自动生成	1	2026-05-28 16:29:49.134782	\N	purchase	1
-664	FK202605284026	PO2026052901204472710	supplier	盛大印刷	480.00	2026-05-26	7	公司支出账户	采购单PO2026052901204472710审核自动生成	1	2026-05-28 17:22:09.124694	\N	purchase	1
-665	FK202605298714	PO2026052912083928733	supplier	科尔沁奶食品	440.00	2026-01-31	7	公司支出账户	采购单PO2026052912083928733审核自动生成	1	2026-05-29 04:10:23.323215	\N	purchase	1
-666	FK202605294384	PO2026052912143656846	supplier	科尔沁奶食品	100.00	2025-12-30	7	公司支出账户	采购单PO2026052912143656846审核自动生成	1	2026-05-29 04:15:33.656188	\N	purchase	1
-667	FK202605299480	PO2026052912393122943	supplier	那牧尔乳制品厂/纯净之源	110.00	2025-12-18	7	公司支出账户	采购单PO2026052912393122943审核自动生成	1	2026-05-29 04:40:40.118619	\N	purchase	1
-668	FK202605298289	PO2026052912475205567	supplier	科尔沁奶食品	34.00	2026-02-01	7	公司支出账户	采购单PO2026052912475205567审核自动生成	1	2026-05-29 04:48:57.646385	\N	purchase	1
-669	FK202605291147	PO202605291250546762	supplier	科尔沁奶食品	155.00	2026-03-26	7	公司支出账户	采购单PO202605291250546762审核自动生成	1	2026-05-29 04:53:16.88026	\N	purchase	1
-670	FK202605292286	PO2026052913120507893	supplier	科尔沁奶食品	95.00	2026-03-18	7	公司支出账户	采购单PO2026052913120507893审核自动生成	1	2026-05-29 05:12:57.636708	\N	purchase	1
-671	FK202605293428	PO2026052913212525832	supplier	科尔沁奶食品	112.00	2025-12-07	7	公司支出账户	采购单PO2026052913212525832审核自动生成	1	2026-05-29 05:25:31.860669	\N	purchase	1
-638	FK202605121753	CG202603319485	supplier	翁牛特旗奶果子	2000.00	2026-01-09	7	公司支出账户	采购单CG202603319485审核自动生成	1	2026-05-12 05:49:02.776302	\N	purchase	1
-672	FK202605297858	PO2026052913280034922	supplier	科尔沁奶食品	290.00	2026-03-30	7	公司支出账户	采购单PO2026052913280034922审核自动生成	1	2026-05-29 05:29:09.873898	\N	purchase	1
-673	FK202605293160	PO2026052913310450637	supplier	科尔沁奶食品	50.00	2026-01-08	7	公司支出账户	采购单PO2026052913310450637审核自动生成	1	2026-05-29 05:31:54.784854	\N	purchase	1
-674	FK202605295785	PO2026052913370308133	supplier	科尔沁奶食品	850.00	2026-02-23	7	公司支出账户	采购单PO2026052913370308133审核自动生成	1	2026-05-29 05:37:36.812031	\N	purchase	1
-675	FK202605294971	PO2026052914341170964	supplier	科尔沁奶食品	110.00	2026-03-20	7	公司支出账户	采购单PO2026052914341170964审核自动生成	1	2026-05-29 06:35:18.416894	\N	purchase	1
-676	FK202605292434	PO2026052914444866357	supplier	巴音珠萨朗	240.00	2026-05-29	7	公司支出账户	采购单PO2026052914444866357审核自动生成	1	2026-05-29 06:51:25.953235	\N	purchase	1
-677	FK202605299319	PO2026052918554541426	supplier	博盈商品	305.00	2026-05-29	7	公司支出账户	采购单PO2026052918554541426审核自动生成	1	2026-05-29 10:57:16.228327	\N	purchase	1
-680	FK202605307843	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-24	7	公司支出账户	采购单CG202603318798审核自动生成	1	2026-05-30 09:16:39.937542	2026-05-30 09:17:21.899392	purchase	1
-655	FK202605282140	PO2026052823031168051	supplier	科尔沁奶食品	22.00	2025-12-01	7	公司支出账户	采购单PO2026052823031168051审核自动生成	1	2026-05-28 15:04:30.594809	2026-05-30 09:45:32.394537	purchase	1
-683	FK202605305536	PO2026053018031117983	supplier	那牧尔乳制品厂/纯净之源	275.00	2025-12-15	7	公司支出账户	采购单PO2026053018031117983审核自动生成	1	2026-05-30 10:04:07.193476	\N	purchase	1
-684	FK202605303645	PO2026053018092954881	supplier	科尔沁奶食品	190.00	2026-04-24	7	公司支出账户	采购单PO2026053018092954881审核自动生成	1	2026-05-30 10:10:23.626049	\N	purchase	1
-685	FK202605307529	PO2026053018111338473	supplier	科尔沁奶食品	110.00	2026-04-22	7	公司支出账户	采购单PO2026053018111338473审核自动生成	1	2026-05-30 10:11:47.503056	\N	purchase	1
-686	FK202605304778	PO2026053018152611741	supplier	科尔沁奶食品	145.00	2026-04-10	7	公司支出账户	采购单PO2026053018152611741审核自动生成	1	2026-05-30 10:16:20.119439	\N	purchase	1
-687	FK202605301125	PO2026053018171487033	supplier	科尔沁奶食品	245.00	2026-04-14	7	公司支出账户	采购单PO2026053018171487033审核自动生成	1	2026-05-30 10:19:34.150345	\N	purchase	1
-688	FK202605303241	PO2026053018200601186	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-04-07	7	公司支出账户	采购单PO2026053018200601186审核自动生成	1	2026-05-30 10:20:48.517875	\N	purchase	1
-689	FK202605308031	PO2026053018211541820	supplier	科尔沁奶食品	410.00	2026-04-05	7	公司支出账户	采购单PO2026053018211541820审核自动生成	1	2026-05-30 10:23:26.683496	\N	purchase	1
-692	FK202605303556	PO2026053018310240985	supplier	科尔沁奶食品	1251.00	2026-04-09	7	公司支出账户	采购单PO2026053018310240985审核自动生成	1	2026-05-30 10:33:08.545672	\N	purchase	1
-693	FK202605308847	PO2026053018352352391	supplier	科尔沁奶食品	206.00	2026-02-09	7	公司支出账户	采购单PO2026053018352352391审核自动生成	1	2026-05-30 10:37:05.827051	\N	purchase	1
-694	FK202605305588	PO2026053018400448932	supplier	奥特尔奶食品店	100.00	2026-04-06	7	公司支出账户	采购单PO2026053018400448932审核自动生成	1	2026-05-30 10:40:44.393087	\N	purchase	1
-695	FK202605309745	PO2026053018415181369	supplier	科尔沁奶食品	200.00	2025-12-14	7	公司支出账户	采购单PO2026053018415181369审核自动生成	1	2026-05-30 10:44:14.984159	\N	purchase	1
-696	FK202605304210	PO2026053018471705426	supplier	奥都奶食品	100.00	2026-04-16	7	公司支出账户	采购单PO2026053018471705426审核自动生成	1	2026-05-30 10:48:12.146439	\N	purchase	1
-697	FK202605303749	PO2026053018490856356	supplier	奥都奶食品	160.00	2026-03-26	7	公司支出账户	采购单PO2026053018490856356审核自动生成	1	2026-05-30 10:50:57.535949	\N	purchase	1
-698	FK202605305073	PO2026053019184528016	supplier	那牧尔乳制品厂/纯净之源	90.00	2026-05-03	7	公司支出账户	采购单PO2026053019184528016审核自动生成	1	2026-05-30 11:19:56.482003	\N	purchase	1
-699	FK202605305543	PO2026053019212439925	supplier	额吉伊德	25.00	2026-04-09	7	公司支出账户	采购单PO2026053019212439925审核自动生成	1	2026-05-30 11:22:17.390691	\N	purchase	1
-700	FK202605307019	PO2026053019261706294	supplier	乌日汗奶食品店	956.00	2026-02-21	7	公司支出账户	采购单PO2026053019261706294审核自动生成	1	2026-05-30 11:33:03.767895	\N	purchase	1
-701	FK202605308844	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单CG202603316981审核自动生成	1	2026-05-30 11:57:58.820852	2026-05-30 11:58:15.031274	purchase	1
-703	FK202605309725		supplier	科尔沁奶食品	4161.00	2026-05-30	7	公司支出账户	补单据费用	1	2026-05-30 14:42:06.604339	\N		1
-705	FK202605307009		supplier	科尔沁奶食品	2.00	2026-05-30	7	公司支出账户	采购单付款 #525	1	2026-05-30 15:18:37.351794	2026-05-30 15:21:52.153302		1
-706	FK202605301795		supplier	科尔沁奶食品	10.00	2026-05-30	7	公司支出账户	采购单付款 #411	1	2026-05-30 15:18:38.48235	2026-05-30 15:21:53.167389		1
-707	FK202605309861		supplier	科尔沁奶食品	75.00	2026-05-30	7	公司支出账户	采购单付款 #405	1	2026-05-30 15:18:39.739319	2026-05-30 15:21:54.190885		1
-708	FK202605308610		supplier	科尔沁奶食品	713.00	2026-05-30	7	公司支出账户	采购单付款 #394	1	2026-05-30 15:18:41.421647	2026-05-30 15:21:55.876625		1
-709	FK202605303534		supplier	科尔沁奶食品	140.00	2026-05-30	7	公司支出账户	采购单付款 #373	1	2026-05-30 15:18:42.746129	2026-05-30 15:21:57.444988		1
-691	FK202605307533	PO2026053018273221330	supplier	额吉伊德	280.00	2026-03-18	7	公司支出账户	采购单PO2026053018273221330审核自动生成	1	2026-05-30 10:29:40.161758	2026-06-13 06:44:14.20259	purchase	1
-690	FK202605303505	PO2026053018255584263	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单PO2026053018255584263审核自动生成	1	2026-05-30 10:26:41.674672	\N	purchase	1
-679	FK202605291215	CG202603316675	supplier	科尔沁奶食品	945.00	2026-02-13	7	公司支出账户	采购单CG202603316675审核自动生成	1	2026-05-29 11:29:04.931661	\N	purchase	1
-702	FK202605302250	CG202603319778	supplier	杂/采购商	140.00	2025-12-17	7	公司支出账户	采购单CG202603319778审核自动生成	1	2026-05-30 11:58:30.195741	\N	purchase	1
-682	FK202605309329	PO2026052823031168051	supplier	科尔沁奶食品	22.00	2025-12-01	7	公司支出账户	采购单PO2026052823031168051审核自动生成 [orphan]	1	2026-05-30 09:46:18.532588	\N	purchase	1
-678	FK202605297349	CG202603312332	supplier	科尔沁奶食品	50.00	2026-01-18	7	公司支出账户	采购单CG202603312332审核自动生成	1	2026-05-29 11:19:00.172176	\N	purchase	1
-704	FK202605306388		supplier	科尔沁奶食品	505.00	2026-05-30	7	公司支出账户	采购单付款 #545	1	2026-05-30 15:18:35.734921	2026-05-30 15:21:36.660068		1
-710	FK202605305871		supplier	科尔沁奶食品	1163.00	2026-05-30	7	公司支出账户	采购单付款 #369	1	2026-05-30 15:18:43.859836	2026-05-30 15:21:58.855616		1
-711	FK202605308197		supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #365	1	2026-05-30 15:18:45.360982	2026-05-30 15:21:59.94135		1
-712	FK202605303756		supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #361	1	2026-05-30 15:18:46.642773	2026-05-30 15:22:00.916597		1
-713	FK202605303781		supplier	科尔沁奶食品	145.00	2026-05-30	7	公司支出账户	采购单付款 #359	1	2026-05-30 15:18:47.887556	2026-05-30 15:22:01.978172		1
-714	FK202605305210		supplier	科尔沁奶食品	450.00	2026-05-30	7	公司支出账户	采购单付款 #355	1	2026-05-30 15:18:49.073703	2026-05-30 15:22:04.599553		1
-715	FK202605307773		supplier	科尔沁奶食品	858.00	2026-05-30	7	公司支出账户	采购单付款 #354	1	2026-05-30 15:18:50.263239	2026-05-30 15:22:05.888185		1
-716	FK202605307672	CG202603MERGE001	supplier	科尔沁奶食品	505.00	2026-05-30	7	公司支出账户	采购单付款 #545	1	2026-05-30 15:22:34.182533	\N		1
-717	FK202605308615	PO2026052823031168051	supplier	科尔沁奶食品	2.00	2026-05-30	7	公司支出账户	采购单付款 #525	1	2026-05-30 15:22:35.497598	\N		1
-718	FK202605303287	CG202603317218	supplier	科尔沁奶食品	10.00	2026-05-30	7	公司支出账户	采购单付款 #411	1	2026-05-30 15:22:36.708094	\N		1
-719	FK202605306137	CG202603311283	supplier	科尔沁奶食品	75.00	2026-05-30	7	公司支出账户	采购单付款 #405	1	2026-05-30 15:22:37.733619	\N		1
-720	FK202605307015	CG202603316221	supplier	科尔沁奶食品	713.00	2026-05-30	7	公司支出账户	采购单付款 #394	1	2026-05-30 15:22:38.739121	\N		1
-721	FK202605305935	CG202603319456	supplier	科尔沁奶食品	140.00	2026-05-30	7	公司支出账户	采购单付款 #373	1	2026-05-30 15:22:39.786682	\N		1
-722	FK202605307599	CG202603319794	supplier	科尔沁奶食品	1163.00	2026-05-30	7	公司支出账户	采购单付款 #369	1	2026-05-30 15:22:42.45583	\N		1
-723	FK202605304720	CG202603317708	supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #365	1	2026-05-30 15:22:43.535561	\N		1
-724	FK202605302951	CG202603317412	supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #361	1	2026-05-30 15:22:44.600631	\N		1
-725	FK202605302158	CG202603313525	supplier	科尔沁奶食品	145.00	2026-05-30	7	公司支出账户	采购单付款 #359	1	2026-05-30 15:22:47.163224	\N		1
-726	FK202605309792	CG202603313612	supplier	科尔沁奶食品	450.00	2026-05-30	7	公司支出账户	采购单付款 #355	1	2026-05-30 15:22:48.214712	\N		1
-727	FK202605309659	CG202603318635	supplier	科尔沁奶食品	858.00	2026-05-30	7	公司支出账户	采购单付款 #354	1	2026-05-30 15:22:49.208406	\N		1
-728	FK202606058703	PO202606051017064654	supplier	科尔沁奶食品	330.00	2026-06-05	7	公司支出账户	采购单PO202606051017064654审核自动生成	1	2026-06-05 02:18:13.354599	\N	purchase	1
-729	FK202606074943	PO2026060714193221766	other	车费	60.00	2026-06-07	7	公司支出账户	采购附加费用 #568:运费 [翁牛特旗奶果子]	1	2026-06-07 06:23:16.655584	\N		1
-731	FK202606079444	PO2026060714325332740	supplier	浙江金矿包装	570.96	2026-05-23	7	公司支出账户	采购单PO2026060714325332740审核自动生成	1	2026-06-07 06:37:10.415438	\N	purchase	1
-732	FK202606072041	PO2026060714455091530	supplier	翁牛特旗奶果子	1629.75	2026-04-09	7	公司支出账户	采购单PO2026060714455091530审核自动生成	1	2026-06-07 06:51:26.228294	\N	purchase	1
-733	FK202606074399	PO2026060714455091530	other	车费	60.00	2026-06-07	7	公司支出账户	采购附加费用 #570:运费 [翁牛特旗奶果子]	1	2026-06-07 06:51:45.213443	2026-06-07 06:51:59.751292		1
-734	FK202606077491	PO2026060714455091530	other	车费	60.00	2026-04-09	7	公司支出账户	采购附加费用 #570:运费 [翁牛特旗奶果子]	1	2026-06-07 06:52:54.214273	\N		1
-730	FK202606072408	PO2026060714193221766	supplier	那牧尔乳制品厂/纯净之源	873.30	2026-06-07	7	公司支出账户	采购附加费用 #568:包装费 [翁牛特旗奶果子]	1	2026-06-07 06:23:25.769709	\N		1
-735	FK202606072611	PO2026060714455091530	supplier	那牧尔乳制品厂/纯净之源	296.00	2026-04-09	7	公司支出账户	采购附加费用 #570:包装费 [翁牛特旗奶果子]	1	2026-06-07 06:53:08.161182	\N		1
-736	FK202606079901	PO202606071531535955	supplier	盛大印刷	97.20	2026-06-07	7	公司支出账户	采购单PO202606071531535955审核自动生成	1	2026-06-07 07:32:54.901914	\N	purchase	1
-737	FK202606078550	PO2026060716001489521	supplier	科尔沁奶食品	330.00	2026-06-07	7	公司支出账户	采购单PO2026060716001489521审核自动生成	1	2026-06-07 08:02:06.214274	\N	purchase	1
-738	FK202606075107	PO2026060717373589935	supplier	浙江金矿包装	243.39	2026-02-25	7	公司支出账户	采购单PO2026060717373589935审核自动生成	1	2026-06-07 09:40:45.475372	\N	purchase	1
-739	FK202606071912	PO2026060718075097772	supplier	永巨茶业	610.00	2026-02-26	7	公司支出账户	采购单PO2026060718075097772审核自动生成	1	2026-06-07 10:10:19.080962	\N	purchase	1
-740	FK202606073815	PO2026060718184856196	supplier	拼多多/木勺	53.46	2026-01-04	7	公司支出账户	采购单PO2026060718184856196审核自动生成	1	2026-06-07 10:19:59.106994	\N	purchase	1
-741	FK202606077996	PO2026060718231877330	supplier	浙江金矿包装	243.39	2026-02-24	7	公司支出账户	采购单PO2026060718231877330审核自动生成	1	2026-06-07 10:24:08.868801	\N	purchase	1
-742	FK202606071424	CG202603318310	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单付款 #390	1	2026-06-07 10:28:08.329325	\N		1
-743	FK202606076480	PO2026060718331762974	supplier	山东锦食食品	687.00	2026-04-17	7	公司支出账户	采购单PO2026060718331762974审核自动生成	1	2026-06-07 10:34:39.072866	\N	purchase	1
-744	FK202606075538	PO2026060718364487147	supplier	广州维记	2535.00	2026-03-22	7	公司支出账户	采购单PO2026060718364487147审核自动生成	1	2026-06-07 10:38:55.19627	\N	purchase	1
-745	FK202606078074	PO2026060718392055752	supplier	广州维记	1050.00	2026-02-12	7	公司支出账户	采购单PO2026060718392055752审核自动生成	1	2026-06-07 10:42:48.711907	\N	purchase	1
-746	FK202606079778	PO2026060718430558657	supplier	广州维记	42.00	2026-02-05	7	公司支出账户	采购单PO2026060718430558657审核自动生成	1	2026-06-07 10:43:56.729525	\N	purchase	1
-747	FK202606075456	PO2026060719254963613	supplier	巴音珠萨朗	740.00	2026-04-06	7	公司支出账户	采购单PO2026060719254963613审核自动生成	1	2026-06-07 11:28:04.822572	\N	purchase	1
-748	FK202606077762	PO2026060719295660396	supplier	巴音珠萨朗	335.00	2025-12-30	7	公司支出账户	采购单PO2026060719295660396审核自动生成	1	2026-06-07 11:30:55.799759	\N	purchase	1
-749	FK202606076253	PO202606071931245928	supplier	巴音珠萨朗	390.00	2025-12-15	7	公司支出账户	采购单PO202606071931245928审核自动生成	1	2026-06-07 11:33:01.125879	\N	purchase	1
-750	FK202606072184	CG202603315981	supplier	巴音珠萨朗	310.00	2025-12-28	7	公司支出账户	采购单付款 #404	1	2026-06-07 11:38:01.550521	\N		1
-751	FK202606075088	CG202603317188	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单付款 #402	1	2026-06-07 11:39:08.972715	\N		1
-752	FK202606071688	CG202603315339	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单付款 #385	1	2026-06-07 11:39:22.580682	\N		1
-753	FK202606076786	PO202606072143392521	supplier	小米厂家阿旗	740.00	2026-04-06	7	公司支出账户	采购单PO202606072143392521审核自动生成	1	2026-06-07 13:47:11.348443	\N	purchase	1
-754	FK202606073649	PO2026060722052379648	supplier	乌日汗奶食品店	100.00	2026-04-16	7	公司支出账户	采购单PO2026060722052379648审核自动生成	1	2026-06-07 14:06:30.910748	\N	purchase	1
-755	FK202606075167	PO2026060722270197996	supplier	奥特尔奶食品店	410.00	2026-02-21	7	公司支出账户	采购单PO2026060722270197996审核自动生成	1	2026-06-07 14:28:45.359416	\N	purchase	1
-756	FK202606077337	PO2026060722515244096	supplier	科尔沁奶食品	380.00	2026-06-01	7	公司支出账户	采购单PO2026060722515244096审核自动生成	1	2026-06-07 14:53:17.606919	\N	purchase	1
-757	FK202606089399	PO2026060812281032249	supplier	沈阳东源包材厂	3180.00	2025-08-07	7	公司支出账户	采购单PO2026060812281032249审核自动生成	1	2026-06-08 04:29:22.620877	2026-06-08 04:29:51.382025	purchase	1
-758	FK202606084440	PO2026060812281032249	supplier	沈阳东源包材厂	3180.00	2025-08-07	9	乌日力格	采购单PO2026060812281032249审核自动生成	1	2026-06-08 04:30:01.700439	\N	purchase	1
-340	FK202604117214	CG202603313713	supplier	沈阳东源包材厂	2381.12	2025-09-30	9	乌日力格	采购单CG202603313713审核自动生成	1	2026-04-11 07:09:37.981783	2026-06-08 06:01:49.577435	purchase	1
-759	FK202606085110	PO2026060814463308038	supplier	盛大印刷	92.40	2026-01-23	7	公司支出账户	采购单PO2026060814463308038审核自动生成	1	2026-06-08 06:47:57.144277	2026-06-08 06:48:19.744593	purchase	1
-761	FK202606081289	PO2026060814463308038	supplier	盛大印刷	56.70	2026-01-23	7	公司支出账户	采购单付款 #589	1	2026-06-08 06:50:27.290186	\N		1
-762	FK202606095699	PO2026060910060636734	supplier	科尔沁奶食品	533.00	2026-06-09	7	公司支出账户	采购单PO2026060910060636734审核自动生成	1	2026-06-09 02:17:55.671388	\N	purchase	1
-763	FK202606098668	PO2026060910254942721	supplier	巴音珠萨朗	330.00	2026-06-09	7	公司支出账户	采购单PO2026060910254942721审核自动生成	1	2026-06-09 02:26:54.168364	\N	purchase	1
-764	FK202606095036	HT20260608001	other	圆通	18.00	2026-06-08	7	公司支出账户	销售订单附加费用 #291:快递/物流 [圆通]	1	2026-06-09 04:46:42.26643	\N		1
-765	FK202606093616	PO2026060914470477658	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-06-09	7	公司支出账户	采购单PO2026060914470477658审核自动生成	1	2026-06-09 06:47:32.919687	\N	purchase	1
-766	FK202606105874	PO202606091505449597	supplier	科尔沁奶食品	390.00	2026-06-09	7	公司支出账户	采购单PO202606091505449597审核自动生成	1	2026-06-10 04:53:27.438126	\N	purchase	1
-767	FK202606116767	PO2026061115090786886	supplier	科尔沁奶食品	200.00	2026-06-11	7	公司支出账户	采购单PO2026061115090786886审核自动生成	1	2026-06-11 07:10:09.876556	\N	purchase	1
-768	FK202606112718	PO2026061119212198130	supplier	阿润查干	90.00	2026-06-11	7	公司支出账户	采购单PO2026061119212198130审核自动生成	1	2026-06-11 11:23:50.322277	\N	purchase	1
-769	FK202606121489	PO2026061211213321962	supplier	科尔沁奶食品	670.00	2026-06-12	7	公司支出账户	采购单PO2026061211213321962审核自动生成	1	2026-06-12 03:24:08.216742	\N	purchase	1
-770	FK202606133491	PO2026061311080402886	supplier	阿润查干	60.00	2026-06-13	7	公司支出账户	采购单PO2026061311080402886审核自动生成	1	2026-06-13 03:10:18.177401	\N	purchase	1
-771	FK202606135959		other	美团-广告推广	100.00	2026-04-29	7	公司支出账户	[美团平台]	1	2026-06-13 03:32:53.490162	\N		1
-772	FK202606133756	HT20260603001	other	汇鑫物流	120.00	2026-06-13	7	公司支出账户	销售订单附加费用 #288:快递/物流 [汇鑫物流]	1	2026-06-13 05:24:34.98194	\N		1
-773	FK202606136449	HT20260611001	other	汇鑫物流	10.00	2026-06-13	7	公司支出账户	销售订单附加费用 #292:快递/物流 [汇鑫物流]	1	2026-06-13 05:25:01.917241	\N		1
-774	FK202606137365		supplier	广告推广	189.33	2025-12-31	7		[拼多多] 2025年12月推广广告费用	1	2026-06-13 06:26:06.435935	\N		1
-775	FK202606137592	PO2026061314314110367	supplier	奥都奶食品	1000.00	2026-02-20	7	公司支出账户	采购单PO2026061314314110367审核自动生成	1	2026-06-13 06:37:33.288806	\N	purchase	1
-776	FK202606135412	PO2026061314382294132	supplier	格日勒	213.00	2026-02-25	7	公司支出账户	采购单PO2026061314382294132审核自动生成	1	2026-06-13 06:40:18.893677	\N	purchase	1
-777	FK202606138061	PO2026053018273221330	supplier	额吉伊德	280.00	2026-03-18	7	公司支出账户	采购单PO2026053018273221330审核自动生成	1	2026-06-13 06:44:52.443798	\N	purchase	1
-778	FK202606139771	PO2026061314445962835	supplier	额吉伊德	70.00	2026-03-17	7	公司支出账户	采购单PO2026061314445962835审核自动生成	1	2026-06-13 06:46:20.874635	\N	purchase	1
-779	FK202606139691		other	淘宝/杂	341.00	2026-03-05	7	公司支出账户	[样品] 淘宝瓶子样品\n拼多多购物袋定制/2000个/287\n江苏永发玻璃黄油罐样品/6个/39	1	2026-06-13 07:25:52.188415	\N		1
-780	FK202606142568		other	圆通快递	1327.00	2026-03-27	7	公司支出账户	快递运费	1	2026-06-14 06:58:15.420767	\N		1
-782	FK202606149580		other	阿姨劳工费	764.00	2026-02-18	7	公司支出账户	店面	1	2026-06-14 07:31:03.932212	\N		1
-784	FK202606141781		other	阿姨劳工费	500.00	2026-06-05	7	公司支出账户	店面	1	2026-06-14 07:32:05.208571	\N		1
-783	FK202606143944		other	阿姨劳工费	500.00	2026-05-27	7	公司支出账户	店面	1	2026-06-14 07:31:44.968884	\N		1
-781	FK202606146314		other	阿姨劳工费	350.00	2026-01-10	7	公司支出账户	店面	1	2026-06-14 07:30:06.673406	\N		1
-785	FK202606146965		other	暖气电锅炉	300.00	2025-11-13	7	公司支出账户	店面	1	2026-06-14 08:05:51.93613	\N		1
-786	FK202606146463		other	暖气电锅炉	498.92	2025-11-16	7	公司支出账户	店面	1	2026-06-14 08:05:53.033651	\N		1
-787	FK202606149298		other	暖气电锅炉	99.71	2025-12-01	7	公司支出账户	店面	1	2026-06-14 08:05:54.27505	\N		1
-788	FK202606146711		other	暖气电锅炉	499.82	2025-12-07	7	公司支出账户	店面	1	2026-06-14 08:05:55.327961	\N		1
-789	FK202606141810		other	暖气电锅炉	499.12	2025-12-14	7	公司支出账户	店面	1	2026-06-14 08:05:56.383334	\N		1
-790	FK202606147114		other	暖气电锅炉	150.00	2025-12-24	7	公司支出账户	店面	1	2026-06-14 08:05:57.783624	\N		1
-791	FK202606141363		other	暖气电锅炉	499.72	2025-12-27	7	公司支出账户	店面	1	2026-06-14 08:05:58.820848	\N		1
-792	FK202606142916		other	暖气电锅炉	500.00	2026-01-09	7	公司支出账户	店面	1	2026-06-14 08:05:59.830152	\N		1
-793	FK202606141496		other	暖气电锅炉	500.00	2026-01-16	7	公司支出账户	店面	1	2026-06-14 08:06:00.861899	\N		1
-794	FK202606142056		other	暖气电锅炉	500.00	2026-01-28	7	公司支出账户	店面	1	2026-06-14 08:06:01.892167	\N		1
-795	FK202606142650		other	暖气电锅炉	500.00	2026-02-06	7	公司支出账户	店面	1	2026-06-14 08:06:02.90254	\N		1
-796	FK202606145821		other	暖气电锅炉	200.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 08:06:03.907209	\N		1
-797	FK202606141417		other	暖气电锅炉	500.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 08:06:05.207554	\N		1
-798	FK202606148301		other	暖气电锅炉	200.00	2026-03-10	7	公司支出账户	店面	1	2026-06-14 08:06:06.237014	\N		1
-799	FK202606143904		other	暖气电锅炉	200.00	2026-03-10	7	公司支出账户	店面	1	2026-06-14 08:06:07.286795	\N		1
-800	FK202606144613		supplier	泰成物流	960.00	2026-02-10	7	公司支出账户		1	2026-06-14 08:52:43.425707	\N		1
-801	FK202606145994		other	店面电费	100.00	2025-10-27	7	公司支出账户	店面	1	2026-06-14 09:01:45.434561	\N		1
-802	FK202606147276		other	店面电费	50.00	2025-11-25	7	公司支出账户	店面	1	2026-06-14 09:01:46.478823	\N		1
-803	FK202606147950		other	店面电费	100.00	2025-12-14	7	公司支出账户	店面	1	2026-06-14 09:01:47.496113	\N		1
-804	FK202606142197		other	店面电费	100.00	2025-12-22	7	公司支出账户	店面	1	2026-06-14 09:01:48.584996	\N		1
-805	FK202606142982		other	店面电费	150.00	2025-12-30	7	公司支出账户	店面	1	2026-06-14 09:01:49.678618	\N		1
-806	FK202606141238		other	店面电费	100.00	2026-01-09	7	公司支出账户	店面	1	2026-06-14 09:01:50.70206	\N		1
-807	FK202606142763		other	店面电费	200.00	2026-01-16	7	公司支出账户	店面	1	2026-06-14 09:01:51.770439	\N		1
-808	FK202606147549		other	店面电费	200.00	2026-01-25	7	公司支出账户	店面	1	2026-06-14 09:01:53.251247	\N		1
-809	FK202606145905		other	店面电费	197.00	2026-01-31	7	公司支出账户	店面	1	2026-06-14 09:01:54.322603	\N		1
-810	FK202606144817		other	店面电费	300.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 09:01:55.349587	\N		1
-811	FK202606148515		other	店面电费	100.00	2026-03-15	7	公司支出账户	店面	1	2026-06-14 09:01:56.383354	\N		1
-812	FK202606147560		other	店面电费	200.00	2026-03-21	7	公司支出账户	店面	1	2026-06-14 09:01:57.414313	\N		1
-813	FK202606145717		other	店面电费	100.00	2026-03-31	7	公司支出账户	店面	1	2026-06-14 09:01:58.443225	\N		1
-814	FK202606147980		other	店面电费	100.00	2026-04-07	7	公司支出账户	店面	1	2026-06-14 09:01:59.498327	\N		1
-815	FK202606149506		other	店面电费	100.00	2026-04-16	7	公司支出账户	店面	1	2026-06-14 09:02:00.522242	\N		1
-816	FK202606144657		other	店面电费	100.00	2026-04-23	7	公司支出账户	店面	1	2026-06-14 09:02:01.532563	\N		1
-817	FK202606147079		other	店面电费	100.00	2026-04-29	7	公司支出账户	店面	1	2026-06-14 09:02:02.545273	\N		1
-818	FK202606146356		other	店面电费	199.49	2026-05-06	7	公司支出账户	店面	1	2026-06-14 09:02:03.54904	\N		1
-819	FK202606148564		other	店面电费	197.00	2026-05-15	7	公司支出账户	店面	1	2026-06-14 09:02:04.560965	\N		1
-820	FK202606143946		other	店面电费	200.00	2026-05-23	7	公司支出账户	店面	1	2026-06-14 09:02:05.576501	\N		1
-821	FK202606147006		other	店面电费	397.00	2026-06-13	7	公司支出账户	店面	1	2026-06-14 09:02:06.582145	\N		1
-681	FK202605308257	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-24	7	公司支出账户	采购单PO2026052900005420615审核自动生成	1	2026-05-30 09:17:54.08422	\N	purchase	1
-332	FK202604095070	CG202603313861	supplier	淘宝紫辰包装	10.20	2025-09-30	9	乌日力格	采购单CG202603313861审核自动生成	1	2026-04-09 14:56:20.436486	\N	purchase	1
-341	FK202604113455	CG202603311700	supplier	盛大印刷	5.20	2025-09-30	9	乌日力格	采购单CG202603311700审核自动生成	1	2026-04-11 07:13:35.722123	\N	purchase	1
-342	FK202604119897	CG202603317026	supplier	淘宝紫辰包装	49.50	2025-09-30	9	乌日力格	采购单CG202603317026审核自动生成	1	2026-04-11 07:17:50.112577	\N	purchase	1
-343	FK202604117997	CG202603312374	supplier	盛大印刷	1.74	2025-09-30	9	乌日力格	采购单CG202603312374审核自动生成	1	2026-04-11 07:18:55.211002	\N	purchase	1
-345	FK202604119416	CG202603318344	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单CG202603318344审核自动生成	1	2026-04-11 07:28:16.57574	\N	purchase	1
-346	FK202604113663	CG202603316897	supplier	盛大印刷	1469.00	2025-09-30	9	乌日力格	采购单CG202603316897审核自动生成	1	2026-04-11 07:30:25.137374	\N	purchase	1
-347	FK202604112050	CG202603311453	supplier	沈阳乾兴包装	254.80	2025-09-30	9	乌日力格	采购单CG202603311453审核自动生成	1	2026-04-11 08:04:40.303687	\N	purchase	1
-350	FK202604115520	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单CG202603317823审核自动生成	1	2026-04-11 09:09:14.444567	\N	purchase	1
-352	FK202604111164	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单CG202603314893审核自动生成	1	2026-04-11 09:13:44.961254	\N	purchase	1
-354	FK202604112273	CG202603315759	supplier	淘宝紫辰包装	3.40	2025-09-30	9	乌日力格	采购单CG202603315759审核自动生成	1	2026-04-11 09:28:56.427135	\N	purchase	1
-355	FK202604115729	CG202603317580	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	9	乌日力格	采购单CG202603317580审核自动生成	1	2026-04-11 09:51:32.282962	\N	purchase	1
-356	FK202604113490	CG202603314842	supplier	盛大印刷	970.45	2025-09-30	9	乌日力格	采购单CG202603314842审核自动生成	1	2026-04-11 09:52:34.349068	\N	purchase	1
-357	FK202604111735	CG202603316532	supplier	巴音珠萨朗	420.00	2025-10-12	9	乌日力格	采购单CG202603316532审核自动生成	1	2026-04-11 11:00:49.366553	\N	purchase	1
-358	FK202604114437	CG202603313871	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	采购单CG202603313871审核自动生成	1	2026-04-11 12:18:16.263441	\N	purchase	1
-360	FK202604121025	CG202603315163	supplier	永巨茶业	2825.04	2025-10-06	9	乌日力格	采购单CG202603315163审核自动生成	1	2026-04-12 02:43:49.696879	\N	purchase	1
-361	FK202604127420	CG202603318958	supplier	广州维记	1455.00	2025-10-09	9	乌日力格	采购单CG202603318958审核自动生成	1	2026-04-12 02:45:40.893721	\N	purchase	1
-362	FK202604127954	CG202603311647	supplier	优如包装	2250.00	2025-10-11	9	乌日力格	采购单CG202603311647审核自动生成	1	2026-04-12 02:56:54.060475	\N	purchase	1
-364	FK202604122813	CG202603312892	supplier	淘宝欧信	1700.00	2025-10-22	9	乌日力格	采购单CG202603312892审核自动生成	1	2026-04-12 03:05:29.301332	\N	purchase	1
-365	FK202604123964	CG202603319598	supplier	山东锦食食品	151.10	2025-10-01	9	乌日力格	采购单CG202603319598审核自动生成	1	2026-04-12 03:07:02.263845	\N	purchase	1
-367	FK202604126510	CG202603312351	supplier	拼多多/木勺	63.96	2025-10-01	9	乌日力格	采购单CG202603312351审核自动生成	1	2026-04-12 03:08:50.298811	\N	purchase	1
-368	FK202604125739	CG202603317743	supplier	拼多多/木勺	159.90	2025-11-16	7	公司支出账户	采购单CG202603317743审核自动生成	1	2026-04-12 03:09:22.958612	\N	purchase	1
-369	FK202604126691	CG202603318243	supplier	盛大印刷	360.00	2025-10-01	9	乌日力格	采购单CG202603318243审核自动生成	1	2026-04-12 03:11:33.400987	\N	purchase	1
-380	FK202604126461	CG202603315155	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	采购单CG202603315155审核自动生成	1	2026-04-12 04:32:43.305888	\N	purchase	1
-381	FK202604121917	CG202603314251	supplier	锡盟艾润萨利SC	470.00	2025-10-26	9	乌日力格	采购单CG202603314251审核自动生成	1	2026-04-12 04:37:50.072252	\N	purchase	1
-392	FK202604174708	CG202603317794	supplier	恩赫奶制品厂	284.40	2025-10-20	9	乌日力格	采购单CG202603317794审核自动生成	1	2026-04-17 13:28:29.345562	\N	purchase	1
-395	FK202604176554	CG202603312155	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603312155审核自动生成	1	2026-04-17 14:52:45.537096	\N	purchase	1
-396	FK202604183052	CG202603314365	supplier	广州维记	1817.00	2025-11-07	7	公司支出账户	采购单CG202603314365审核自动生成	1	2026-04-18 11:11:52.735608	\N	purchase	1
-397	FK202604185404	CG202603312275-D426	supplier	广州维记	3380.00	2025-12-10	7	公司支出账户	采购单CG202603312275-D426审核自动生成	1	2026-04-18 11:12:37.540723	\N	purchase	1
-398	FK202604184603	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单CG202603314495审核自动生成	1	2026-04-18 11:17:59.345082	\N	purchase	1
-399	FK202604185757	CG202603313821	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	采购单CG202603313821审核自动生成	1	2026-04-18 11:19:11.501805	\N	purchase	1
-400	FK202604189776	CG202603315747	supplier	拼多多/热缩膜	245.49	2025-11-16	7	公司支出账户	采购单CG202603315747审核自动生成	1	2026-04-18 11:36:20.404362	\N	purchase	1
-435	FK202604255343	CG202603312647	supplier	恩赫奶制品厂	367.20	2025-12-10	9	乌日力格	采购单CG202603312647审核自动生成	1	2026-04-25 11:14:29.295467	\N	purchase	1
-407	FK202604258214	CG202603315058	supplier	盛大印刷	743.89	2025-12-04	7	公司支出账户	采购单CG202603315058审核自动生成	1	2026-04-25 05:27:09.829592	\N	purchase	1
-408	FK202604253343	CG202603316462	supplier	盛大印刷	960.00	2025-12-10	8	孟根	采购单CG202603316462审核自动生成	1	2026-04-25 05:35:25.961571	\N	purchase	1
-411	FK202604259028	CG202603318832	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	采购单CG202603318832审核自动生成	1	2026-04-25 10:11:06.116262	\N	purchase	1
-412	FK202604251093	CG202603315329	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	采购单CG202603315329审核自动生成	1	2026-04-25 10:12:25.34692	\N	purchase	1
-414	FK202604258449	CG202603319667	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	采购单CG202603319667审核自动生成	1	2026-04-25 10:14:37.622578	\N	purchase	1
-415	FK202604258640	CG202603319001	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	采购单CG202603319001审核自动生成	1	2026-04-25 10:15:19.849434	\N	purchase	1
-416	FK202604256097	CG202603318178	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	采购单CG202603318178审核自动生成	1	2026-04-25 10:16:11.534225	\N	purchase	1
-419	FK202604256562	CG202603312047	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	采购单CG202603312047审核自动生成	1	2026-04-25 10:20:57.202888	\N	purchase	1
-420	FK202604251981	CG202603319416	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	采购单CG202603319416审核自动生成	1	2026-04-25 10:22:11.848563	\N	purchase	1
-421	FK202604254132	CG202603312757	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	采购单CG202603312757审核自动生成	1	2026-04-25 10:23:01.71716	\N	purchase	1
-422	FK202604253636	CG202603314528	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	采购单CG202603314528审核自动生成	1	2026-04-25 10:28:11.351906	\N	purchase	1
-425	FK202604258495	CG202603317629	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	采购单CG202603317629审核自动生成	1	2026-04-25 10:41:56.750299	\N	purchase	1
-430	FK202604253204	CG202603319655	supplier	优如包装	3800.00	2025-12-07	8	孟根	采购单CG202603319655审核自动生成	1	2026-04-25 11:00:05.650903	\N	purchase	1
-432	FK202604257783	CG202603312552	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	采购单CG202603312552审核自动生成	1	2026-04-25 11:02:07.71983	\N	purchase	1
-437	FK202604254423	CG202603312319	supplier	科尔沁奶食品	526.00	2025-12-10	7	公司支出账户	采购单CG202603312319审核自动生成	1	2026-04-25 11:23:23.840327	\N	purchase	1
-441	FK202604257180	CG202603315567	supplier	科尔沁奶食品	555.00	2025-12-17	7	公司支出账户	采购单CG202603315567审核自动生成	1	2026-04-25 14:46:11.302629	\N	purchase	1
-446	FK202604259180	CG202603319749	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单CG202603319749审核自动生成	1	2026-04-25 14:59:16.176819	\N	purchase	1
-448	FK202604258318	CG202603319076	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	采购单CG202603319076审核自动生成	1	2026-04-25 15:01:08.995748	\N	purchase	1
-455	FK202604267194	CG202603318785	supplier	雷记炒货	200.00	2026-01-11	7	公司支出账户	采购单CG202603318785审核自动生成	1	2026-04-26 15:49:52.626787	\N	purchase	1
-459	FK202604262204	CG202603319425	supplier	糖炮	240.00	2026-01-16	7	公司支出账户	采购单CG202603319425审核自动生成	1	2026-04-26 16:02:59.424178	\N	purchase	1
-465	FK202604267803	CG202603313356	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	采购单CG202603313356审核自动生成	1	2026-04-26 16:10:30.519371	\N	purchase	1
-466	FK202604261159	CG202603319923	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	采购单CG202603319923审核自动生成	1	2026-04-26 16:16:22.109416	\N	purchase	1
-467	FK202604265937	CG202603312825	supplier	额吉伊德	161.00	2026-01-27	7	公司支出账户	采购单CG202603312825审核自动生成	1	2026-04-26 16:16:58.389325	\N	purchase	1
-633	FK202605104460	CG202603311981	supplier	巴音珠萨朗	183.00	2025-12-16	7		采购单CG202603311981审核自动生成	1	2026-05-10 04:41:47.340227	\N		1
-639	FK202605121144	CG202603318280	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单CG202603318280审核自动生成	1	2026-05-12 05:49:04.388494	\N	purchase	1
-641	FK202605123384	CG202603311625	supplier	民族印刷厂	120.00	2025-11-16	7		采购单CG202603311625审核自动生成	1	2026-05-12 09:26:47.448794	\N	purchase	1
-760	FK202606085311	PO2026060814463308038	supplier	盛大印刷	92.40	2026-01-23	7	公司支出账户	采购单PO2026060814463308038审核自动生成 [orphan]	1	2026-06-08 06:49:07.031538	\N	purchase	1
-541	FK202605041833	CG202603314468	supplier	纯净奶食品	310.00	2026-02-01	7	公司支出账户	采购单付款 #409	1	2026-05-04 04:51:19.481044	\N		1
-822	FK202606154832	LS202606148804	other	顺丰	127.00	2026-04-06	7	公司支出账户	零售附加费用 #1474:运费	1	2026-06-15 15:16:03.352919	\N		1
-823	FK202606163073	PO2026061621560672971	supplier	科尔沁奶食品	50.00	2026-06-16	7	公司支出账户	采购单PO2026061621560672971审核自动生成	1	2026-06-16 13:56:33.455049	\N	purchase	1
-824	FK202606195007		other	阿姨劳工费	500.00	2026-06-16	7	公司支出账户	劳务费	1	2026-06-19 06:50:56.952546	\N		1
-825	FK202606202438	PO202606201610588640	supplier	科尔沁奶食品	330.00	2026-06-20	7	公司支出账户	采购单PO202606201610588640审核自动生成	1	2026-06-20 08:11:55.109764	\N	purchase	1
-826	FK202606226939	PO2026062211360496627	supplier	科尔沁奶食品	640.00	2026-06-22	7	公司支出账户	采购单PO2026062211360496627审核自动生成	1	2026-06-22 03:38:38.443941	\N	purchase	1
-827	FK202606228627	PO2026062211385423444	supplier	科尔沁奶食品	656.00	2026-06-13	7	公司支出账户	采购单PO2026062211385423444审核自动生成	1	2026-06-22 03:42:24.727378	\N	purchase	1
-828	FK202606221666	PO2026062211424384186	supplier	科尔沁奶食品	200.00	2026-06-21	7	公司支出账户	采购单PO2026062211424384186审核自动生成	1	2026-06-22 03:43:26.350675	\N	purchase	1
-829	FK202606223308	PO2026062214182043723	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-06-22	7	公司支出账户	采购单PO2026062214182043723审核自动生成	1	2026-06-22 06:19:24.982317	\N	purchase	1
-830	FK202606229868	PO2026062215271297352	supplier	科尔沁奶食品	340.00	2026-06-22	7	公司支出账户	采购单PO2026062215271297352审核自动生成	1	2026-06-22 07:27:51.994528	\N	purchase	1
-831	FK202606225637	PO2026062215561861413	supplier	巴音珠萨朗	470.00	2026-06-22	7	公司支出账户	采购单PO2026062215561861413审核自动生成	1	2026-06-22 07:58:17.05122	\N	purchase	1
-832	FK202606238949	PO202606231742474342	supplier	科尔沁奶食品	205.00	2026-06-23	7	公司支出账户	采购单PO202606231742474342审核自动生成	1	2026-06-23 09:44:38.691626	\N	purchase	1
-833	FK202606305600	PO2026063010174698423	supplier	科尔沁奶食品	155.00	2026-06-30	7	公司支出账户	采购单PO2026063010174698423审核自动生成	1	2026-06-30 02:18:31.903611	\N	purchase	1
-834	FK202606307003	PO2026063010302146351	supplier	科尔沁奶食品	50.00	2026-06-30	7	公司支出账户	采购单PO2026063010302146351审核自动生成	1	2026-06-30 02:30:57.767806	\N	purchase	1
-835	FK202607026195	PO2026070216142419815	supplier	科尔沁奶食品	475.00	2026-07-02	7	公司支出账户	采购单PO2026070216142419815审核自动生成	1	2026-07-02 08:14:54.559381	\N	purchase	1
-836	FK202607047081	PO2026070416575364554	supplier	广州维记	1690.00	2026-07-04	7	公司支出账户	采购单PO2026070416575364554审核自动生成	1	2026-07-04 08:58:38.409787	\N	purchase	1
-837	FK202607075423	PO2026070711073264031	supplier	科尔沁奶食品	50.00	2026-07-07	7	公司支出账户	采购单PO2026070711073264031审核自动生成	1	2026-07-07 03:07:55.854025	\N	purchase	1
-838	FK202607082802	PO2026070816402254688	supplier	科尔沁奶食品	340.00	2026-07-08	7	公司支出账户	采购单PO2026070816402254688审核自动生成	1	2026-07-08 08:40:58.891513	\N	purchase	1
-839	FK202607126700	PO2026071214043411525	supplier	广州维记	1807.00	2026-07-10	7	公司支出账户	采购单PO2026071214043411525审核自动生成	1	2026-07-12 06:06:45.995088	\N	purchase	1
-840	FK202607124673	PO202607121407018203	supplier	额吉伊德	68.00	2026-07-09	7	公司支出账户	采购单PO202607121407018203审核自动生成	1	2026-07-12 06:09:21.250016	\N	purchase	1
-841	FK202607126953	PO202607121533349182	supplier	科尔沁奶食品	50.00	2026-07-12	7	公司支出账户	采购单PO202607121533349182审核自动生成	1	2026-07-12 07:34:05.36926	\N	purchase	1
-842	FK202607199080	PO2026071922045383147	supplier	阿润查干	120.00	2026-07-19	7	公司支出账户	采购单PO2026071922045383147审核自动生成	1	2026-07-19 14:05:40.221994	\N	purchase	1
-843	FK202607194528	PO2026071922345620868	supplier	纯净奶食品	3000.00	2026-07-13	7	公司支出账户	采购单PO2026071922345620868审核自动生成	1	2026-07-19 14:36:51.74825	\N	purchase	1
-844	FK202607207543	PO2026072021342977610	supplier	科尔沁奶食品	50.00	2026-07-20	7	公司支出账户	采购单PO2026072021342977610审核自动生成	1	2026-07-20 13:34:57.626164	\N	purchase	1
-845	FK202607216790	PO2026072112024670768	supplier	科尔沁奶食品	170.00	2026-07-21	7	公司支出账户	采购单PO2026072112024670768审核自动生成	1	2026-07-21 04:03:14.585568	\N	purchase	1
-846	FK202607223102	PO2026072222234108185	supplier	山东锦食食品	339.60	2026-07-22	7	公司支出账户	采购单PO2026072222234108185审核自动生成	1	2026-07-22 14:25:12.413209	\N	purchase	1
+COPY public.pay_receipt (id, receipt_no, order_sn, contact_type, contact_name, amount, pay_date, fund_id, fund_name, remark, status, created_at, deleted_at, category, shop_id, admin_id, admin_name) FROM stdin;
+849	FK202607274653	PO2026072722424871143	supplier	科尔沁奶食品	155.00	2026-07-27	7	公司支出账户	采购单PO2026072722424871143审核自动生成	1	2026-07-27 14:43:23.236654	\N	purchase	1	1	管理员
+853	FK202608041853	PO2026080410450844175	supplier	巴音珠萨朗	200.00	2026-08-04	7	公司支出账户	采购单PO2026080410450844175审核自动生成	1	2026-08-04 02:46:24.001614	\N	purchase	1	1	管理员
+868	FK202608177507	PO2026081713040762130	supplier	科尔沁奶食品	200.00	2026-08-17	7	公司支出账户	采购单PO2026081713040762130审核自动生成	1	2026-08-17 05:04:38.709318	\N	purchase	1	1	管理员
+870	FK202608179687	PO202608171305095272	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-08-17	7	公司支出账户	采购单PO202608171305095272审核自动生成	1	2026-08-17 05:08:15.426384	\N	purchase	1	1	管理员
+872	FK202608171519	PO202608171311176209	supplier	奥都奶食品	170.00	2026-08-17	7	公司支出账户	采购单PO202608171311176209审核自动生成	1	2026-08-17 05:11:37.862157	\N	purchase	1	1	管理员
+873	FK202608224293	PO2026082210465932867	supplier	科尔沁奶食品	85.00	2026-08-22	7	公司支出账户	采购单PO2026082210465932867审核自动生成	1	2026-08-22 02:47:37.760863	\N	purchase	1	0	
+874	FK202608227693	PO2026082211521113294	supplier	奥特尔奶食品店	100.00	2026-08-22	7	公司支出账户	采购单PO2026082211521113294审核自动生成	1	2026-08-22 03:53:40.221372	\N	purchase	1	0	
+51	FK202603293286		other	包装支出	4300.00	2026-02-01	7	公司支出账户	乌海文旅集团包装印刷费用	1	2026-03-29 15:37:31.828773	\N		1	1	管理员
+52	FK202603296295		other	购物袋/小/中/大/奶皮真空袋/各100张	54.00	2026-02-01	7	公司支出账户	购物袋/小/中/大/奶皮真空袋/各100张	1	2026-03-29 15:37:32.734334	\N		1	1	管理员
+53	FK202603298127		other	民族印刷厂	16.00	2026-01-08	7	公司支出账户	乌海文旅集团集团打印	1	2026-03-29 15:37:33.677508	\N		1	1	管理员
+54	FK202603293993		other	路费/收费站	43.00	2026-01-08	7	公司支出账户	乌海文旅集团/合同文件/ 打样礼盒	1	2026-03-29 15:37:34.609582	\N		1	1	管理员
+55	FK202603294726		other	店面	360.00	2026-01-05	7	公司支出账户	店面	1	2026-03-29 15:37:35.616719	\N		1	1	管理员
+56	FK202603296408		other	劳务费	719.00	2026-01-05	7	公司支出账户	劳务费	1	2026-03-29 15:37:36.519705	\N		1	1	管理员
+57	FK202603295513		other	店面	405.00	2025-12-28	8	孟根	编织筐。10个250元\n地毯。155元	1	2026-03-29 15:37:38.346429	\N		1	1	管理员
+50	FK202603299243		other	一个安全灯，两个灭火器	205.00	2026-02-10	7	公司支出账户	一个安全灯，两个灭火器	1	2026-03-29 15:37:29.949765	\N		1	1	管理员
+850	FK202607271839	PO2026072722545606423	supplier	佳赫糕点	230.00	2026-07-27	7	公司支出账户	采购单PO2026072722545606423审核自动生成	1	2026-07-27 15:00:09.929189	\N	purchase	1	1	管理员
+854	FK202608044953	PO2026080414192605390	supplier	杂/采购商	25.00	2026-08-04	7	公司支出账户	采购单PO2026080414192605390审核自动生成	1	2026-08-04 06:20:18.233752	\N	purchase	1	1	管理员
+869	FK202608179766	PO2026081713044459412	supplier	科尔沁奶食品	180.00	2026-08-17	7	公司支出账户	采购单PO2026081713044459412审核自动生成	1	2026-08-17 05:05:05.859878	\N	purchase	1	1	管理员
+871	FK202608171409	PO2026081713093466727	supplier	永巨茶业	1710.00	2026-08-17	7	公司支出账户	采购单PO2026081713093466727审核自动生成	1	2026-08-17 05:11:00.361238	\N	purchase	1	1	管理员
+875	FK202608222006	PO2026082211534364880	supplier	巴音珠萨朗	155.00	2026-08-13	7	公司支出账户	采购单PO2026082211534364880审核自动生成	1	2026-08-22 03:55:29.794186	\N	purchase	1	0	
+58	FK202603299673		other	店面	145.00	2025-12-28	8	孟根	地毯36➕麻绳20=56元\n试营业字打印4元\n发财树80元\n推拉贴 5元	1	2026-03-29 15:37:39.350547	\N		1	1	管理员
+59	FK202603294846		other	店面	3500.00	2025-12-28	8	孟根	店面	1	2026-03-29 15:37:40.345208	\N		1	1	管理员
+851	FK202607286134	PO2026072813523477436	supplier	杂/采购商	35.00	2026-07-28	7	公司支出账户	采购单PO2026072813523477436审核自动生成	1	2026-07-28 05:53:03.247222	\N	purchase	1	1	管理员
+855	FK202608059888		supplier	锡盟艾润萨利SC	52.00	2026-08-05	7	公司支出账户	40元样品费+12元快递费	1	2026-08-05 04:54:31.469137	\N		1	1	管理员
+876	FK202608227903		other	临时工/游牧文化产业园费用	300.00	2026-08-22	7	公司支出账户		1	2026-08-22 03:59:43.5512	\N		1	1	管理员
+106	FK202604013579	CG202603313713	supplier	沈阳东源包材厂	2381.12	2025-09-30	20	沈阳东源包材厂	采购单CG202603313713审核自动生成	1	2026-04-01 01:39:09.313881	2026-04-01 01:39:29.0358		1	1	管理员
+852	FK202607312872	PO2026073113412688991	supplier	奥特尔奶食品店	100.00	2026-07-31	7	公司支出账户	采购单PO2026073113412688991审核自动生成	1	2026-07-31 05:41:55.896071	\N	purchase	1	1	管理员
+856	FK202608059665		other	400电话号码购买	260.00	2026-08-05	7	公司支出账户		1	2026-08-05 04:55:52.845891	\N		1	1	管理员
+858	FK202608053328	PO2026080512564475657	supplier	科尔沁奶食品	330.00	2026-08-05	7	公司支出账户	采购单PO2026080512564475657审核自动生成	1	2026-08-05 04:57:48.472891	\N	purchase	1	1	管理员
+197	FK202604019062	CG202603319789	supplier	巴音珠萨朗	310.20	2025-12-28	31	巴音珠萨朗	采购单CG202603319789审核自动生成	1	2026-04-01 01:43:12.17361	2026-04-03 07:16:13.985995		1	1	管理员
+857	FK202608058789	PO202608051256008232	supplier	奥都奶食品	170.00	2026-08-05	7	公司支出账户	采购单PO202608051256008232审核自动生成	1	2026-08-05 04:56:35.06424	\N	purchase	1	1	管理员
+238	FK202604019797	CG202603315671	supplier	科尔沁奶食品	95.00	2026-02-09	40	科尔沁奶食品	采购单CG202603315671审核自动生成	1	2026-04-01 01:44:54.821814	2026-04-03 07:15:15.569715		1	1	管理员
+859	FK202608084820	PO2026080811193335543	supplier	旧苏木蒙古果子	100.00	2026-08-08	7	公司支出账户	采购单PO2026080811193335543审核自动生成	1	2026-08-08 03:20:40.536984	\N	purchase	1	1	管理员
+145	FK202604014235	CG202603311066	supplier	巴音珠萨朗	357.00	2025-11-16	31	巴音珠萨朗	采购单CG202603311066审核自动生成	1	2026-04-01 01:40:53.545062	2026-04-01 01:45:20.652233		1	1	管理员
+860	FK202608082446	PO2026080811204731280	supplier	乌日汗奶食品店	224.00	2026-08-08	7	公司支出账户	采购单PO2026080811204731280审核自动生成	1	2026-08-08 03:24:05.130018	\N	purchase	1	1	管理员
+861	FK202608088300	PO2026080811241759999	supplier	科尔沁奶食品	180.00	2026-08-07	7	公司支出账户	采购单PO2026080811241759999审核自动生成	1	2026-08-08 03:24:52.203741	\N	purchase	1	1	管理员
+250	FK202604015137	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	40	科尔沁奶食品	采购单CG202603311089审核自动生成	1	2026-04-01 01:45:23.856617	2026-04-03 07:14:54.199572		1	1	管理员
+94	FK202603294981		other	其他支出	10000.00	2025-10-26	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:15.91545	2026-08-08 03:26:13.17202		1	1	管理员
+862	FK202608084930		other	临时工/苏叶	1625.00	2026-07-31	7	公司支出账户		1	2026-08-08 03:29:09.200553	\N		1	1	管理员
+316	FK202604067715	CG202603317523	supplier		27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 08:21:09.959164	2026-04-06 08:37:37.33408		1	1	管理员
+314	FK202604058735	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 04:01:42.625916	2026-04-06 09:04:23.812317	purchase	1	1	管理员
+318	FK202604064058	CG202603311054	supplier		200.93	2025-09-30	9	乌日力格	采购单付款 #502	1	2026-04-06 09:14:43.414846	\N		1	1	管理员
+317	FK202604063361	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-06 09:14:37.517324	2026-04-06 09:16:11.930492	purchase	1	1	管理员
+319	FK202604068231	CG202603317523	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 09:16:50.774624	2026-04-06 09:25:33.28618		1	1	管理员
+321	FK202604068626	CG202603317523	supplier		27.84	2025-09-30	9	乌日力格	采购单付款 #501	1	2026-04-06 11:40:29.153483	\N		1	1	管理员
+320	FK202604064313	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-06 11:40:26.700608	2026-04-06 12:13:52.389049	purchase	1	1	管理员
+322	FK202604069329	CG202603319057	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单CG202603319057审核自动生成	1	2026-04-06 12:25:24.255635	2026-04-06 12:58:01.016122	purchase	1	1	管理员
+323	FK202604064663	CG202603312326	supplier	银河包装	9.10	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-06 12:57:26.350609	2026-04-06 14:52:20.558981	purchase	1	1	管理员
+326	FK202604063504		supplier	银河包装	1.10	2026-04-06	9	乌日力格		1	2026-04-06 14:59:32.045263	2026-04-06 15:30:41.217742		1	1	管理员
+327	FK202604063257	CG202603312326	supplier	银河包装	1.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-06 15:27:51.997597	2026-04-06 15:53:18.081154		1	1	管理员
+325	FK202604067083		supplier		8.00	2026-04-06	9	乌日力格	采购单付款 #499	1	2026-04-06 14:58:32.458238	2026-04-06 15:53:18.95183		1	1	管理员
+329	FK202604065189		supplier	测试供应商	0.01	2099-01-01	9			1	2026-04-06 16:02:28.033059	2026-04-06 16:02:37.481543		1	1	管理员
+328	FK202604066804	CG202603312326	supplier	银河包装	8.00	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-06 15:56:10.883307	2026-04-09 15:02:05.023611	purchase	1	1	管理员
+330	FK202604096767	CG202603312326	supplier	银河包装	1.10	2026-04-09	7	公司支出账户	采购单付款 #499	1	2026-04-09 05:55:20.196442	2026-04-09 15:02:05.023611		1	1	管理员
+335	FK202604092544	CG202603311551	supplier	银河包装	100.00	2026-04-10	9	乌日力格	采购单付款 #496	1	2026-04-09 16:23:42.236188	2026-04-09 16:49:53.729803		1	1	管理员
+863	FK202608081937	PO2026080812110973613	supplier	优如包装	400.00	2026-07-30	7	公司支出账户	采购单PO2026080812110973613审核自动生成	1	2026-08-08 04:13:10.337774	\N	purchase	1	1	管理员
+363	FK202604126828	CG202603311647	supplier	优如包装	5250.01	2026-04-12	8	孟根	采购单付款 #469	1	2026-04-12 02:57:17.371319	2026-04-12 03:42:26.682648		1	1	管理员
+370	FK202604124084		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格		1	2026-04-12 03:25:39.608785	2026-04-12 03:47:47.585437		1	1	管理员
+371	FK202604127599		supplier	拼多多/热缩膜	250.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:48:51.237594	2026-04-12 03:49:40.347632		1	1	管理员
+372	FK202604129424		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:50:36.8525	2026-04-12 03:56:48.500046		1	1	管理员
+374	FK202604126611		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 03:57:44.486303	2026-04-12 04:03:08.941333		1	1	管理员
+375	FK202604121586		supplier	拼多多/热缩膜	250.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:04:00.259349	2026-04-12 04:04:51.882134		1	1	管理员
+376	FK202604128194		supplier	拼多多/热缩膜	200.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:05:43.152671	2026-04-12 04:06:27.353767		1	1	管理员
+377	FK202604124033		supplier	拼多多/热缩膜	120.00	2026-04-12	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:07:13.808629	2026-04-12 04:07:39.276606		1	1	管理员
+382	FK202604121425	CG202603312995	other	阿旗北方	3.90	2025-10-31	9	乌日力格	采购单据支出 #461	1	2026-04-12 11:49:03.232807	2026-04-12 12:01:10.789035		1	1	管理员
+383	FK202604126191	CG202603312995	other	阿旗北方	3.90	2025-10-31	9	乌日力格	采购单据支出 #461	1	2026-04-12 12:01:25.46005	2026-04-12 12:01:37.970929		1	1	管理员
+384	FK202604137531	CG202603312995	other	采购单据支出	3.90	2026-04-13	9	乌日力格	采购单据支出 #461	1	2026-04-13 14:00:06.63083	2026-04-15 03:36:18.069244		1	1	管理员
+385	FK202604151572	CG202603312995	other	采购单据支出	3.90	2026-04-15	7	公司支出账户	采购单据支出 #461	1	2026-04-15 03:37:02.770139	2026-04-17 04:54:32.347429		1	1	管理员
+386	FK202604179754	CG202603316946	other	阿旗北方	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出	1	2026-04-17 05:44:49.169315	2026-04-17 06:30:10.185816		1	1	管理员
+387	FK202604175935	CG202603316946	other	其他支出	3.90	2025-10-31	9	乌日力格	采购附加费用 #461:单据支出	1	2026-04-17 06:32:19.922874	2026-04-17 07:17:40.307975		1	1	管理员
+388	FK202604174164	CG202603316946	other		3.90	2025-09-30	7	公司支出账户	采购附加费用 #461:单据支出	1	2026-04-17 07:18:26.822381	2026-04-17 08:02:49.204702		1	1	管理员
+389	FK202604171200	CG202603316946	other	圆通运费	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:16:42.111466	2026-04-17 08:30:54.19844		1	1	管理员
+390	FK202604178903	CG202603316946	other		3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:31:52.02562	2026-04-17 08:32:04.25758		1	1	管理员
+391	FK202604174050	CG202603316946	other	运费	3.90	2026-04-17	7	公司支出账户	采购附加费用 #461:单据支出 [阿旗北方]	1	2026-04-17 08:32:21.745621	2026-04-17 08:32:45.415552		1	1	管理员
+864	FK202608086934	PO2026080812270330052	supplier	广州维记	1807.00	2026-07-27	7	公司支出账户	采购单PO2026080812270330052审核自动生成	1	2026-08-08 04:28:27.823797	\N	purchase	1	1	管理员
+406	FK202604258155	CG202603319218	supplier	盛大印刷	96.00	2025-12-10	8	孟根	采购单CG202603319218审核自动生成	1	2026-04-25 03:10:38.901629	2026-04-25 03:11:20.330957	purchase	1	1	管理员
+405	FK202604252468	CG202603315058	supplier	盛大印刷	743.93	2025-12-04	7	公司支出账户	采购单付款 #441	1	2026-04-25 03:09:41.518305	2026-04-25 05:26:24.769807		1	1	管理员
+409	FK202604258668	CG202603316462	supplier	盛大印刷	3.00	2025-10-10	7	公司支出账户	采购单付款 #427	1	2026-04-25 05:35:56.458146	2026-04-25 05:36:48.187712		1	1	管理员
+402	FK202604255502	CG202603318635	supplier	银河包装	400.00	2025-10-01	9	乌日力格	采购单CG202603318635审核自动生成	1	2026-04-25 03:01:06.150845	2026-04-25 11:18:09.097554	purchase	1	1	管理员
+418	FK202604259303	CG202603313985	supplier	浙江金矿包装	19.50	2025-12-04	7	公司支出账户	采购单付款 #442	1	2026-04-25 10:18:57.261411	2026-05-03 01:02:29.197708		1	1	管理员
+417	FK202604255791	CG202603319829	supplier	浙江金矿包装	2180.00	2025-12-04	8	孟根	采购单CG202603319829审核自动生成	1	2026-04-25 10:18:25.454724	2026-05-03 03:46:10.974902	purchase	1	1	管理员
+428	FK202604258672	CG202604257525	supplier	广州维记	2535.00	2026-04-25	5		采购单付款 #505	1	2026-04-25 10:45:03.232446	2026-05-07 11:45:51.433194		1	1	管理员
+439	FK202604257241	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单CG202603312913审核自动生成	1	2026-04-25 14:40:55.513391	2026-05-07 12:02:07.404866	purchase	1	1	管理员
+431	FK202604252704	CG202603319655	supplier	优如包装	600.01	2025-12-28	9	乌日力格	采购单付款 #434	1	2026-04-25 11:00:36.46132	2026-05-17 08:13:25.77131		1	1	管理员
+865	FK202608105154	PO2026081016075140866	supplier	科尔沁奶食品	170.00	2026-08-10	7	公司支出账户	采购单PO2026081016075140866审核自动生成	1	2026-08-10 08:08:35.860565	\N	purchase	1	1	管理员
+445	FK202604255851	CG202603311750	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单CG202603311750审核自动生成	1	2026-04-25 14:58:45.176271	2026-04-25 14:59:06.7697	purchase	1	1	管理员
+450	FK202604269662	PO2026042612572345234	supplier	科尔沁奶食品	440.00	2026-04-26	7	公司支出账户	采购单PO2026042612572345234审核自动生成	1	2026-04-26 04:57:55.206853	\N	purchase	1	1	管理员
+461	FK202604268789	CG202603311119	supplier	那牧尔乳制品厂/纯净之源	3400.00	2026-01-19	8	孟根	采购单CG202603311119审核自动生成	1	2026-04-26 16:06:25.782171	2026-04-26 16:08:18.533245	purchase	1	1	管理员
+462	FK202604266107	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	2964.01	2025-01-19	9	乌日力格	采购单付款 #381	1	2026-04-26 16:07:01.642347	2026-04-26 16:09:08.662392		1	1	管理员
+469	FK202604286899	PO2026042813181255686	supplier	酷简旗舰店/淘宝	570.00	2026-04-28	7	公司支出账户	采购单PO2026042813181255686审核自动生成	1	2026-04-28 05:19:18.003219	\N	purchase	1	1	管理员
+471	FK202604297006	PO2026042915313785163	supplier	科尔沁奶食品	50.00	2026-04-29	7	公司支出账户	采购单PO2026042915313785163审核自动生成	1	2026-04-29 07:33:03.997742	\N	purchase	1	1	管理员
+476	FK202605026119		supplier	孟克河	1.00	2026-05-02	7	公司支出账户	TEST - DO NOT SAVE	1	2026-05-02 01:36:29.667013	2026-05-02 01:45:14.136454		1	1	管理员
+866	FK202608126850	PO2026081217071848182	supplier	阿润查干	120.00	2026-08-12	7	公司支出账户	采购单PO2026081217071848182审核自动生成	1	2026-08-12 09:08:05.967476	\N	purchase	1	1	管理员
+508	FK202605025753	CG0002608	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	原采购单 CG0002608 (2025-11-16) — 拼多多/随机店采购 — 冷冻柜/冰箱×1	1	2026-05-02 07:21:37.489765	2026-05-02 07:30:40.199627		1	1	管理员
+507	FK202605021740	CG0002609	supplier	盛大印刷	594.70	2025-11-16	7	公司支出账户	原采购单 CG0002609 (2025-11-16) — 盛大印刷 — 标签/不干胶/冻炒米×500、茶包/类腰封纸×2000、黄油脖签×500、新茶专用标签纸×3000	1	2026-05-02 07:21:36.728254	2026-05-02 07:30:40.890073		1	1	管理员
+506	FK202605021560	CG0002610	supplier	民族印刷厂	120.00	2025-11-16	7	公司支出账户	原采购单 CG0002610 (2025-11-16) — 民族印刷厂 — 甜味/标签/不干胶/传统奶豆腐×25、原味/标签/不干胶/传统奶豆腐×25、茶专用/不干胶/标签×60	1	2026-05-02 07:21:35.865741	2026-05-02 07:30:41.543541		1	1	管理员
+867	FK202608124240	PO2026081217080930540	supplier	科尔沁奶食品	50.00	2026-08-12	7	公司支出账户	采购单PO2026081217080930540审核自动生成	1	2026-08-12 09:08:42.203833	\N	purchase	1	1	管理员
+512	FK202605022285	CG0002022	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	原采购单 CG0002022 (2025-10-10) — 恩赫奶制品厂 — 散装/原味奶条×15	1	2026-05-02 07:21:40.654602	2026-05-02 07:30:37.020158		1	1	管理员
+515	FK202605027188		other	奶皮真空袋	50.00	2026-05-02	7	公司支出账户		1	2026-05-02 09:14:26.921567	\N		1	1	管理员
+548	FK202605042716	CG202603312825	supplier	额吉伊德	161.00	2026-01-27	7	公司支出账户	采购单付款 #372	1	2026-05-04 12:43:26.956545	2026-05-05 02:12:39.996172		1	1	管理员
+545	FK202605049734	CG202603317050	supplier	科尔沁奶食品	158.00	2026-02-09	7	公司支出账户	采购单付款 #362	1	2026-05-04 12:43:22.5808	2026-05-05 02:12:33.327681		1	1	管理员
+636	FK202605104774		supplier	巴音珠萨朗	207.00	2025-12-16	7		采购单付款 #419	1	2026-05-10 06:40:52.772908	\N		1	1	管理员
+637	FK202605127603	CG202603318843	supplier	翁牛特旗奶果子	493.00	2025-11-30	9	乌日力格	采购单CG202603318843审核自动生成	1	2026-05-12 05:44:16.778375	2026-05-12 05:49:01.723169	purchase	1	1	管理员
+640	FK202605123666	PO202605121507588787	supplier	科尔沁奶食品	270.00	2026-05-12	7	公司支出账户	采购单PO202605121507588787审核自动生成	1	2026-05-12 07:09:28.639287	\N	purchase	1	1	管理员
+672	FK202605297858	PO2026052913280034922	supplier	科尔沁奶食品	290.00	2026-03-30	7	公司支出账户	采购单PO2026052913280034922审核自动生成	1	2026-05-29 05:29:09.873898	\N	purchase	1	1	管理员
+751	FK202606075088	CG202603317188	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单付款 #402	1	2026-06-07 11:39:08.972715	\N		1	1	管理员
+60	FK202603299527		other	那牧尔乳制品厂/纯净之源	20.00	2025-12-16	7	公司支出账户	拉货	1	2026-03-29 15:37:41.252526	\N		1	1	管理员
+61	FK202603295590		other	那牧尔乳制品厂/纯净之源	487.60	2025-12-05	7	公司支出账户	奶果子内袋包装费/42.92公斤/1公斤11.36元。	1	2026-03-29 15:37:42.148896	\N		1	1	管理员
+62	FK202603296675		other	店面	150.00	2025-12-04	7	公司支出账户	店面	1	2026-03-29 15:37:43.177797	\N		1	1	管理员
+63	FK202603295685		other	店面	600.00	2025-12-04	7	公司支出账户	店面	1	2026-03-29 15:37:44.150817	\N		1	1	管理员
+64	FK202603293583		other	拼多多/随机店采购	38.90	2025-12-04	7	公司支出账户	计算器	1	2026-03-29 15:37:45.062344	\N		1	1	管理员
+65	FK202603293606		other	店面	400.00	2025-12-04	7	公司支出账户	要了分断式的	1	2026-03-29 15:37:45.972017	\N		1	1	管理员
+66	FK202603294619		other	店面	180.00	2025-12-04	7	公司支出账户	三个货架+地板贴	1	2026-03-29 15:37:46.873213	\N		1	1	管理员
+67	FK202603294511		other	包装支出	400.00	2025-12-04	7	公司支出账户	打样费两次，定制打货5000以上会扣除。	1	2026-03-29 15:37:47.925845	\N		1	1	管理员
+68	FK202603293178		other	店面	31.30	2025-11-26	7	公司支出账户	店面	1	2026-03-29 15:37:48.900549	\N		1	1	管理员
+69	FK202603295676		other	店面	2800.00	2025-11-22	8	孟根	店面	1	2026-03-29 15:37:49.906692	\N		1	1	管理员
+70	FK202603293376		other	店面	113.00	2025-11-21	7	公司支出账户	店面	1	2026-03-29 15:37:50.855229	\N		1	1	管理员
+71	FK202603298255		other	店面	4000.00	2025-11-20	8	孟根	两个2米6	1	2026-03-29 15:37:51.782917	\N		1	1	管理员
+72	FK202603299758		other	店面	20.38	2025-11-20	7	公司支出账户	店面	1	2026-03-29 15:37:52.682326	\N		1	1	管理员
+73	FK202603292372		other	店面	1574.00	2025-11-17	8	孟根	店面	1	2026-03-29 15:37:53.622949	\N		1	1	管理员
+74	FK202603292865		other	店面	2800.45	2025-11-14	8	孟根	店面	1	2026-03-29 15:37:54.884444	\N		1	1	管理员
+75	FK202603295589		other	店面	65.20	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:37:55.770361	\N		1	1	管理员
+76	FK202603296838		other	店面	300.00	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:37:56.664712	\N		1	1	管理员
+77	FK202603293766		other	店面	1000.00	2025-11-16	7	公司支出账户	总额5000	1	2026-03-29 15:37:57.622223	\N		1	1	管理员
+78	FK202603297328		other	店面	1410.00	2025-11-16	7	公司支出账户	卫生间隔断60+安装三相电闸180+安装灯/插排/230/水龙头/90+地板贴安装/卫生850	1	2026-03-29 15:37:58.872661	\N		1	1	管理员
+79	FK202603292919		other	店面	399.00	2025-11-07	7	公司支出账户	已开票/三相电线	1	2026-03-29 15:37:59.793984	\N		1	1	管理员
+81	FK202603292739		other	店面	1600.00	2025-11-16	7	公司支出账户	张静海/水暖/大白/隔断	1	2026-03-29 15:38:01.690294	\N		1	1	管理员
+82	FK202603299527		other	店面	5000.00	2025-11-11	8	孟根	张静海/水暖/大白/隔断/部分尾款	1	2026-03-29 15:38:02.57709	\N		1	1	管理员
+83	FK202603296344		other	其他支出	796.00	2025-11-01	9	乌日力格	其他支出	1	2026-03-29 15:38:04.41024	\N		1	1	管理员
+84	FK202603292934		other	店面	518.80	2025-11-01	8	孟根	店面	1	2026-03-29 15:38:05.340346	\N		1	1	管理员
+85	FK202603296825		other	店面	3400.00	2025-11-01	8	孟根	共计6400/已结清	1	2026-03-29 15:38:06.289758	\N		1	1	管理员
+86	FK202603297905		other	店面	700.00	2025-11-01	8	孟根	店面	1	2026-03-29 15:38:07.179161	\N		1	1	管理员
+87	FK202603291825		other	其他支出	1500.00	2025-11-01	9	乌日力格	共计2500， 还欠1000元	1	2026-03-29 15:38:08.105727	\N		1	1	管理员
+88	FK202603291967		other	店面	25.00	2025-10-28	9	乌日力格	钉子/发泡剂	1	2026-03-29 15:38:09.015514	\N		1	1	管理员
+89	FK202603295096		other	店面	5000.00	2025-10-26	9	乌日力格	总金额/预付款	1	2026-03-29 15:38:10.05528	\N		1	1	管理员
+90	FK202603292233		other	店面	350.00	2025-10-24	9	乌日力格	店面	1	2026-03-29 15:38:10.96623	\N		1	1	管理员
+91	FK202603291623		other	店面	540.00	2025-10-26	9	乌日力格	店面	1	2026-03-29 15:38:11.858102	\N		1	1	管理员
+92	FK202603294894		other	其他支出	800.00	2025-10-23	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:14.074908	\N		1	1	管理员
+93	FK202603292505		other	其他支出	660.00	2025-10-26	10	乌日力格/额外支出	其他支出	1	2026-03-29 15:38:14.980808	\N		1	1	管理员
+95	FK202603294962		other	店面	286.00	2025-10-14	8	孟根	店面	1	2026-03-29 15:38:16.81842	\N		1	1	管理员
+96	FK202603295262		other	店面	3000.00	2025-10-13	8	孟根	店面	1	2026-03-29 15:38:17.725993	\N		1	1	管理员
+97	FK202603295739		other	劳务费	400.00	2025-10-12	9	乌日力格	仓库货品点数	1	2026-03-29 15:38:18.608155	\N		1	1	管理员
+98	FK202603298495		other	其他支出	18000.00	2025-10-09	8	孟根		1	2026-03-29 15:38:19.526667	\N		1	1	管理员
+99	FK202604018180	CG202603318815	supplier	银河包装	200.93	2025-09-30	17	银河包装	采购单CG202603318815审核自动生成	1	2026-04-01 01:38:12.893047	2026-04-03 07:19:16.654718		1	1	管理员
+100	FK202604015785	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	18	盛大印刷	采购单CG202603313025审核自动生成	1	2026-04-01 01:38:50.706638	2026-04-03 07:19:18.004867		1	1	管理员
+101	FK202604011140	CG202603319057	supplier	银河包装	66.60	2025-09-30	17	银河包装	采购单CG202603319057审核自动生成	1	2026-04-01 01:38:52.913764	2026-04-03 07:19:19.386888		1	1	管理员
+102	FK202604013099	CG202603312326	supplier	银河包装	9.10	2025-09-30	17	银河包装	采购单CG202603312326审核自动生成	1	2026-04-01 01:38:57.015091	2026-04-03 07:19:20.73531		1	1	管理员
+103	FK202604018250	CG202603314925	supplier	盛大印刷	0.96	2025-09-30	18	盛大印刷	采购单CG202603314925审核自动生成	1	2026-04-01 01:38:59.508483	2026-04-03 07:19:22.113541		1	1	管理员
+104	FK202604011382	CG202603314472	supplier	淘宝紫辰包装	10.20	2025-09-30	19	淘宝紫辰包装	采购单CG202603314472审核自动生成	1	2026-04-01 01:39:02.327739	2026-04-03 07:19:23.489413		1	1	管理员
+105	FK202604015811	CG202603311551	supplier	银河包装	206.16	2025-09-30	17	银河包装	采购单CG202603311551审核自动生成	1	2026-04-01 01:39:06.244886	2026-04-03 07:19:24.911268		1	1	管理员
+107	FK202604013243	CG202603312835	supplier	盛大印刷	5.20	2025-09-30	18	盛大印刷	采购单CG202603312835审核自动生成	1	2026-04-01 01:39:13.134032	2026-04-03 07:19:27.783098		1	1	管理员
+108	FK202604018847	CG202603317171	supplier	淘宝紫辰包装	49.50	2025-09-30	19	淘宝紫辰包装	采购单CG202603317171审核自动生成	1	2026-04-01 01:39:16.528492	2026-04-03 07:19:29.211545		1	1	管理员
+109	FK202604013111	CG202603319135	supplier	盛大印刷	1.74	2025-09-30	18	盛大印刷	采购单CG202603319135审核自动生成	1	2026-04-01 01:39:18.805024	2026-04-03 07:19:30.603405		1	1	管理员
+110	FK202604017364	CG202603315123	supplier	盛大印刷	0.39	2025-09-30	18	盛大印刷	采购单CG202603315123审核自动生成	1	2026-04-01 01:39:22.096162	2026-04-03 07:19:31.962418		1	1	管理员
+111	FK202604015079	CG202603316376	supplier	盛大印刷	1469.00	2025-09-30	18	盛大印刷	采购单CG202603316376审核自动生成	1	2026-04-01 01:39:25.256777	2026-04-03 07:19:33.387331		1	1	管理员
+80	FK202603296019		other	店面	300.00	2025-11-16	7	公司支出账户	店面	1	2026-03-29 15:38:00.775247	2026-04-06 12:20:43.723697		1	1	管理员
+153	FK202604018256	CG202603319137	supplier	淘宝/杂	925.00	2025-12-01	38	淘宝/杂	采购单CG202603319137审核自动生成	1	2026-04-01 01:41:16.468216	2026-04-03 07:18:14.41419		1	1	管理员
+152	FK202604014306	CG202603318843	supplier	翁牛特旗奶果子	2146.00	2025-11-30	26	翁牛特旗奶果子	采购单CG202603318843审核自动生成	1	2026-04-01 01:41:14.390363	2026-04-03 07:18:22.760887		1	1	管理员
+146	FK202604019236	CG202603317098	supplier	拼多多/木勺	159.90	2025-11-16	24	拼多多/木勺	采购单CG202603317098审核自动生成	1	2026-04-01 01:40:55.650516	2026-04-03 07:18:26.989771		1	1	管理员
+147	FK202604016107	CG202603318383	supplier	拼多多/热缩膜	245.49	2025-11-16	25	拼多多/热缩膜	采购单CG202603318383审核自动生成	1	2026-04-01 01:40:58.367347	2026-04-03 07:18:28.497809		1	1	管理员
+148	FK202604017052	CG202603312758	supplier	拼多多/随机店采购	38.00	2025-11-16	36	拼多多/随机店采购	采购单CG202603312758审核自动生成	1	2026-04-01 01:41:04.453555	2026-04-03 07:18:30.043011		1	1	管理员
+149	FK202604011960	CG202603315962	supplier	拼多多/随机店采购	2800.00	2025-11-16	36	拼多多/随机店采购	采购单CG202603315962审核自动生成	1	2026-04-01 01:41:07.558097	2026-04-03 07:18:31.507104		1	1	管理员
+150	FK202604016657	CG202603318653	supplier	盛大印刷	594.69	2025-11-16	18	盛大印刷	采购单CG202603318653审核自动生成	1	2026-04-01 01:41:10.173399	2026-04-03 07:18:32.943452		1	1	管理员
+151	FK202604019307	CG202603316610	supplier	民族印刷厂	96.00	2025-11-16	37	民族印刷厂	采购单CG202603316610审核自动生成	1	2026-04-01 01:41:12.272136	2026-04-03 07:18:34.31649		1	1	管理员
+144	FK202604011832	CG202603313230	supplier	广州维记	1817.00	2025-11-07	28	广州维记	采购单CG202603313230审核自动生成	1	2026-04-01 01:40:50.464208	2026-04-03 07:18:38.620609		1	1	管理员
+141	FK202604014150	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	23	山东锦食食品	采购单CG202603319388审核自动生成	1	2026-04-01 01:40:43.84265	2026-04-03 07:18:40.002558		1	1	管理员
+142	FK202604014436	CG202603313284	supplier	阿旗北方	46.80	2025-11-01	35	阿旗北方	采购单CG202603313284审核自动生成	1	2026-04-01 01:40:45.904882	2026-04-03 07:18:41.470368		1	1	管理员
+143	FK202604017261	CG202603313108	supplier	山东锦食食品	242.08	2025-11-01	23	山东锦食食品	采购单CG202603313108审核自动生成	1	2026-04-01 01:40:47.962681	2026-04-03 07:18:43.292892		1	1	管理员
+140	FK202604016241	CG202603316946	supplier	阿旗北方	16.50	2025-10-31	35	阿旗北方	采购单CG202603316946审核自动生成	1	2026-04-01 01:40:41.690931	2026-04-03 07:18:44.672007		1	1	管理员
+138	FK202604018495	CG202603315309	supplier	广州维记	1820.00	2025-10-26	28	广州维记	采购单CG202603315309审核自动生成	1	2026-04-01 01:40:36.758715	2026-04-03 07:18:46.060243		1	1	管理员
+139	FK202604011913	CG202603317037	supplier	锡盟艾润萨利SC	470.00	2025-10-26	34	锡盟艾润萨利SC	采购单CG202603317037审核自动生成	1	2026-04-01 01:40:39.439772	2026-04-03 07:18:47.575431		1	1	管理员
+137	FK202604016318	CG202603316258	supplier	淘宝欧信	1700.00	2025-10-22	33	淘宝欧信	采购单CG202603316258审核自动生成	1	2026-04-01 01:40:34.536977	2026-04-03 07:18:49.107985		1	1	管理员
+135	FK202604016325	CG202603311175	supplier	恩赫奶制品厂	284.40	2025-10-20	29	恩赫奶制品厂	采购单CG202603311175审核自动生成	1	2026-04-01 01:40:28.771078	2026-04-03 07:18:50.503666		1	1	管理员
+136	FK202604014635	CG202603318976	supplier	恩赫奶制品厂	82.80	2025-10-20	29	恩赫奶制品厂	采购单CG202603318976审核自动生成	1	2026-04-01 01:40:32.327963	2026-04-03 07:18:51.911061		1	1	管理员
+133	FK202604017117	CG202603315878	supplier	巴音珠萨朗	422.56	2025-10-12	31	巴音珠萨朗	采购单CG202603315878审核自动生成	1	2026-04-01 01:40:24.014476	2026-04-03 07:18:54.688686		1	1	管理员
+134	FK202604011589	CG202603314185	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603314185审核自动生成	1	2026-04-01 01:40:26.127408	2026-04-03 07:18:56.066786		1	1	管理员
+132	FK202604014808	CG202603313258	supplier	优如包装	7500.01	2025-10-11	30	优如包装	采购单CG202603313258审核自动生成	1	2026-04-01 01:40:21.276956	2026-04-03 07:18:57.458423		1	1	管理员
+131	FK202604016517	CG202603313299	supplier	恩赫奶制品厂	270.00	2025-10-10	29	恩赫奶制品厂	采购单CG202603313299审核自动生成	1	2026-04-01 01:40:18.1797	2026-04-03 07:18:58.915023		1	1	管理员
+130	FK202604013994	CG202603315174	supplier	广州维记	1455.00	2025-10-09	28	广州维记	采购单CG202603315174审核自动生成	1	2026-04-01 01:40:15.336029	2026-04-03 07:19:00.304005		1	1	管理员
+129	FK202604018125	CG202603319414	supplier	永巨茶业	2825.04	2025-10-06	27	永巨茶业	采购单CG202603319414审核自动生成	1	2026-04-01 01:40:13.193463	2026-04-03 07:19:01.718664		1	1	管理员
+120	FK202604012669	CG202603317526	supplier	山东锦食食品	151.10	2025-10-01	23	山东锦食食品	采购单CG202603317526审核自动生成	1	2026-04-01 01:39:48.768357	2026-04-03 07:19:03.392451		1	1	管理员
+121	FK202604016749	CG202603311612	supplier	拼多多/木勺	63.96	2025-10-01	24	拼多多/木勺	采购单CG202603311612审核自动生成	1	2026-04-01 01:39:52.128942	2026-04-03 07:19:05.219475		1	1	管理员
+122	FK202604011719	CG202603314707	supplier	盛大印刷	360.00	2025-10-01	18	盛大印刷	采购单CG202603314707审核自动生成	1	2026-04-01 01:39:54.175968	2026-04-03 07:19:06.725836		1	1	管理员
+123	FK202604016851	CG202603319038	supplier	拼多多/热缩膜	100.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603319038审核自动生成	1	2026-04-01 01:39:56.255488	2026-04-03 07:19:08.201024		1	1	管理员
+124	FK202604016444	CG202603318635	supplier	银河包装	400.00	2025-10-01	17	银河包装	采购单CG202603318635审核自动生成	1	2026-04-01 01:39:59.411552	2026-04-03 07:19:09.599567		1	1	管理员
+125	FK202604015306	CG202603315898	supplier	拼多多/热缩膜	50.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603315898审核自动生成	1	2026-04-01 01:40:03.360724	2026-04-03 07:19:10.982432		1	1	管理员
+126	FK202604016097	CG202603316864	supplier	翁牛特旗奶果子	456.00	2025-10-01	26	翁牛特旗奶果子	采购单CG202603316864审核自动生成	1	2026-04-01 01:40:05.362188	2026-04-03 07:19:12.421716		1	1	管理员
+127	FK202604014237	CG202603318624	supplier	拼多多/热缩膜	100.00	2025-10-01	25	拼多多/热缩膜	采购单CG202603318624审核自动生成	1	2026-04-01 01:40:08.007076	2026-04-03 07:19:13.887462		1	1	管理员
+128	FK202604017123	CG202603316040	supplier	翁牛特旗奶果子	360.00	2025-10-01	26	翁牛特旗奶果子	采购单CG202603316040审核自动生成	1	2026-04-01 01:40:10.089919	2026-04-03 07:19:15.263438		1	1	管理员
+113	FK202604018373	CG202603313713	supplier	银河包装	6580.05	2025-09-30	17	银河包装	采购单CG202603313713审核自动生成	1	2026-04-01 01:39:30.061788	2026-04-03 07:19:26.397598		1	1	管理员
+114	FK202604011522	CG202603318956	supplier	银河包装	5751.26	2025-09-30	17	银河包装	采购单CG202603318956审核自动生成	1	2026-04-01 01:39:32.652907	2026-04-03 07:19:37.79197		1	1	管理员
+115	FK202604018781	CG202603317717	supplier	盛大印刷	66.66	2025-09-30	18	盛大印刷	采购单CG202603317717审核自动生成	1	2026-04-01 01:39:35.941341	2026-04-03 07:19:39.279109		1	1	管理员
+116	FK202604017246	CG202603317878	supplier	淘宝紫辰包装	56.10	2025-09-30	19	淘宝紫辰包装	采购单CG202603317878审核自动生成	1	2026-04-01 01:39:38.187143	2026-04-03 07:19:40.661807		1	1	管理员
+117	FK202604016322	CG202603312052	supplier	淘宝紫辰包装	3.40	2025-09-30	19	淘宝紫辰包装	采购单CG202603312052审核自动生成	1	2026-04-01 01:39:40.908867	2026-04-03 07:19:42.513085		1	1	管理员
+118	FK202604012933	CG202603313843	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	22	淘宝/江苏永发玻璃制品厂	采购单CG202603313843审核自动生成	1	2026-04-01 01:39:42.982645	2026-04-03 07:19:43.959866		1	1	管理员
+119	FK202604018921	CG202603312503	supplier	盛大印刷	970.45	2025-09-30	18	盛大印刷	采购单CG202603312503审核自动生成	1	2026-04-01 01:39:45.01742	2026-04-03 07:19:45.400299		1	1	管理员
+190	FK202604011395	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-25	40	科尔沁奶食品	采购单CG202603318798审核自动生成	1	2026-04-01 01:42:54.876223	2026-04-03 07:16:17.273886		1	1	管理员
+191	FK202604018174	CG202603313911	supplier	阿润查干	182.00	2025-12-25	44	阿润查干	采购单CG202603313911审核自动生成	1	2026-04-01 01:42:57.009303	2026-04-03 07:16:18.824076		1	1	管理员
+192	FK202604013249	CG202603315570	supplier	纯净奶食品	2310.00	2025-12-25	39	纯净奶食品	采购单CG202603315570审核自动生成	1	2026-04-01 01:42:59.16655	2026-04-03 07:16:20.263095		1	1	管理员
+193	FK202604011462	CG202603318561	supplier	盛大印刷	47.80	2025-12-25	18	盛大印刷	采购单CG202603318561审核自动生成	1	2026-04-01 01:43:01.29454	2026-04-03 07:16:21.642641		1	1	管理员
+194	FK202604019416	CG202603311750	supplier	盛大印刷	33.50	2025-12-25	18	盛大印刷	采购单CG202603311750审核自动生成	1	2026-04-01 01:43:04.008618	2026-04-03 07:16:23.01622		1	1	管理员
+195	FK202604018267	CG202603316305	supplier	盛大印刷	43.20	2025-12-25	18	盛大印刷	采购单CG202603316305审核自动生成	1	2026-04-01 01:43:06.20373	2026-04-03 07:16:24.402341		1	1	管理员
+189	FK202604012522	CG202603319237	supplier	科尔沁奶食品	150.00	2025-12-24	40	科尔沁奶食品	采购单CG202603319237审核自动生成	1	2026-04-01 01:42:52.814758	2026-04-03 07:16:32.027608		1	1	管理员
+188	FK202604016991	CG202603319917	supplier	纯净奶食品	325.00	2025-12-21	39	纯净奶食品	采购单CG202603319917审核自动生成	1	2026-04-01 01:42:50.677649	2026-04-03 07:16:34.977931		1	1	管理员
+187	FK202604015923	CG202603315281	supplier	奥都奶食品	352.00	2025-12-19	43	奥都奶食品	采购单CG202603315281审核自动生成	1	2026-04-01 01:42:47.829625	2026-04-03 07:16:38.193774		1	1	管理员
+184	FK202604016923	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	42	杂/采购商	采购单CG202603316981审核自动生成	1	2026-04-01 01:42:41.557755	2026-04-03 07:16:41.110618		1	1	管理员
+185	FK202604012626	CG202603319402	supplier	纯净奶食品	971.50	2025-12-17	39	纯净奶食品	采购单CG202603319402审核自动生成	1	2026-04-01 01:42:43.610873	2026-04-03 07:16:42.5846		1	1	管理员
+186	FK202604015250	CG202603312070	supplier	科尔沁奶食品	555.00	2025-12-17	40	科尔沁奶食品	采购单CG202603312070审核自动生成	1	2026-04-01 01:42:45.651256	2026-04-03 07:16:46.269405		1	1	管理员
+182	FK202604017883	CG202603314778	supplier	巴音珠萨朗	184.00	2025-12-16	31	巴音珠萨朗	采购单CG202603314778审核自动生成	1	2026-04-01 01:42:36.288167	2026-04-03 07:16:52.74749		1	1	管理员
+183	FK202604017363	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	29	恩赫奶制品厂	采购单CG202603312913审核自动生成	1	2026-04-01 01:42:38.373525	2026-04-03 07:16:54.346084		1	1	管理员
+180	FK202604011200	CG202603318036	supplier	科尔沁奶食品	235.00	2025-12-14	40	科尔沁奶食品	采购单CG202603318036审核自动生成	1	2026-04-01 01:42:30.545034	2026-04-03 07:16:58.914365		1	1	管理员
+179	FK202604018898	CG202603317045	supplier	奥都奶食品	128.00	2025-12-13	43	奥都奶食品	采购单CG202603317045审核自动生成	1	2026-04-01 01:42:28.230427	2026-04-03 07:17:05.121889		1	1	管理员
+177	FK202604018982	CG202603315371	supplier	纯净奶食品	272.00	2025-12-12	39	纯净奶食品	采购单CG202603315371审核自动生成	1	2026-04-01 01:42:24.007646	2026-04-03 07:17:08.356939		1	1	管理员
+178	FK202604017371	CG202603316227	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603316227审核自动生成	1	2026-04-01 01:42:26.082986	2026-04-03 07:17:09.900895		1	1	管理员
+171	FK202604019173	CG202603319340	supplier	科尔沁奶食品	526.00	2025-12-10	40	科尔沁奶食品	采购单CG202603319340审核自动生成	1	2026-04-01 01:42:05.954276	2026-04-03 07:17:14.485616		1	1	管理员
+172	FK202604019180	CG202603319006	supplier	恩赫奶制品厂	554.40	2025-12-10	29	恩赫奶制品厂	采购单CG202603319006审核自动生成	1	2026-04-01 01:42:08.172811	2026-04-03 07:17:16.004413		1	1	管理员
+173	FK202604014518	CG202603316651	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	32	那牧尔乳制品厂/纯净之源	采购单CG202603316651审核自动生成	1	2026-04-01 01:42:13.66642	2026-04-03 07:17:17.49641		1	1	管理员
+174	FK202604013723	CG202603319218	supplier	盛大印刷	963.00	2025-12-10	18	盛大印刷	采购单CG202603319218审核自动生成	1	2026-04-01 01:42:16.635108	2026-04-03 07:17:19.011959		1	1	管理员
+175	FK202604018696	CG202603313799	supplier	广州维记	3380.00	2025-12-10	28	广州维记	采购单CG202603313799审核自动生成	1	2026-04-01 01:42:19.555994	2026-04-03 07:17:20.533593		1	1	管理员
+176	FK202604015823	CG202603318375	supplier	杂/采购商	21.00	2025-12-10	42	杂/采购商	采购单CG202603318375审核自动生成	1	2026-04-01 01:42:21.705565	2026-04-03 07:17:21.963676		1	1	管理员
+168	FK202604018602	CG202603316236	supplier	科尔沁奶食品	48.00	2025-12-09	40	科尔沁奶食品	采购单CG202603316236审核自动生成	1	2026-04-01 01:41:59.393029	2026-04-03 07:17:32.178304		1	1	管理员
+169	FK202604017222	CG202603316781	supplier	科尔沁奶食品	25.00	2025-12-09	40	科尔沁奶食品	采购单CG202603316781审核自动生成	1	2026-04-01 01:42:01.523198	2026-04-03 07:17:33.63455		1	1	管理员
+170	FK202604016141	CG202603317747	supplier	科尔沁奶食品	751.00	2025-12-09	40	科尔沁奶食品	采购单CG202603317747审核自动生成	1	2026-04-01 01:42:03.898543	2026-04-03 07:17:35.235499		1	1	管理员
+166	FK202604015143	CG202603313199	supplier	奥都奶食品	240.00	2025-12-07	43	奥都奶食品	采购单CG202603313199审核自动生成	1	2026-04-01 01:41:54.348768	2026-04-03 07:17:41.283428		1	1	管理员
+167	FK202604013094	CG202603319564	supplier	优如包装	4400.01	2025-12-07	30	优如包装	采购单CG202603319564审核自动生成	1	2026-04-01 01:41:57.235093	2026-04-03 07:17:42.674919		1	1	管理员
+161	FK202604011706	CG202603316877	supplier	拼多多/随机店采购	124.62	2025-12-05	36	拼多多/随机店采购	采购单CG202603316877审核自动生成	1	2026-04-01 01:41:38.386878	2026-04-03 07:17:45.546872		1	1	管理员
+162	FK202604014459	CG202603314856	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	32	那牧尔乳制品厂/纯净之源	采购单CG202603314856审核自动生成	1	2026-04-01 01:41:41.026047	2026-04-03 07:17:46.949182		1	1	管理员
+163	FK202604016827	CG202603317215	supplier	科尔沁奶食品	166.00	2025-12-05	40	科尔沁奶食品	采购单CG202603317215审核自动生成	1	2026-04-01 01:41:45.288989	2026-04-03 07:17:48.391457		1	1	管理员
+164	FK202604018384	CG202603319826	supplier	杂/采购商	107.00	2025-12-05	42	杂/采购商	采购单CG202603319826审核自动生成	1	2026-04-01 01:41:48.83886	2026-04-03 07:17:49.783647		1	1	管理员
+165	FK202604018763	CG202603318627	supplier	纯净奶食品	2805.00	2025-12-05	39	纯净奶食品	采购单CG202603318627审核自动生成	1	2026-04-01 01:41:51.072492	2026-04-03 07:17:51.218347		1	1	管理员
+157	FK202604017722	CG202603315629	supplier	科尔沁奶食品	154.00	2025-12-04	40	科尔沁奶食品	采购单CG202603315629审核自动生成	1	2026-04-01 01:41:26.840692	2026-04-03 07:17:59.921538		1	1	管理员
+158	FK202604012895	CG202603318249	supplier	纯净奶食品	772.00	2025-12-04	39	纯净奶食品	采购单CG202603318249审核自动生成	1	2026-04-01 01:41:29.522396	2026-04-03 07:18:01.375517		1	1	管理员
+159	FK202604017309	CG202603319829	supplier	浙江金矿包装	2199.50	2025-12-04	41	浙江金矿包装	采购单CG202603319829审核自动生成	1	2026-04-01 01:41:32.277023	2026-04-03 07:18:02.811214		1	1	管理员
+160	FK202604018129	CG202603314585	supplier	盛大印刷	743.93	2025-12-04	18	盛大印刷	采购单CG202603314585审核自动生成	1	2026-04-01 01:41:35.007562	2026-04-03 07:18:04.244688		1	1	管理员
+156	FK202604016700	CG202603311756	supplier	纯净奶食品	2359.60	2025-12-03	39	纯净奶食品	采购单CG202603311756审核自动生成	1	2026-04-01 01:41:24.199965	2026-04-03 07:18:11.509509		1	1	管理员
+155	FK202604014767	CG202603318017	supplier	淘宝紫辰包装	70.40	2025-12-01	19	淘宝紫辰包装	采购单CG202603318017审核自动生成	1	2026-04-01 01:41:20.969887	2026-04-03 07:18:17.197988		1	1	管理员
+239	FK202604015419	CG202603319839	supplier	科尔沁奶食品	158.00	2026-02-09	40	科尔沁奶食品	采购单CG202603319839审核自动生成	1	2026-04-01 01:44:57.569663	2026-04-03 07:15:16.906497		1	1	管理员
+237	FK202604016038	CG202603319631	supplier	小米厂家阿旗	573.00	2026-02-08	54	小米厂家阿旗	采购单CG202603319631审核自动生成	1	2026-04-01 01:44:51.799054	2026-04-03 07:15:18.261093		1	1	管理员
+235	FK202604012938	CG202603312071	supplier	兴安盟杭盖奶制品厂	380.00	2026-02-04	48	兴安盟杭盖奶制品厂	采购单CG202603312071审核自动生成	1	2026-04-01 01:44:47.285814	2026-04-03 07:15:19.59042		1	1	管理员
+236	FK202604015192	CG202603317293	supplier	科尔沁奶食品	50.00	2026-02-04	40	科尔沁奶食品	采购单CG202603317293审核自动生成	1	2026-04-01 01:44:49.345322	2026-04-03 07:15:20.905987		1	1	管理员
+232	FK202604013766	CG202603315234	supplier	科尔沁奶食品	1163.00	2026-02-01	40	科尔沁奶食品	采购单CG202603315234审核自动生成	1	2026-04-01 01:44:39.423911	2026-04-03 07:15:22.289994		1	1	管理员
+233	FK202604018130	CG202603317843	supplier	雷记炒货	100.00	2026-02-01	46	雷记炒货	采购单CG202603317843审核自动生成	1	2026-04-01 01:44:41.779744	2026-04-03 07:15:23.615326		1	1	管理员
+234	FK202604014630	CG202603314313	supplier	阿润查干	200.00	2026-02-01	44	阿润查干	采购单CG202603314313审核自动生成	1	2026-04-01 01:44:44.644908	2026-04-03 07:15:25.08079		1	1	管理员
+228	FK202604017460	CG202603312948	supplier	科尔沁奶食品	140.00	2026-01-27	40	科尔沁奶食品	采购单CG202603312948审核自动生成	1	2026-04-01 01:44:29.404755	2026-04-03 07:15:26.416967		1	1	管理员
+229	FK202604011694	CG202603314311	supplier	额吉伊德	161.00	2026-01-27	51	额吉伊德	采购单CG202603314311审核自动生成	1	2026-04-01 01:44:31.470749	2026-04-03 07:15:27.842345		1	1	管理员
+230	FK202604012704	CG202603312096	supplier	奥特尔奶食品店	526.00	2026-01-27	52	奥特尔奶食品店	采购单CG202603312096审核自动生成	1	2026-04-01 01:44:33.606618	2026-04-03 07:15:29.236294		1	1	管理员
+231	FK202604016749	CG202603317619	supplier	沈阳包装	2785.97	2026-01-27	53	沈阳包装	采购单CG202603317619审核自动生成	1	2026-04-01 01:44:35.628175	2026-04-03 07:15:30.581958		1	1	管理员
+227	FK202604016116	CG202603319664	supplier	科尔沁奶食品	400.00	2026-01-24	40	科尔沁奶食品	采购单CG202603319664审核自动生成	1	2026-04-01 01:44:27.321937	2026-04-03 07:15:31.947779		1	1	管理员
+221	FK202604016206	CG202603318926	supplier	科尔沁奶食品	80.00	2026-01-20	40	科尔沁奶食品	采购单CG202603318926审核自动生成	1	2026-04-01 01:44:11.43905	2026-04-03 07:15:33.556766		1	1	管理员
+222	FK202604013982	CG202603312795	supplier	扎旗吉十奶制品	90.00	2026-01-20	49	扎旗吉十奶制品	采购单CG202603312795审核自动生成	1	2026-04-01 01:44:13.533008	2026-04-03 07:15:34.900742		1	1	管理员
+223	FK202604019969	CG202603319171	supplier	阿齐图/巴林右旗	1470.00	2026-01-20	50	阿齐图/巴林右旗	采购单CG202603319171审核自动生成	1	2026-04-01 01:44:15.67895	2026-04-03 07:15:36.289962		1	1	管理员
+224	FK202604011889	CG202603313509	supplier	糖炮	140.00	2026-01-20	47	糖炮	采购单CG202603313509审核自动生成	1	2026-04-01 01:44:18.069209	2026-04-03 07:15:37.667009		1	1	管理员
+225	FK202604019990	CG202603315006	supplier	杂/采购商	49.36	2026-01-20	42	杂/采购商	采购单CG202603315006审核自动生成	1	2026-04-01 01:44:22.175997	2026-04-03 07:15:39.043958		1	1	管理员
+226	FK202604013286	CG202603311425	supplier	拼多多/热缩膜	140.00	2026-01-20	25	拼多多/热缩膜	采购单CG202603311425审核自动生成	1	2026-04-01 01:44:24.242406	2026-04-03 07:15:40.428344		1	1	管理员
+219	FK202604011585	CG202603318254	supplier	科尔沁奶食品	147.00	2026-01-19	40	科尔沁奶食品	采购单CG202603318254审核自动生成	1	2026-04-01 01:44:06.978223	2026-04-03 07:15:41.778045		1	1	管理员
+220	FK202604016875	CG202603311119	supplier	那牧尔乳制品厂/纯净之源	6364.00	2026-01-19	32	那牧尔乳制品厂/纯净之源	采购单CG202603311119审核自动生成	1	2026-04-01 01:44:09.401491	2026-04-03 07:15:43.098645		1	1	管理员
+217	FK202604013213	CG202603314014	supplier	兴安盟杭盖奶制品厂	190.00	2026-01-17	48	兴安盟杭盖奶制品厂	采购单CG202603314014审核自动生成	1	2026-04-01 01:44:02.273945	2026-04-03 07:15:44.473876		1	1	管理员
+218	FK202604016904	CG202603317632	supplier	科尔沁奶食品	378.00	2026-01-17	40	科尔沁奶食品	采购单CG202603317632审核自动生成	1	2026-04-01 01:44:04.867441	2026-04-03 07:15:45.902781		1	1	管理员
+214	FK202604015180	CG202603317919	supplier	阿润查干	680.00	2026-01-16	44	阿润查干	采购单CG202603317919审核自动生成	1	2026-04-01 01:43:53.518477	2026-04-03 07:15:47.265393		1	1	管理员
+215	FK202604013966	CG202603317814	supplier	糖炮	240.00	2026-01-16	47	糖炮	采购单CG202603317814审核自动生成	1	2026-04-01 01:43:55.53165	2026-04-03 07:15:48.630679		1	1	管理员
+216	FK202604018882	CG202603311710	supplier	永巨茶业	3310.00	2026-01-16	27	永巨茶业	采购单CG202603311710审核自动生成	1	2026-04-01 01:43:57.742593	2026-04-03 07:15:49.988077		1	1	管理员
+210	FK202604018813	CG202603315468	supplier	科尔沁奶食品	50.00	2026-01-11	40	科尔沁奶食品	采购单CG202603315468审核自动生成	1	2026-04-01 01:43:45.25821	2026-04-03 07:15:51.347658		1	1	管理员
+211	FK202604018227	CG202603312889	supplier	浙江金矿包装	611.76	2026-01-11	41	浙江金矿包装	采购单CG202603312889审核自动生成	1	2026-04-01 01:43:47.403954	2026-04-03 07:15:52.714868		1	1	管理员
+212	FK202604019908	CG202603319582	supplier	雷记炒货	200.00	2026-01-11	46	雷记炒货	采购单CG202603319582审核自动生成	1	2026-04-01 01:43:49.406824	2026-04-03 07:15:54.039993		1	1	管理员
+213	FK202604016600	CG202603313858	supplier	科尔沁奶食品	48.00	2026-01-11	40	科尔沁奶食品	采购单CG202603313858审核自动生成	1	2026-04-01 01:43:51.481076	2026-04-03 07:15:55.377825		1	1	管理员
+208	FK202604017105	CG202603313876	supplier	山东锦食食品	687.00	2026-01-09	23	山东锦食食品	采购单CG202603313876审核自动生成	1	2026-04-01 01:43:41.052815	2026-04-03 07:15:56.729876		1	1	管理员
+207	FK202604014153	CG202603319112	supplier	科尔沁奶食品	713.00	2026-01-07	40	科尔沁奶食品	采购单CG202603319112审核自动生成	1	2026-04-01 01:43:38.34387	2026-04-03 07:15:59.450502		1	1	管理员
+205	FK202604011134	CG202603312353	supplier	科尔沁奶食品	220.00	2026-01-06	40	科尔沁奶食品	采购单CG202603312353审核自动生成	1	2026-04-01 01:43:33.171388	2026-04-03 07:16:00.787214		1	1	管理员
+206	FK202604016135	CG202603316269	supplier	巴音珠萨朗	854.00	2026-01-06	31	巴音珠萨朗	采购单CG202603316269审核自动生成	1	2026-04-01 01:43:35.306984	2026-04-03 07:16:02.703639		1	1	管理员
+203	FK202604013348	CG202603311038	supplier	纯净奶食品	60.00	2026-01-03	39	纯净奶食品	采购单CG202603311038审核自动生成	1	2026-04-01 01:43:27.035093	2026-04-03 07:16:04.136992		1	1	管理员
+204	FK202604016807	CG202603315470	supplier	茁硕乐/牛肉干	980.00	2026-01-03	45	茁硕乐/牛肉干	采购单CG202603315470审核自动生成	1	2026-04-01 01:43:30.191728	2026-04-03 07:16:05.570681		1	1	管理员
+201	FK202604016715	CG202603318600	supplier	纯净奶食品	1396.00	2026-01-01	39	纯净奶食品	采购单CG202603318600审核自动生成	1	2026-04-01 01:43:21.605999	2026-04-03 07:16:06.935162		1	1	管理员
+202	FK202604011094	CG202603317448	supplier	纯净奶食品	424.40	2026-01-01	39	纯净奶食品	采购单CG202603317448审核自动生成	1	2026-04-01 01:43:24.38902	2026-04-03 07:16:08.303711		1	1	管理员
+200	FK202604017400	CG202603318172	supplier	奥都奶食品	315.00	2025-12-31	43	奥都奶食品	采购单CG202603318172审核自动生成	1	2026-04-01 01:43:18.465915	2026-04-03 07:16:09.656415		1	1	管理员
+199	FK202604014858	CG202603313512	supplier	永巨茶业	1388.00	2025-12-29	27	永巨茶业	采购单CG202603313512审核自动生成	1	2026-04-01 01:43:16.305868	2026-04-03 07:16:11.117957		1	1	管理员
+198	FK202604014698	CG202603315199	supplier	科尔沁奶食品	75.00	2025-12-28	40	科尔沁奶食品	采购单CG202603315199审核自动生成	1	2026-04-01 01:43:14.232411	2026-04-03 07:16:15.664024		1	1	管理员
+251	FK202604016208	CG202603318570	supplier	科尔沁奶食品	75.00	2026-03-01	40	科尔沁奶食品	采购单CG202603318570审核自动生成	1	2026-04-01 01:45:25.881319	2026-04-03 07:14:55.581558		1	1	管理员
+253	FK202604016278	CG202603318189	supplier	科尔沁奶食品	50.00	2026-03-01	40	科尔沁奶食品	采购单CG202603318189审核自动生成	1	2026-04-01 01:45:30.253505	2026-04-03 07:14:58.393279		1	1	管理员
+254	FK202604018888	CG202603319515	supplier	科尔沁奶食品	220.00	2026-03-01	40	科尔沁奶食品	采购单CG202603319515审核自动生成	1	2026-04-01 01:45:32.353841	2026-04-03 07:14:59.78019		1	1	管理员
+249	FK202604017159	CG202603311066	supplier	兴安盟杭盖奶制品厂	380.00	2026-02-27	48	兴安盟杭盖奶制品厂	采购单CG202603311066审核自动生成	1	2026-04-01 01:45:21.70952	2026-04-03 07:15:01.191776		1	1	管理员
+248	FK202604011010	CG202603318392	supplier	德吉奶食品	270.00	2026-02-26	57	德吉奶食品	采购单CG202603318392审核自动生成	1	2026-04-01 01:45:19.595205	2026-04-03 07:15:02.626075		1	1	管理员
+244	FK202604018036	CG202603318133	supplier	格日勒	100.00	2026-02-23	56	格日勒	采购单CG202603318133审核自动生成	1	2026-04-01 01:45:07.885988	2026-04-03 07:15:03.969551		1	1	管理员
+245	FK202604017425	CG202603311777	supplier	科尔沁奶食品	850.00	2026-02-23	40	科尔沁奶食品	采购单CG202603311777审核自动生成	1	2026-04-01 01:45:10.68822	2026-04-03 07:15:05.332853		1	1	管理员
+246	FK202604015509	CG202603314534	supplier	科尔沁奶食品	450.00	2026-02-23	40	科尔沁奶食品	采购单CG202603314534审核自动生成	1	2026-04-01 01:45:14.861715	2026-04-03 07:15:06.753739		1	1	管理员
+247	FK202604014007	CG202603318524	supplier	科尔沁奶食品	858.00	2026-02-23	40	科尔沁奶食品	采购单CG202603318524审核自动生成	1	2026-04-01 01:45:17.554042	2026-04-03 07:15:08.23627		1	1	管理员
+243	FK202604016007	CG202603315370	supplier	科尔沁奶食品	965.00	2026-02-14	40	科尔沁奶食品	采购单CG202603315370审核自动生成	1	2026-04-01 01:45:05.833117	2026-04-03 07:15:09.673528		1	1	管理员
+242	FK202604017496	CG202603312202	supplier	科尔沁奶食品	145.00	2026-02-12	40	科尔沁奶食品	采购单CG202603312202审核自动生成	1	2026-04-01 01:45:03.738678	2026-04-03 07:15:11.02385		1	1	管理员
+241	FK202604012245	CG202603315780	supplier	乌日汗奶食品店	90.00	2026-02-10	55	乌日汗奶食品店	采购单CG202603315780审核自动生成	1	2026-04-01 01:45:01.70066	2026-04-03 07:15:13.98126		1	1	管理员
+281	FK202604015842	CG202603303089	supplier	纯净奶食品	272.00	2025-12-12	39	纯净奶食品	采购单CG202603303089审核自动生成	1	2026-04-01 01:46:44.020407	2026-04-03 07:17:11.468227		1	1	管理员
+282	FK202604014099	CG202603308349	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	32	那牧尔乳制品厂/纯净之源	采购单CG202603308349审核自动生成	1	2026-04-01 01:46:46.289007	2026-04-03 07:17:12.894446		1	1	管理员
+275	FK202604013429	CG202603305241	supplier	科尔沁奶食品	526.00	2025-12-10	40	科尔沁奶食品	采购单CG202603305241审核自动生成	1	2026-04-01 01:46:26.775216	2026-04-03 07:17:23.45995		1	1	管理员
+277	FK202604015130	CG202603305271	supplier	恩赫奶制品厂	554.40	2025-12-10	29	恩赫奶制品厂	采购单CG202603305271审核自动生成	1	2026-04-01 01:46:31.019276	2026-04-03 07:17:24.973312		1	1	管理员
+278	FK202604011297	CG202603304022	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	32	那牧尔乳制品厂/纯净之源	采购单CG202603304022审核自动生成	1	2026-04-01 01:46:35.835926	2026-04-03 07:17:26.391713		1	1	管理员
+279	FK202604015853	CG202603302325	supplier	盛大印刷	963.00	2025-12-10	18	盛大印刷	采购单CG202603302325审核自动生成	1	2026-04-01 01:46:38.320582	2026-04-03 07:17:27.859483		1	1	管理员
+280	FK202604015128	CG202603309418	supplier	广州维记	3380.00	2025-12-10	28	广州维记	采购单CG202603309418审核自动生成	1	2026-04-01 01:46:41.301841	2026-04-03 07:17:29.331817		1	1	管理员
+272	FK202604019112	CG202603304854	supplier	科尔沁奶食品	48.00	2025-12-09	40	科尔沁奶食品	采购单CG202603304854审核自动生成	1	2026-04-01 01:46:18.672395	2026-04-03 07:17:36.713291		1	1	管理员
+273	FK202604017103	CG202603305554	supplier	科尔沁奶食品	25.00	2025-12-09	40	科尔沁奶食品	采购单CG202603305554审核自动生成	1	2026-04-01 01:46:22.533389	2026-04-03 07:17:38.13569		1	1	管理员
+274	FK202604015313	CG202603301508	supplier	科尔沁奶食品	751.00	2025-12-09	40	科尔沁奶食品	采购单CG202603301508审核自动生成	1	2026-04-01 01:46:24.602742	2026-04-03 07:17:39.84945		1	1	管理员
+271	FK202604014371	CG202603306172	supplier	奥都奶食品	240.00	2025-12-07	43	奥都奶食品	采购单CG202603306172审核自动生成	1	2026-04-01 01:46:16.491938	2026-04-03 07:17:44.118353		1	1	管理员
+266	FK202604016975	CG202603301177	supplier	拼多多/随机店采购	124.62	2025-12-05	36	拼多多/随机店采购	采购单CG202603301177审核自动生成	1	2026-04-01 01:46:02.896362	2026-04-03 07:17:52.686554		1	1	管理员
+267	FK202604015872	CG202603304977	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	32	那牧尔乳制品厂/纯净之源	采购单CG202603304977审核自动生成	1	2026-04-01 01:46:06.943886	2026-04-03 07:17:54.086443		1	1	管理员
+268	FK202604016222	CG202603308245	supplier	科尔沁奶食品	166.00	2025-12-05	40	科尔沁奶食品	采购单CG202603308245审核自动生成	1	2026-04-01 01:46:10.003717	2026-04-03 07:17:55.639621		1	1	管理员
+269	FK202604012137	CG202603302270	supplier	杂/采购商	107.00	2025-12-05	42	杂/采购商	采购单CG202603302270审核自动生成	1	2026-04-01 01:46:12.099928	2026-04-03 07:17:57.037447		1	1	管理员
+270	FK202604015233	CG202603309410	supplier	纯净奶食品	2805.00	2025-12-05	39	纯净奶食品	采购单CG202603309410审核自动生成	1	2026-04-01 01:46:14.264776	2026-04-03 07:17:58.496059		1	1	管理员
+261	FK202604017681	CG202603306057	supplier	科尔沁奶食品	154.00	2025-12-04	40	科尔沁奶食品	采购单CG202603306057审核自动生成	1	2026-04-01 01:45:50.40781	2026-04-03 07:18:05.68004		1	1	管理员
+263	FK202604019397	CG202603302397	supplier	纯净奶食品	772.00	2025-12-04	39	纯净奶食品	采购单CG202603302397审核自动生成	1	2026-04-01 01:45:56.325333	2026-04-03 07:18:07.112314		1	1	管理员
+264	FK202604013112	CG202603309473	supplier	浙江金矿包装	2199.50	2025-12-04	41	浙江金矿包装	采购单CG202603309473审核自动生成	1	2026-04-01 01:45:58.501206	2026-04-03 07:18:08.562014		1	1	管理员
+265	FK202604016521	CG202603308185	supplier	盛大印刷	743.93	2025-12-04	18	盛大印刷	采购单CG202603308185审核自动生成	1	2026-04-01 01:46:00.623185	2026-04-03 07:18:10.059778		1	1	管理员
+262	FK202604018375	CG202603304535	supplier	纯净奶食品	2359.60	2025-12-03	39	纯净奶食品	采购单CG202603304535审核自动生成	1	2026-04-01 01:45:52.634137	2026-04-03 07:18:13.056365		1	1	管理员
+257	FK202604011854	CG202603306534	supplier	淘宝/杂	925.00	2025-12-01	38	淘宝/杂	采购单CG202603306534审核自动生成	1	2026-04-01 01:45:39.667756	2026-04-03 07:18:18.606514		1	1	管理员
+258	FK202604016004	CG202603305508	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	22	淘宝/江苏永发玻璃制品厂	采购单CG202603305508审核自动生成	1	2026-04-01 01:45:42.238113	2026-04-03 07:18:20.003731		1	1	管理员
+260	FK202604011264	CG202603306186	supplier	淘宝紫辰包装	70.40	2025-12-01	19	淘宝紫辰包装	采购单CG202603306186审核自动生成	1	2026-04-01 01:45:48.324139	2026-04-03 07:18:21.386151		1	1	管理员
+259	FK202604017564	CG202603308801	supplier	翁牛特旗奶果子	2146.00	2025-11-30	26	翁牛特旗奶果子	采购单CG202603308801审核自动生成	1	2026-04-01 01:45:45.155217	2026-04-03 07:18:24.123852		1	1	管理员
+255	FK202604011190	CG202603305055	supplier	盛大印刷	594.69	2025-11-16	18	盛大印刷	采购单CG202603305055审核自动生成	1	2026-04-01 01:45:34.439908	2026-04-03 07:18:35.767907		1	1	管理员
+256	FK202604014073	CG202603308739	supplier	民族印刷厂	96.00	2025-11-16	37	民族印刷厂	采购单CG202603308739审核自动生成	1	2026-04-01 01:45:37.593769	2026-04-03 07:18:37.192043		1	1	管理员
+276	FK202604014194	CG202603307063	supplier	恩赫奶制品厂	82.80	2025-10-20	29	恩赫奶制品厂	采购单CG202603307063审核自动生成	1	2026-04-01 01:46:28.891642	2026-04-03 07:18:53.278992		1	1	管理员
+252	FK202604012489	CG202603319830	supplier	科尔沁奶食品	50.00	2026-03-01	40	科尔沁奶食品	采购单CG202603319830审核自动生成	1	2026-04-01 01:45:28.089377	2026-04-03 07:14:57.033915		1	1	管理员
+240	FK202604012314	CG202603314546	supplier	科尔沁奶食品	50.00	2026-02-10	40	科尔沁奶食品	采购单CG202603314546审核自动生成	1	2026-04-01 01:44:59.623702	2026-04-03 07:15:12.407439		1	1	管理员
+209	FK202604013486	CG202603319904	supplier	翁牛特旗奶果子	3653.00	2026-01-09	26	翁牛特旗奶果子	采购单CG202603319904审核自动生成	1	2026-04-01 01:43:43.095785	2026-04-03 07:15:58.083105		1	1	管理员
+196	FK202604019320	CG202603314661	supplier	科尔沁奶食品	75.00	2025-12-28	40	科尔沁奶食品	采购单CG202603314661审核自动生成	1	2026-04-01 01:43:09.636583	2026-04-03 07:16:12.490306		1	1	管理员
+295	FK202604016820	CG202603309125	supplier	科尔沁奶食品	140.00	2025-12-25	40	科尔沁奶食品	采购单CG202603309125审核自动生成	1	2026-04-01 01:47:19.059171	2026-04-03 07:16:25.817507		1	1	管理员
+296	FK202604017481	CG202603305256	supplier	阿润查干	182.00	2025-12-25	44	阿润查干	采购单CG202603305256审核自动生成	1	2026-04-01 01:47:21.187135	2026-04-03 07:16:27.382517		1	1	管理员
+297	FK202604011768	CG202603309411	supplier	纯净奶食品	2310.00	2025-12-25	39	纯净奶食品	采购单CG202603309411审核自动生成	1	2026-04-01 01:47:23.394509	2026-04-03 07:16:28.941515		1	1	管理员
+298	FK202604011336	CG202603308630	supplier	盛大印刷	47.80	2025-12-25	18	盛大印刷	采购单CG202603308630审核自动生成	1	2026-04-01 01:47:25.587548	2026-04-03 07:16:30.536043		1	1	管理员
+294	FK202604018875	CG202603309170	supplier	科尔沁奶食品	150.00	2025-12-24	40	科尔沁奶食品	采购单CG202603309170审核自动生成	1	2026-04-01 01:47:16.880385	2026-04-03 07:16:33.509401		1	1	管理员
+293	FK202604012208	CG202603309920	supplier	纯净奶食品	325.00	2025-12-21	39	纯净奶食品	采购单CG202603309920审核自动生成	1	2026-04-01 01:47:14.825594	2026-04-03 07:16:36.55016		1	1	管理员
+292	FK202604016041	CG202603302336	supplier	奥都奶食品	352.00	2025-12-19	43	奥都奶食品	采购单CG202603302336审核自动生成	1	2026-04-01 01:47:12.663084	2026-04-03 07:16:39.677529		1	1	管理员
+289	FK202604014005	CG202603304928	supplier	杂/采购商	144.00	2025-12-17	42	杂/采购商	采购单CG202603304928审核自动生成	1	2026-04-01 01:47:04.936531	2026-04-03 07:16:48.181333		1	1	管理员
+290	FK202604013430	CG202603304184	supplier	纯净奶食品	971.50	2025-12-17	39	纯净奶食品	采购单CG202603304184审核自动生成	1	2026-04-01 01:47:06.987186	2026-04-03 07:16:49.586304		1	1	管理员
+291	FK202604019147	CG202603301141	supplier	科尔沁奶食品	555.00	2025-12-17	40	科尔沁奶食品	采购单CG202603301141审核自动生成	1	2026-04-01 01:47:09.467944	2026-04-03 07:16:51.288747		1	1	管理员
+287	FK202604013753	CG202603303596	supplier	巴音珠萨朗	184.00	2025-12-16	31	巴音珠萨朗	采购单CG202603303596审核自动生成	1	2026-04-01 01:46:59.117911	2026-04-03 07:16:55.948185		1	1	管理员
+288	FK202604019634	CG202603308467	supplier	恩赫奶制品厂	216.00	2025-12-16	29	恩赫奶制品厂	采购单CG202603308467审核自动生成	1	2026-04-01 01:47:02.525231	2026-04-03 07:16:57.483212		1	1	管理员
+181	FK202604011922	CG202603312951	supplier	那牧尔乳制品厂/纯净之源	390.00	2025-12-14	32	那牧尔乳制品厂/纯净之源	采购单CG202603312951审核自动生成	1	2026-04-01 01:42:33.627987	2026-04-03 07:17:00.467733		1	1	管理员
+285	FK202604016446	CG202603308629	supplier	科尔沁奶食品	235.00	2025-12-14	40	科尔沁奶食品	采购单CG202603308629审核自动生成	1	2026-04-01 01:46:53.540287	2026-04-03 07:17:02.048094		1	1	管理员
+286	FK202604012753	CG202603306282	supplier	那牧尔乳制品厂/纯净之源	390.00	2025-12-14	32	那牧尔乳制品厂/纯净之源	采购单CG202603306282审核自动生成	1	2026-04-01 01:46:56.085938	2026-04-03 07:17:03.64797		1	1	管理员
+284	FK202604019917	CG202603309372	supplier	奥都奶食品	128.00	2025-12-13	43	奥都奶食品	采购单CG202603309372审核自动生成	1	2026-04-01 01:46:51.402299	2026-04-03 07:17:06.616484		1	1	管理员
+283	FK202604019983	CG202603302265	supplier	杂/采购商	21.00	2025-12-10	42	杂/采购商	采购单CG202603302265审核自动生成	1	2026-04-01 01:46:48.625627	2026-04-03 07:17:30.727893		1	1	管理员
+154	FK202604015500	CG202603318201	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	22	淘宝/江苏永发玻璃制品厂	采购单CG202603318201审核自动生成	1	2026-04-01 01:41:18.694416	2026-04-03 07:18:15.803099		1	1	管理员
+112	FK202604015407	CG202603319788	supplier	沈阳乾兴包装	254.80	2025-09-30	21	沈阳乾兴包装	采购单CG202603319788审核自动生成	1	2026-04-01 01:39:27.994738	2026-04-03 07:19:34.811598		1	1	管理员
+300	FK202604041165	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:45:57.06077	2026-04-04 12:49:47.5441	purchase	1	1	管理员
+301	FK202604049121	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:50:21.62358	2026-04-04 12:51:00.526805	purchase	1	1	管理员
+302	FK202604045413	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:51:25.209935	2026-04-04 12:57:57.427467	purchase	1	1	管理员
+303	FK202604046150	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 12:58:42.522174	2026-04-04 13:06:49.002884	purchase	1	1	管理员
+304	FK202604042240	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 13:07:34.13384	2026-04-04 13:12:14.257491	purchase	1	1	管理员
+307	FK202604049011	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	9	乌日力格	采购单CG202603311089审核自动生成	1	2026-04-04 13:37:50.721226	2026-04-04 13:58:53.595917	purchase	1	1	管理员
+306	FK202604049491	CG202603318570	supplier	科尔沁奶食品	75.00	2026-03-01	9	乌日力格	采购单CG202603318570审核自动生成	1	2026-04-04 13:37:39.271404	2026-04-04 13:59:01.683938	purchase	1	1	管理员
+308	FK202604045651	CG202603319830	supplier	科尔沁奶食品	50.00	2026-03-01	5	道力干记录付款单	采购单CG202603319830审核自动生成	1	2026-04-04 13:45:42.056521	2026-04-04 13:59:09.087059	purchase	1	1	管理员
+309	FK202604042178	CG202603318189	supplier	科尔沁奶食品	50.00	2026-03-01	5	道力干记录付款单	采购单CG202603318189审核自动生成	1	2026-04-04 13:53:01.504581	2026-04-04 13:59:17.055499	purchase	1	1	管理员
+305	FK202604046611	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-04 13:12:46.387104	2026-04-04 14:06:29.30596	purchase	1	1	管理员
+299	FK202604047597	CG202603318815	supplier	银河包装	200.93	2025-09-30	7	公司支出账户	采购单CG202603318815审核自动生成	1	2026-04-04 07:57:41.630746	2026-04-04 14:26:15.293457	purchase	1	1	管理员
+310	FK202604041592	CG202603319631	supplier	小米厂家阿旗	573.00	2026-02-08	5	道力干记录付款单	采购单CG202603319631审核自动生成	1	2026-04-04 14:29:21.484991	2026-04-04 14:29:37.49582	purchase	1	1	管理员
+312	FK202604059982	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 03:53:18.858353	2026-04-05 03:54:44.9855	purchase	1	1	管理员
+311	FK202604045516	CG202603311089	supplier	科尔沁奶食品	110.00	2026-03-01	9	乌日力格	采购单CG202603311089审核自动生成	1	2026-04-04 15:44:51.577345	2026-04-05 03:56:21.690025	purchase	1	1	管理员
+313	FK202604056349	CG202603318815	supplier	银河包装	200.93	2025-09-30	9	乌日力格	采购单CG202603318815审核自动生成	1	2026-04-05 03:54:58.38881	2026-04-05 04:01:16.283837	purchase	1	1	管理员
+315	FK202604065621	CG202603313025	supplier	盛大印刷	27.84	2025-09-30	9	乌日力格	采购单CG202603313025审核自动生成	1	2026-04-06 08:21:06.561862	2026-04-06 09:04:30.976454	purchase	1	1	管理员
+336	FK202604092984	CG202603311551	supplier	银河包装	100.00	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 16:50:35.493164	2026-04-09 17:09:05.994164		1	1	管理员
+334	FK202604091987	CG202603312326	supplier	银河包装	1.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-09 16:10:27.605415	2026-04-11 06:55:27.864002		1	1	管理员
+333	FK202604093338	CG202603312326	supplier	银河包装	8.00	2025-09-30	9	乌日力格	采购单CG202603312326审核自动生成	1	2026-04-09 16:08:57.080312	2026-04-11 06:57:02.364102	purchase	1	1	管理员
+344	FK202604111638	CG202603315123	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单CG202603315123审核自动生成	1	2026-04-11 07:20:16.021036	2026-04-11 07:24:17.848402	purchase	1	1	管理员
+348	FK202604116596	CG202603313713-D488	supplier	银河包装	6580.05	2025-09-30	9	乌日力格	采购单CG202603313713-D488审核自动生成	1	2026-04-11 08:40:45.674261	\N	purchase	1	1	管理员
+349	FK202604119063	CG202603318956	supplier	银河包装	5751.26	2025-09-30	9	乌日力格	采购单CG202603318956审核自动生成	1	2026-04-11 08:41:30.599694	\N	purchase	1	1	管理员
+353	FK202604114800	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单付款 #485	1	2026-04-11 09:13:49.296938	2026-04-11 09:24:38.416203		1	1	管理员
+351	FK202604118030	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单付款 #486	1	2026-04-11 09:09:21.439828	2026-04-11 09:24:39.271927		1	1	管理员
+338	FK202604098601	CG202603311551	supplier	银河包装	106.16	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 17:11:46.829845	2026-05-17 08:13:27.887708		1	1	管理员
+324	FK202604064498	CG202603318723	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单CG202603318723审核自动生成	1	2026-04-06 12:58:17.649258	\N	purchase	1	1	管理员
+331	FK202604099708	CG202603312257	supplier	盛大印刷	0.96	2025-09-30	9	乌日力格	采购单CG202603312257审核自动生成	1	2026-04-09 14:44:17.357395	\N	purchase	1	1	管理员
+339	FK202604115655	CG202603319033	supplier	银河包装	9.10	2025-09-30	9	乌日力格	采购单付款 #499	1	2026-04-11 06:59:47.027293	\N		1	1	管理员
+366	FK202604129810	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603319388审核自动生成	1	2026-04-12 03:07:43.23896	2026-04-17 14:39:07.560215	purchase	1	1	管理员
+394	FK202604176190	CG202603319388	other		10.00	2026-04-17	9	乌日力格	采购附加费用 #460:运费 [山东锦食食品]	1	2026-04-17 14:39:55.243252	2026-04-17 14:45:59.092737		1	1	管理员
+393	FK202604179496	CG202603319388	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603319388审核自动生成	1	2026-04-17 14:39:42.809757	2026-04-17 14:52:33.925198	purchase	1	1	管理员
+378	FK202604121742		supplier	拼多多/热缩膜	250.00	2025-10-01	9	乌日力格	采购单付款 #478 采购单付款 #476 采购单付款 #474	1	2026-04-12 04:08:07.544632	2026-05-17 08:13:23.11645		1	1	管理员
+379	FK202604126903		supplier	翁牛特旗奶果子	816.00	2025-10-01	9	乌日力格	采购单付款 #475 采购单付款 #473	1	2026-04-12 04:29:08.451811	2026-05-17 08:13:24.744465		1	1	管理员
+359	FK202604115814	CG202603312210	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	9	乌日力格	采购单CG202603312210审核自动生成	1	2026-04-11 12:20:53.807524	\N	purchase	1	1	管理员
+436	FK202604253781	CG202603318254	supplier	科尔沁奶食品	147.00	2026-01-19	7	公司支出账户	采购单CG202603318254审核自动生成	1	2026-04-25 11:18:52.122811	2026-05-08 04:37:24.793073	purchase	1	1	管理员
+440	FK202604253550	CG202603314778	supplier	巴音珠萨朗	184.00	2025-12-16	7	公司支出账户	采购单CG202603314778审核自动生成	1	2026-04-25 14:41:44.738111	2026-05-10 04:41:46.01483	purchase	1	1	管理员
+401	FK202604182225	CG202603311425	supplier	拼多多/热缩膜	140.00	2026-01-20	7	公司支出账户	采购单CG202603311425审核自动生成	1	2026-04-18 11:43:47.846885	2026-05-12 01:52:26.93982	purchase	1	1	管理员
+413	FK202604259981	CG202603318843	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单CG202603318843审核自动生成	1	2026-04-25 10:13:36.572588	2026-05-12 05:44:15.741332	purchase	1	1	管理员
+403	FK202604253502	CG202603316610	supplier	民族印刷厂	96.00	2025-11-16	7	公司支出账户	采购单CG202603316610审核自动生成	1	2026-04-25 03:04:52.840902	2026-05-12 09:25:33.813133	purchase	1	1	管理员
+426	FK202604258071	CG202603317632	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单CG202603317632审核自动生成	1	2026-04-25 10:43:57.050698	2026-05-30 09:37:11.674893	purchase	1	1	管理员
+404	FK202604253812	CG202603314437	supplier	盛大印刷	594.69	2025-11-16	7	公司支出账户	采购单CG202603314437审核自动生成	1	2026-04-25 03:07:45.905166	\N	purchase	1	1	管理员
+423	FK202604251665	CG202603316793	supplier	科尔沁奶食品	48.00	2025-12-09	7	公司支出账户	采购单CG202603316793审核自动生成	1	2026-04-25 10:39:37.13055	\N	purchase	1	1	管理员
+424	FK202604253178	CG202603313040	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	采购单CG202603313040审核自动生成	1	2026-04-25 10:41:17.447431	\N	purchase	1	1	管理员
+429	FK202604256663	CG202603316877	supplier	拼多多/随机店采购	24.62	2025-12-05	7	公司支出账户	采购单CG202603316877审核自动生成 [orphan]	1	2026-04-25 10:55:44.38727	\N	purchase	1	1	管理员
+434	FK202604253646	CG202603317638	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	9	乌日力格	采购单CG202603317638审核自动生成	1	2026-04-25 11:08:45.761693	\N	purchase	1	1	管理员
+438	FK202604258780	CG202603314715	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	7	公司支出账户	采购单CG202603314715审核自动生成	1	2026-04-25 11:24:11.519836	\N	purchase	1	1	管理员
+433	FK202604256382	CG202603315874	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单CG202603315874审核自动生成	1	2026-04-25 11:07:06.186023	\N	purchase	1	1	管理员
+477	FK202605027559	PO2026050209380807082	supplier	科尔沁奶食品	300.00	2026-05-02	7	公司支出账户	采购单PO2026050209380807082审核自动生成	1	2026-05-02 01:41:06.570844	\N	purchase	1	1	管理员
+475	FK202605028614		supplier	测试供应商	500.00	2026-05-02	1	测试账户		1	2026-05-02 01:34:54.027965	2026-05-02 01:45:31.101872		1	1	管理员
+474	FK202605023037		other	阿姨劳工费	500.00	2026-05-02	7	公司支出账户		1	2026-05-02 01:33:39.811576	2026-05-02 01:45:31.559242		1	1	管理员
+473	FK202605027777		other	阿姨劳工费	500.00	2026-05-02	7	公司支出账户		1	2026-05-02 01:33:02.220673	2026-05-02 01:45:32.021834		1	1	管理员
+480	FK202605028074	CG0004368	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	原采购单 CG0004368 (2026-02-09) — 科尔沁奶食品 — 奶豆腐/原味/中/科尔沁×5	1	2026-05-02 07:21:14.093902	2026-05-02 07:32:30.159609		1	1	管理员
+470	FK202604296121	CG202604254206	other	物流	175.00	2026-04-29	7	公司支出账户	采购附加费用 #505:运费 [广州维记]	1	2026-04-29 04:04:04.567385	2026-05-07 11:45:53.481285		1	1	管理员
+449	FK202604259454	CG202603315199	supplier	科尔沁奶食品	75.00	2025-12-28	7	公司支出账户	采购单CG202603315199审核自动生成	1	2026-04-25 15:23:08.408034	2026-05-08 04:20:21.538224	purchase	1	1	管理员
+468	FK202604267249	CG202603319839	supplier	科尔沁奶食品	158.00	2026-02-09	7	公司支出账户	采购单CG202603319839审核自动生成	1	2026-04-26 16:22:42.650847	2026-05-08 04:37:26.934404	purchase	1	1	管理员
+479	FK202605029162		supplier	巴音珠萨朗	207.00	2026-05-02	7	公司支出账户	采购单付款 #404	1	2026-05-02 03:05:55.986801	2026-05-10 03:10:27.255607		1	1	管理员
+451	FK202604267800	CG202603313512	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单CG202603313512审核自动生成	1	2026-04-26 15:29:41.02426	2026-05-10 09:18:18.419324	purchase	1	1	管理员
+458	FK202604266027	CG202603311710	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单CG202603311710审核自动生成	1	2026-04-26 15:56:20.585874	2026-05-10 09:18:19.521947	purchase	1	1	管理员
+453	FK202604262121	CG202603319904	supplier	翁牛特旗奶果子	3653.00	2026-01-09	7	公司支出账户	采购单CG202603319904审核自动生成	1	2026-04-26 15:44:02.9032	2026-05-12 05:49:00.634374	purchase	1	1	管理员
+456	FK202604262239	CG202603312889	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单CG202603312889审核自动生成	1	2026-04-26 15:50:36.80328	2026-05-13 13:03:45.822595	purchase	1	1	管理员
+460	FK202604264134	CG202603317919	supplier	阿润查干	680.00	2026-01-16	7	公司支出账户	采购单CG202603317919审核自动生成	1	2026-04-26 16:03:45.07733	2026-05-13 13:20:50.832557	purchase	1	1	管理员
+442	FK202604251390	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单CG202603316981审核自动生成	1	2026-04-25 14:48:56.696708	2026-05-30 11:57:44.248944	purchase	1	1	管理员
+472	FK202605015880		other	阿姨劳工费	500.00	2026-05-01	9	乌日力格	店面	1	2026-05-01 14:59:10.957065	\N		1	1	管理员
+478	FK202605022800	CG202603319609	supplier	银河包装	400.00	2025-10-22	9	乌日力格	采购单付款 #477	1	2026-05-02 02:16:11.823276	\N		1	1	管理员
+443	FK202604258618	CG202603319956	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	采购单CG202603319956审核自动生成	1	2026-04-25 14:53:50.991626	\N	purchase	1	1	管理员
+444	FK202604251004	CG202603318256	supplier	盛大印刷	43.20	2025-12-25	7	公司支出账户	采购单CG202603318256审核自动生成	1	2026-04-25 14:57:39.061589	\N	purchase	1	1	管理员
+447	FK202604259363	CG202603319749	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单付款 #407	1	2026-04-25 14:59:19.289868	2026-06-15 12:30:55.412647		1	1	管理员
+457	FK202604268562	CG202603319912	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	采购单CG202603319912审核自动生成	1	2026-04-26 15:51:49.494488	\N	purchase	1	1	管理员
+452	FK202604261240	CG202603317071	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	采购单CG202603317071审核自动生成	1	2026-04-26 15:42:46.382447	\N	purchase	1	1	管理员
+454	FK202604267826	CG202603316686	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	采购单CG202603316686审核自动生成	1	2026-04-26 15:48:59.238815	\N	purchase	1	1	管理员
+463	FK202604267256	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	3400.00	2026-01-19	8	孟根	采购单付款 #381	1	2026-04-26 16:08:54.772181	\N		1	1	管理员
+464	FK202604261069	CG202603312275-D381	supplier	那牧尔乳制品厂/纯净之源	2964.01	2026-01-19	9	乌日力格	采购单付款 #381	1	2026-04-26 16:09:29.31285	\N		1	1	管理员
+505	FK202605021489	CG0002794	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	原采购单 CG0002794 (2025-12-01) — 淘宝/杂 — 塑料手提袋×5000	1	2026-05-02 07:21:35.090493	2026-05-02 07:30:42.265983		1	1	管理员
+504	FK202605024054	CG0002797	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	原采购单 CG0002797 (2025-12-01) — 淘宝/江苏永发玻璃制品厂 — 专瓶/黄油×240、专瓶/黄油渣×120	1	2026-05-02 07:21:34.338162	2026-05-02 07:30:43.112168		1	1	管理员
+503	FK202605025219	CG0002801	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	原采购单 CG0002801 (2025-12-01) — 淘宝紫辰包装 — 真空袋×500	1	2026-05-02 07:21:33.574189	2026-05-02 07:30:43.847585		1	1	管理员
+502	FK202605029475	CG0002847	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	原采购单 CG0002847 (2025-12-04) — 科尔沁奶食品 — 烤奶皮×7	1	2026-05-02 07:21:32.789118	2026-05-02 07:30:44.911697		1	1	管理员
+501	FK202605023980	CG0002853	supplier	浙江金矿包装	2180.00	2025-12-04	8	孟根	原采购单 CG0002853 (2025-12-04) — 浙江金矿包装 — 小/方形/亚克力盒/×240、中/方形/亚克力盒/×258、三角/奶皮千层盒×200、扁盒/亚克力/带内托×300、大/牛薄脆盒/亚克力×246、小/长方/亚克力/乳清奶条盒×183、大/长方/亚克力/待用×180	1	2026-05-02 07:21:31.626138	2026-05-02 07:30:45.625739		1	1	管理员
+500	FK202605026025	CG0002856	supplier	拼多多/随机店采购	124.62	2025-12-05	7	公司支出账户	原采购单 CG0002856 (2025-12-05) — 拼多多/随机店采购 — 专袋/乌日莫/炒米×100、专袋/乌日莫×100	1	2026-05-02 07:21:30.813497	2026-05-02 07:30:46.288238		1	1	管理员
+499	FK202605022634	CG0002863	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	原采购单 CG0002863 (2025-12-05) — 科尔沁奶食品 — 加沙奶豆腐×5、炒米粉/aag×10、炒米海丰×10	1	2026-05-02 07:21:30.054767	2026-05-02 07:30:46.952291		1	1	管理员
+498	FK202605027461	CG0002864	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	原采购单 CG0002864 (2025-12-05) — 杂/采购商 — 白砂糖×2、封口机/真空×1、塑料购物袋×300	1	2026-05-02 07:21:29.289274	2026-05-02 07:30:47.639048		1	1	管理员
+497	FK202605022470	CG0002900	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	原采购单 CG0002900 (2025-12-07) — 奥都奶食品 — 冻炒米/袋装×5、机器乌日末液体×2、手工乌日末液体×10、黄油/半斤×2、黄油/斤×4	1	2026-05-02 07:21:28.525942	2026-05-02 07:30:48.310506		1	1	管理员
+495	FK202605025323	CG0002955	supplier	盛大印刷	960.00	2025-12-10	8	孟根	原采购单 CG0002955 (2025-12-10) — 盛大印刷 — 透专标签/脆香奶条/微甜×500、透专标签/奶皮卷×500、透专标签/冻炒米×500、透专标签/奶酪/原味×500、透专标签/奶酪/甜味×500、透专标签/鲜奶皮×500	1	2026-05-02 07:21:26.95055	2026-05-02 07:30:49.623935		1	1	管理员
+494	FK202605021021	CG0002994	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	原采购单 CG0002994 (2025-12-10) — 杂/采购商 — 白砂糖×6	1	2026-05-02 07:21:25.548854	2026-05-02 07:30:50.281334		1	1	管理员
+493	FK202605021474	CG0003056	supplier	巴音珠萨朗	390.00	2025-12-16	7	公司支出账户	原采购单 CG0003056 (2025-12-16) — 巴音珠萨朗 — 散装/甜味奶条×23	1	2026-05-02 07:21:24.752422	2026-05-02 07:30:50.950781		1	1	管理员
+492	FK202605025689	CG0003074	supplier	杂/采购商	140.00	2025-12-17	7	公司支出账户	原采购单 CG0003074 (2025-12-17) — 杂/采购商 — 红枣×12	1	2026-05-02 07:21:23.974292	2026-05-02 07:32:24.488		1	1	管理员
+491	FK202605028661	CG0003106	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	原采购单 CG0003106 (2025-12-19) — 奥都奶食品 — 冻炒米/散装×13.25、实惠/奶豆腐×5、冻炒米/袋装×10	1	2026-05-02 07:21:23.156602	2026-05-02 07:32:24.943105		1	1	管理员
+490	FK202605029193	CG0003285	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	原采购单 CG0003285 (2025-12-25) — 阿润查干 — 阿润月饼/五仁馅×4、干肉奶茶×4、阿润月饼/奶皮子馅×4、阿润月饼/黄油渣馅×4、阿润月饼/奶豆腐馅×4	1	2026-05-02 07:21:22.380077	2026-05-02 07:32:25.403092		1	1	管理员
+489	FK202605023061	CG0003544	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	原采购单 CG0003544 (2026-01-06) — 科尔沁奶食品 — 烤奶皮×10	1	2026-05-02 07:21:21.603397	2026-05-02 07:32:25.856415		1	1	管理员
+488	FK202605022114	CG0003546	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	原采购单 CG0003546 (2026-01-06) — 巴音珠萨朗 — 散装/甜味奶条×53.4	1	2026-05-02 07:21:20.785179	2026-05-02 07:32:26.310621		1	1	管理员
+487	FK202605026399	CG0003704	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	原采购单 CG0003704 (2026-01-11) — 科尔沁奶食品 — 手工乌日末液体×10	1	2026-05-02 07:21:19.913502	2026-05-02 07:32:26.81389		1	1	管理员
+486	FK202605023999	CG0003707	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	原采购单 CG0003707 (2026-01-11) — 科尔沁奶食品 — 炒米粉/aag×10	1	2026-05-02 07:21:19.149339	2026-05-02 07:32:27.304968		1	1	管理员
+485	FK202605026121	CG0003873	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	原采购单 CG0003873 (2026-01-17) — 科尔沁奶食品 — 烤奶皮×10、手工白花炒米/散装×30	1	2026-05-02 07:21:18.370107	2026-05-02 07:32:27.78325		1	1	管理员
+484	FK202605024490	CG0003944	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	原采购单 CG0003944 (2026-01-20) — 杂/采购商 — 红糖袋/delicious×100	1	2026-05-02 07:21:17.604387	2026-05-02 07:32:28.238329		1	1	管理员
+483	FK202605021701	CG0004043	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	原采购单 CG0004043 (2026-01-24) — 科尔沁奶食品 — 乌日莫糖/散装×5、酸奶炒米糖/散装×5、嚼口脆炒米糖/散装×5、科尔沁/大奶豆腐×5	1	2026-05-02 07:21:16.835564	2026-05-02 07:32:28.691328		1	1	管理员
+482	FK202605023086	CG0004116	supplier	额吉伊德	160.00	2026-01-27	7	公司支出账户	原采购单 CG0004116 (2026-01-27) — 额吉伊德 — 乳清饮料×20、酸奶/额吉伊德×6、乌日莫/袋装×5	1	2026-05-02 07:21:16.042263	2026-05-02 07:32:29.146627		1	1	管理员
+511	FK202605029742	CG0002028	supplier	优如包装	2250.00	2025-10-11	9	乌日力格	原采购单 CG0002028 (2025-10-11) — 优如包装 — 专盒/青砖奶茶外盒×3030	1	2026-05-02 07:21:39.898313	2026-05-02 07:30:37.871275		1	1	管理员
+510	FK202605024711	CG0002219	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	原采购单 CG0002219 (2025-10-26) — 广州维记 — 奶油球×10	1	2026-05-02 07:21:39.098173	2026-05-02 07:30:38.627434		1	1	管理员
+509	FK202605029416	CG0002607	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	原采购单 CG0002607 (2025-11-16) — 拼多多/随机店采购 — 封口机/真空×1	1	2026-05-02 07:21:38.321582	2026-05-02 07:30:39.458325		1	1	管理员
+496	FK202605022721	CG0002914	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	原采购单 CG0002914 (2025-12-09) — 科尔沁奶食品 — 风干牛肉500g大片×2、哈斯乌拉牛肉干500g原味×2、蓝旗绿乳糖惠虹糖×2、蓝旗绿乳糖奶香酥×2、蓝旗绿乳糖果仁酥×2、蓝旗绿乳糖水果×2、蓝旗绿乳糖黄油球×2、蓝旗绿乳糖炼乳×2、嚼口脆炒米糖/散装×1、酸奶炒米糖/散装×1、黄油渣/盒×4、脆奶条/散装/科尔沁×10、真空奶豆腐砖/甜味×2、真空奶豆腐砖/原味×2	1	2026-05-02 07:21:27.741573	2026-05-02 07:30:48.962009		1	1	管理员
+481	FK202605028157	CG0004117	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	原采购单 CG0004117 (2026-01-27) — 奥特尔奶食品店 — 奶粉蒙古国×3、奶皮子粉×4、奶茶粉战粮×2、奶茶粉贡格尔×2、努德勒沁调和茶×2、阿依古丽奶茶专用红茶×2、希日嘎拉奶茶专用茶×2、甜味奶豆腐块儿/大×5、希日嘎拉奶茶专用茶×2	1	2026-05-02 07:21:14.92437	2026-05-02 07:32:29.592692		1	1	管理员
+513	FK202605028539	PO2026050217095594410	supplier	科尔沁奶食品	220.00	2026-05-02	7	公司支出账户	采购单PO2026050217095594410审核自动生成	1	2026-05-02 09:11:21.353554	\N	purchase	1	1	管理员
+514	FK202605021111	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	采购单付款 #427	1	2026-05-02 09:13:03.352105	2026-05-02 09:15:53.381321		1	1	管理员
+516	FK202605029676	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	运费 #427 (CG0002955)	1	2026-05-02 09:15:53.830031	2026-05-03 00:12:36.797712		1	1	管理员
+522	FK202605038360		supplier	test	1.00	2025-12-10	7	test	test123	1	2026-05-03 00:15:16.410482	\N		1	1	管理员
+523	FK202605037520		supplier	test	1.00	2025-12-10	7	test	test	1	2026-05-03 00:15:52.804207	\N		1	1	管理员
+524	FK202605034056		supplier	test	1.00	2025-12-10	7	test	test123	1	2026-05-03 00:27:16.300907	\N		1	1	管理员
+525	FK202605033036	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:31:25.635062	\N		1	1	管理员
+410	FK202604259330		supplier	盛大印刷	3.00	2025-12-10	9	乌日力格	采购单付款 #427	1	2026-04-25 05:37:46.52362	2026-05-03 00:40:03.342569		1	1	管理员
+517	FK202605032774	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:12:37.278666	2026-05-03 00:40:04.325956		1	1	管理员
+518	FK202605032997	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:13:01.48252	2026-05-03 00:40:05.318314		1	1	管理员
+519	FK202605031573	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 [盛大印刷]	1	2026-05-03 00:13:30.063852	2026-05-03 00:40:06.302167		1	1	管理员
+520	FK202605038905	CG202603316462	other		3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:13:57.866975	2026-05-03 00:40:07.307561		1	1	管理员
+521	FK202605034298	CG202603316462	supplier	盛大印刷	3.00	2025-12-10	7	公司支出账户	采购附加费用 #427:附加费用 盛大印刷	1	2026-05-03 00:14:24.315185	2026-05-03 00:40:08.393707		1	1	管理员
+528	FK202605035691	CG202603319829	other	浙江金矿包装	20.00	2025-12-04	8	孟根	采购附加费用 #442:单据支出 浙江金矿包装	1	2026-05-03 03:48:04.323713	\N		1	1	管理员
+530	FK202605042652	CG202603313487	supplier	那牧尔乳制品厂/纯净之源	220.00	2025-12-05	7	公司支出账户	采购单付款 #439	1	2026-05-04 04:46:13.869571	\N		1	1	管理员
+531	FK202605049775	CG202603313170	supplier	恩赫奶制品厂	82.80	2025-12-10	7	公司支出账户	采购单付款 #465	1	2026-05-04 04:46:15.375699	\N		1	1	管理员
+532	FK202605045554	CG202603315869	supplier	奥都奶食品	128.00	2025-12-17	7	公司支出账户	采购单付款 #422	1	2026-05-04 04:46:16.966856	\N		1	1	管理员
+529	FK202605047812	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单付款 #456	1	2026-05-04 04:46:12.237616	2026-05-04 04:50:36.771074		1	1	管理员
+533	FK202605047690	CG202603318804	supplier	科尔沁奶食品	25.00	2025-12-25	7	公司支出账户	采购单付款 #432	1	2026-05-04 04:50:53.028068	\N		1	1	管理员
+534	FK202605045466	CG202603319515	supplier	科尔沁奶食品	235.00	2025-12-25	7	公司支出账户	采购单付款 #421	1	2026-05-04 04:50:54.40143	\N		1	1	管理员
+535	FK202605044707	CG202603311730	supplier	科尔沁奶食品	150.00	2025-12-25	7	公司支出账户	采购单付款 #412	1	2026-05-04 04:50:55.764215	\N		1	1	管理员
+537	FK202605047998	CG202603319644	supplier	盛大印刷	47.80	2025-12-25	7	公司支出账户	采购单付款 #408	1	2026-05-04 04:50:58.561209	\N		1	1	管理员
+539	FK202605042368	CG202603319333	supplier	那牧尔乳制品厂/纯净之源	390.00	2026-01-19	8	孟根	采购单付款 #420	1	2026-05-04 04:51:16.774904	\N		1	1	管理员
+540	FK202605043021	CG202603319344	supplier	纯净奶食品	234.00	2026-02-01	7	公司支出账户	采购单付款 #413	1	2026-05-04 04:51:18.148751	\N		1	1	管理员
+542	FK202605045816	CG202603317285	supplier	纯净奶食品	1396.00	2026-02-01	7	公司支出账户	采购单付款 #400	1	2026-05-04 04:51:20.794141	\N		1	1	管理员
+543	FK202605046571	CG202603316779	supplier	纯净奶食品	60.00	2026-02-01	7	公司支出账户	采购单付款 #398	1	2026-05-04 04:51:22.14902	\N		1	1	管理员
+544	FK202605044861	test	supplier	科尔沁奶食品	158.00	2026-01-01	7	公司支出账户	采购单付款 #362	1	2026-05-04 12:42:54.147235	2026-05-04 12:43:19.686915		1	1	管理员
+546	FK202605049056	CG202603313040	supplier	科尔沁奶食品	95.00	2026-02-09	7	公司支出账户	采购单付款 #363	1	2026-05-04 12:43:24.32743	2026-05-05 02:12:37.927815		1	1	管理员
+536	FK202605047324	CG202603317218	supplier	科尔沁奶食品	140.00	2025-12-25	7	公司支出账户	采购单付款 #411	1	2026-05-04 04:50:57.173806	2026-05-30 09:16:15.566098		1	1	管理员
+527	FK202605037894	CG202603313985	supplier	浙江金矿包装	2160.00	2025-12-04	8	孟根	采购单CG202603313985审核自动生成	1	2026-05-03 03:47:48.59161	\N		1	1	管理员
+538	FK202605044501	CG202603314468	supplier	纯净奶食品	2000.00	2025-12-31	7	公司支出账户	采购单付款 #409	1	2026-05-04 04:51:15.409653	\N		1	1	管理员
+526	FK202605038713	CG202603316601	supplier	拼多多/随机店采购	100.00	2025-12-05	7	公司支出账户	采购单付款 #440	1	2026-05-03 00:49:37.380792	\N		1	1	管理员
+549	FK202605045208	CG202603317629	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	采购单付款 #374	1	2026-05-04 12:43:28.195831	2026-05-05 02:12:40.980271		1	1	管理员
+550	FK202605042868	CG202603317286	supplier	拼多多/热缩膜	140.00	2026-01-20	7	公司支出账户	采购单付款 #375	1	2026-05-04 12:43:29.449329	2026-05-05 02:12:41.977955		1	1	管理员
+551	FK202605048510	CG202603313356	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	采购单付款 #376	1	2026-05-04 12:43:30.69847	2026-05-05 02:12:43.336285		1	1	管理员
+552	FK202605043818	CG202603318909	supplier	科尔沁奶食品	147.00	2026-01-19	7	公司支出账户	采购单付款 #382	1	2026-05-04 12:43:32.097146	2026-05-05 02:12:44.457256		1	1	管理员
+553	FK202605043288	CG202603319977	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单付款 #383	1	2026-05-04 12:43:33.377145	2026-05-05 02:12:45.435129		1	1	管理员
+554	FK202605041267	CG202603315339	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单付款 #385	1	2026-05-04 12:43:34.712185	2026-05-05 02:12:46.445712		1	1	管理员
+555	FK202605041333	CG202603319425	supplier	糖炮	240.00	2026-01-16	7	公司支出账户	采购单付款 #386	1	2026-05-04 12:43:36.435249	2026-05-05 02:12:47.413656		1	1	管理员
+571	FK202605043827	CG202603317380	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单付款 #418	1	2026-05-04 12:43:57.839758	\N		1	1	管理员
+557	FK202605041063	CG202603316686	supplier	科尔沁奶食品	48.00	2026-01-11	7	公司支出账户	采购单付款 #388	1	2026-05-04 12:43:39.205641	2026-05-05 02:12:49.425284		1	1	管理员
+558	FK202605049259	CG202603318785	supplier	雷记炒货	200.00	2026-01-11	7	公司支出账户	采购单付款 #389	1	2026-05-04 12:43:40.415954	2026-05-05 02:12:50.479253		1	1	管理员
+559	FK202605049229	CG202603318310	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单付款 #390	1	2026-05-04 12:43:41.646168	2026-05-05 02:12:51.462888		1	1	管理员
+560	FK202605042255	CG202603319912	supplier	科尔沁奶食品	50.00	2026-01-11	7	公司支出账户	采购单付款 #391	1	2026-05-04 12:43:42.998143	2026-05-05 02:12:52.438008		1	1	管理员
+561	FK202605048037	CG202603319485	supplier	翁牛特旗奶果子	3653.00	2026-01-09	7	公司支出账户	采购单付款 #392	1	2026-05-04 12:43:44.270247	2026-05-05 02:12:53.470483		1	1	管理员
+562	FK202605049298	CG202603313821	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	采购单付款 #395	1	2026-05-04 12:43:45.822226	2026-05-05 02:12:54.428094		1	1	管理员
+563	FK202605041463	CG202603317071	supplier	科尔沁奶食品	220.00	2026-01-06	7	公司支出账户	采购单付款 #396	1	2026-05-04 12:43:47.196151	2026-05-05 02:12:55.437621		1	1	管理员
+564	FK202605046508	CG202603317188	supplier	永巨茶业	1388.00	2025-12-29	7	公司支出账户	采购单付款 #402	1	2026-05-04 12:43:48.402409	2026-05-05 02:12:56.448759		1	1	管理员
+565	FK202605045163	CG202603311090	supplier	科尔沁奶食品	75.00	2025-12-28	7	公司支出账户	采购单付款 #403	1	2026-05-04 12:43:49.641706	2026-05-05 02:12:57.479492		1	1	管理员
+566	FK202605049470	CG202603318256	supplier	盛大印刷	43.20	2025-12-25	7	公司支出账户	采购单付款 #406	1	2026-05-04 12:43:50.866999	2026-05-05 02:12:59.190176		1	1	管理员
+567	FK202605042371	CG202603319076	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	采购单付款 #410	1	2026-05-04 12:43:52.575727	2026-05-05 02:13:00.196773		1	1	管理员
+568	FK202605046495	CG202603319956	supplier	奥都奶食品	352.00	2025-12-19	7	公司支出账户	采购单付款 #414	1	2026-05-04 12:43:53.79142	2026-05-05 02:13:02.200428		1	1	管理员
+570	FK202605049800	CG202603319778	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单付款 #417	1	2026-05-04 12:43:56.565769	2026-05-05 02:13:05.282029		1	1	管理员
+572	FK202605043372	CG202603311981	supplier	巴音珠萨朗	184.00	2025-12-16	7	公司支出账户	采购单付款 #419	1	2026-05-04 12:44:00.104711	2026-05-05 02:13:07.294895		1	1	管理员
+573	FK202605043630	CG202603314715	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-12	7	公司支出账户	采购单付款 #423	1	2026-05-04 12:44:01.540029	2026-05-05 02:13:08.25984		1	1	管理员
+574	FK202605046126	CG202603315874	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单付款 #425	1	2026-05-04 12:44:02.985967	2026-05-05 02:13:09.277274		1	1	管理员
+575	FK202605045550	CG202603312275-D426	supplier	广州维记	3380.00	2025-12-10	7	公司支出账户	采购单付款 #426	1	2026-05-04 12:44:04.195301	2026-05-05 02:13:10.359945		1	1	管理员
+576	FK202605043207	CG202603316462	supplier	盛大印刷	960.00	2025-12-10	8	孟根	采购单付款 #427	1	2026-05-04 12:44:06.388103	2026-05-05 02:13:11.365568		1	1	管理员
+577	FK202605041710	CG202603317638	supplier	那牧尔乳制品厂/纯净之源	550.00	2025-12-10	9	乌日力格	采购单付款 #428	1	2026-05-04 12:44:07.618605	2026-05-05 02:13:12.795936		1	1	管理员
+578	FK202605043136	CG202603312647	supplier	恩赫奶制品厂	367.20	2025-12-10	9	乌日力格	采购单付款 #429	1	2026-05-04 12:44:09.855883	2026-05-05 02:13:13.775614		1	1	管理员
+579	FK202605046720	CG202603312319	supplier	科尔沁奶食品	526.00	2025-12-10	7	公司支出账户	采购单付款 #430	1	2026-05-04 12:44:11.093802	2026-05-05 02:13:14.754845		1	1	管理员
+580	FK202605049180	CG202603314528	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	采购单付款 #431	1	2026-05-04 12:44:12.364495	2026-05-05 02:13:16.720367		1	1	管理员
+581	FK202605045684	CG202603316793	supplier	科尔沁奶食品	48.00	2025-12-09	7	公司支出账户	采购单付款 #433	1	2026-05-04 12:44:13.573207	2026-05-05 02:13:17.765344		1	1	管理员
+582	FK202605045042	CG202603312552	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	采购单付款 #435	1	2026-05-04 12:44:15.424135	2026-05-05 02:13:18.751758		1	1	管理员
+583	FK202605042205	CG202603319416	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	采购单付款 #437	1	2026-05-04 12:44:16.895238	2026-05-05 02:13:19.76073		1	1	管理员
+584	FK202605045659	CG202603312757	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	采购单付款 #438	1	2026-05-04 12:44:18.111609	2026-05-05 02:13:20.758464		1	1	管理员
+585	FK202605045759	CG202603315058	supplier	盛大印刷	743.89	2025-12-04	7	公司支出账户	采购单付款 #441	1	2026-05-04 12:44:20.407006	2026-05-05 02:13:21.778148		1	1	管理员
+586	FK202605045758	CG202603313985	supplier	浙江金矿包装	2160.00	2025-12-04	8	孟根	采购单付款 #442	1	2026-05-04 12:44:22.737133	2026-05-05 02:13:22.802836		1	1	管理员
+587	FK202605045253	CG202603312047	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	采购单付款 #444	1	2026-05-04 12:44:24.058816	2026-05-05 02:13:23.782272		1	1	管理员
+588	FK202605048309	CG202603319667	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	采购单付款 #446	1	2026-05-04 12:44:25.291368	2026-05-05 02:13:25.133225		1	1	管理员
+589	FK202605046170	CG202603319001	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	采购单付款 #447	1	2026-05-04 12:44:26.632392	2026-05-05 02:13:26.153393		1	1	管理员
+590	FK202605045608	CG202603318178	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	采购单付款 #448	1	2026-05-04 12:44:27.982038	2026-05-05 02:13:27.171362		1	1	管理员
+591	FK202605044674	CG202603318280	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单付款 #449	1	2026-05-04 12:44:29.180837	2026-05-05 02:13:28.20997		1	1	管理员
+592	FK202605045521	CG202603311625	supplier	民族印刷厂	96.00	2025-11-16	7	公司支出账户	采购单付款 #450	1	2026-05-04 12:44:30.398907	2026-05-05 02:13:29.192637		1	1	管理员
+593	FK202605041698	CG202603314437	supplier	盛大印刷	594.69	2025-11-16	7	公司支出账户	采购单付款 #451	1	2026-05-04 12:44:31.743538	2026-05-05 02:13:30.153753		1	1	管理员
+556	FK202605041093	CG202603315149	supplier	阿润查干	680.00	2026-01-16	7	公司支出账户	采购单付款 #387	1	2026-05-04 12:43:37.888865	\N		1	1	管理员
+547	FK202605048157	CG202603319923	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	采购单付款 #371	1	2026-05-04 12:43:25.685332	2026-05-05 02:12:39.000651		1	1	管理员
+569	FK202605041578	CG202603315567	supplier	科尔沁奶食品	555.00	2025-12-17	7	公司支出账户	采购单付款 #415	1	2026-05-04 12:43:55.175932	2026-05-05 02:13:04.23771		1	1	管理员
+594	FK202605041709	CG202603318832	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	采购单付款 #452	1	2026-05-04 12:44:33.084887	2026-05-05 02:13:31.15555		1	1	管理员
+595	FK202605049247	CG202603315329	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	采购单付款 #453	1	2026-05-04 12:44:34.34863	2026-05-05 02:13:32.13482		1	1	管理员
+596	FK202605046455	CG202603315747	supplier	拼多多/热缩膜	245.49	2025-11-16	7	公司支出账户	采购单付款 #454	1	2026-05-04 12:44:35.585065	2026-05-05 02:13:33.135981		1	1	管理员
+597	FK202605045765	CG202603317743	supplier	拼多多/木勺	159.90	2025-11-16	7	公司支出账户	采购单付款 #455	1	2026-05-04 12:44:36.829091	2026-05-05 02:13:34.116565		1	1	管理员
+598	FK202605044821	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单付款 #456	1	2026-05-04 12:44:38.078367	2026-05-05 02:13:35.147682		1	1	管理员
+599	FK202605046365	CG202603314365	supplier	广州维记	1817.00	2025-11-07	7	公司支出账户	采购单付款 #457	1	2026-05-04 12:44:40.031477	2026-05-05 02:13:36.137878		1	1	管理员
+600	FK202605041583	CG202603312155	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单付款 #460	1	2026-05-04 12:44:41.243142	2026-05-05 02:13:37.136424		1	1	管理员
+601	FK202605049507	CG202603314251	supplier	锡盟艾润萨利SC	470.00	2025-10-26	9	乌日力格	采购单付款 #462	1	2026-05-04 12:44:42.450799	2026-05-05 02:13:38.351839		1	1	管理员
+602	FK202605048111	CG202603315155	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	采购单付款 #463	1	2026-05-04 12:44:43.685125	2026-05-05 02:13:39.406051		1	1	管理员
+603	FK202605046766	CG202603312892	supplier	淘宝欧信	1700.00	2025-10-22	9	乌日力格	采购单付款 #464	1	2026-05-04 12:44:45.334997	2026-05-05 02:13:40.452145		1	1	管理员
+604	FK202605045741	CG202603317794	supplier	恩赫奶制品厂	284.40	2025-10-20	9	乌日力格	采购单付款 #466	1	2026-05-04 12:44:46.686768	2026-05-05 02:13:41.495119		1	1	管理员
+605	FK202605047557	CG202603312210	supplier	那牧尔乳制品厂/纯净之源	165.00	2025-10-12	9	乌日力格	采购单付款 #467	1	2026-05-04 12:44:47.889443	2026-05-05 02:13:42.555837		1	1	管理员
+606	FK202605045258	CG202603316532	supplier	巴音珠萨朗	420.00	2025-10-12	9	乌日力格	采购单付款 #468	1	2026-05-04 12:46:04.654229	2026-05-05 02:13:43.548513		1	1	管理员
+607	FK202605041699	CG202603313871	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	采购单付款 #470	1	2026-05-04 12:46:06.395955	2026-05-05 02:13:44.536985		1	1	管理员
+608	FK202605049587	CG202603318958	supplier	广州维记	1455.00	2025-10-09	9	乌日力格	采购单付款 #471	1	2026-05-04 12:46:07.701856	2026-05-05 02:13:45.573745		1	1	管理员
+609	FK202605046783	CG202603315163	supplier	永巨茶业	2825.04	2025-10-06	9	乌日力格	采购单付款 #472	1	2026-05-04 12:46:09.429454	2026-05-05 02:13:46.598849		1	1	管理员
+610	FK202605041074	CG202603318243	supplier	盛大印刷	360.00	2025-10-01	9	乌日力格	采购单付款 #479	1	2026-05-04 12:46:10.763226	2026-05-05 02:13:47.60276		1	1	管理员
+611	FK202605044801	CG202603312351	supplier	拼多多/木勺	63.96	2025-10-01	9	乌日力格	采购单付款 #480	1	2026-05-04 12:46:12.364023	2026-05-05 02:13:48.593691		1	1	管理员
+612	FK202605049332	CG202603319598	supplier	山东锦食食品	151.10	2025-10-01	9	乌日力格	采购单付款 #481	1	2026-05-04 12:46:13.638091	2026-05-05 02:13:49.592467		1	1	管理员
+613	FK202605044091	CG202603314842	supplier	盛大印刷	970.45	2025-09-30	9	乌日力格	采购单付款 #482	1	2026-05-04 12:46:14.951187	2026-05-05 02:13:50.860448		1	1	管理员
+614	FK202605047726	CG202603317580	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	9	乌日力格	采购单付款 #483	1	2026-05-04 12:46:16.215746	2026-05-05 02:13:51.865305		1	1	管理员
+615	FK202605041607	CG202603315759	supplier	淘宝紫辰包装	3.40	2025-09-30	9	乌日力格	采购单付款 #484	1	2026-05-04 12:46:17.463213	2026-05-05 02:13:52.856203		1	1	管理员
+616	FK202605046326	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单付款 #485	1	2026-05-04 12:46:18.761831	2026-05-05 02:13:53.864712		1	1	管理员
+617	FK202605048072	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单付款 #486	1	2026-05-04 12:46:20.58428	2026-05-05 02:13:54.921031		1	1	管理员
+618	FK202605042872	CG202603311453	supplier	沈阳乾兴包装	254.80	2025-09-30	9	乌日力格	采购单付款 #489	1	2026-05-04 12:46:22.26543	2026-05-05 02:13:56.247327		1	1	管理员
+619	FK202605041422	CG202603316897	supplier	盛大印刷	1469.00	2025-09-30	9	乌日力格	采购单付款 #490	1	2026-05-04 12:46:23.48806	2026-05-05 02:13:58.250281		1	1	管理员
+620	FK202605041379	CG202603318344	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单付款 #491	1	2026-05-04 12:46:25.298959	2026-05-05 02:13:59.235786		1	1	管理员
+621	FK202605045148	CG202603312374	supplier	盛大印刷	1.74	2025-09-30	9	乌日力格	采购单付款 #492	1	2026-05-04 12:46:26.538395	2026-05-05 02:14:00.256684		1	1	管理员
+622	FK202605043637	CG202603317026	supplier	淘宝紫辰包装	49.50	2025-09-30	9	乌日力格	采购单付款 #493	1	2026-05-04 12:46:27.740744	2026-05-05 02:14:01.272959		1	1	管理员
+623	FK202605048490	CG202603311700	supplier	盛大印刷	5.20	2025-09-30	9	乌日力格	采购单付款 #494	1	2026-05-04 12:46:29.052055	2026-05-05 02:14:02.328809		1	1	管理员
+624	FK202605049147	CG202603314713	supplier	沈阳东源包材厂	2381.12	2025-09-30	9	乌日力格	采购单付款 #495	1	2026-05-04 12:46:30.37295	2026-05-05 02:14:03.382961		1	1	管理员
+625	FK202605046817	CG202603313861	supplier	淘宝紫辰包装	10.20	2025-09-30	9	乌日力格	采购单付款 #497	1	2026-05-04 12:46:32.261715	2026-05-05 02:14:04.392738		1	1	管理员
+626	FK202605047450	CG202603312257	supplier	盛大印刷	0.96	2025-09-30	9	乌日力格	采购单付款 #498	1	2026-05-04 12:46:33.568768	2026-05-05 02:14:05.488718		1	1	管理员
+627	FK202605047665	CG202603318723	supplier	银河包装	66.60	2025-09-30	9	乌日力格	采购单付款 #500	1	2026-05-04 12:46:34.823562	2026-05-05 02:14:06.4688		1	1	管理员
+628	FK202605075606		other	打印标签/酸马奶标签民族印刷厂	6.00	2026-05-07	9	乌日力格		1	2026-05-07 10:24:19.307038	\N		1	1	管理员
+427	FK202604258031	CG202604254206	supplier	广州维记	2535.00	2026-04-25	5	道力干记录付款单	采购单CG202604254206审核自动生成	1	2026-04-25 10:44:59.737902	2026-05-07 11:45:53.481285	purchase	1	1	管理员
+630	FK202605071505	CG202603312913	supplier	恩赫奶制品厂	216.00	2025-12-16	7	公司支出账户	采购单CG202603312913审核自动生成	1	2026-05-07 12:02:40.719854	2026-05-07 12:07:27.766066		1	1	管理员
+631	FK202605103970	PO2026051011090836273	supplier	格日勒	65.00	2026-05-10	7	公司支出账户	采购单PO2026051011090836273审核自动生成	1	2026-05-10 03:10:19.120834	\N	purchase	1	1	管理员
+632	FK202605029162		supplier	巴音珠萨朗	207.00	2026-05-02	7		采购单付款 #419	1	2026-05-10 03:10:28.277717	2026-05-10 06:36:38.411073		1	1	管理员
+635	FK202605109772		supplier	巴音珠萨朗	207.00	2025-12-16	7		采购单付款 #419	1	2026-05-10 06:40:33.060316	2026-05-10 07:13:18.993531		1	1	管理员
+634	FK202605107436		supplier	巴音珠萨朗	207.00	2025-12-28	7		采购单付款 #404	1	2026-05-10 06:36:40.209026	2026-05-10 06:40:51.633262		1	1	管理员
+629	FK202605079112	CG202604257525	supplier	广州维记	2535.00	2026-04-25	7	公司支出账户	采购单CG202604257525审核自动生成	1	2026-05-07 11:47:03.574859	\N	purchase	1	1	管理员
+642	FK202605147733	PO2026051417020142768	supplier	科尔沁奶食品	230.00	2026-05-14	9	乌日力格	采购单PO2026051417020142768审核自动生成	1	2026-05-14 09:03:22.540806	\N	purchase	1	1	管理员
+643	FK202605149652	PO2026051417033280041	supplier	奥特尔奶食品店	86.00	2026-05-14	9	乌日力格	采购单PO2026051417033280041审核自动生成	1	2026-05-14 09:07:04.925545	2026-05-14 09:09:29.757841	purchase	1	1	管理员
+644	FK202605142228	PO2026051417033280041	supplier	奥特尔奶食品店	86.00	2026-05-14	9	乌日力格	采购单PO2026051417033280041审核自动生成	1	2026-05-14 09:10:00.573694	\N	purchase	1	1	管理员
+645	FK202605152809	PO202605152018379825	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-05-15	9	乌日力格	采购单PO202605152018379825审核自动生成	1	2026-05-15 12:19:30.492255	\N	purchase	1	1	管理员
+646	FK202605171114	PO202605171512142302	supplier	科尔沁奶食品	350.00	2026-05-17	9	乌日力格	采购单PO202605171512142302审核自动生成	1	2026-05-17 07:13:41.231587	\N	purchase	1	1	管理员
+373	FK202604127583		supplier	优如包装	5250.01	2025-10-11	8	孟根	采购单付款 #469	1	2026-04-12 03:53:03.893213	2026-05-17 08:13:11.287499		1	1	管理员
+337	FK202604092325	CG202603311551	supplier	银河包装	100.00	2025-09-30	9	乌日力格	采购单付款 #496	1	2026-04-09 17:10:17.885498	2026-05-17 08:13:26.791708		1	1	管理员
+647	FK202605179826	PO2026051720102927747	supplier	乌日汗奶食品店	120.00	2026-05-17	9	乌日力格	采购单PO2026051720102927747审核自动生成	1	2026-05-17 12:14:28.854375	\N	purchase	1	1	管理员
+648	FK202605186545	PO2026051811051272486	supplier	科尔沁奶食品	350.00	2026-05-18	9	乌日力格	采购单PO2026051811051272486审核自动生成	1	2026-05-18 03:07:30.960191	2026-05-18 11:23:10.342118	purchase	1	1	管理员
+649	FK202605183559	PO2026051811051272486	supplier	科尔沁奶食品	470.00	2026-05-18	9	乌日力格	采购单PO2026051811051272486审核自动生成	1	2026-05-18 11:34:27.808354	\N	purchase	1	1	管理员
+650	FK202605256881	PO2026052519441038959	supplier	苏日钦·酸马奶	600.00	2026-05-25	9	乌日力格	采购单PO2026052519441038959审核自动生成	1	2026-05-25 11:45:22.046053	\N	purchase	1	1	管理员
+651	FK202605259754	PO2026052519452885358	supplier	科尔沁奶食品	50.00	2026-05-25	9	乌日力格	采购单PO2026052519452885358审核自动生成	1	2026-05-25 11:46:01.565088	\N	purchase	1	1	管理员
+652	FK202605255524	PO2026052520315526234	supplier	阿斯娜	688.85	2026-05-25	9	乌日力格	采购单PO2026052520315526234审核自动生成	1	2026-05-25 12:56:13.173052	\N	purchase	1	1	管理员
+653	FK202605281814	PO2026052819011556415	supplier	科尔沁奶食品	130.00	2026-05-28	7	公司支出账户	采购单PO2026052819011556415审核自动生成	1	2026-05-28 11:03:46.903624	\N	purchase	1	1	管理员
+654	FK202605289638	PO2026052822532843653	supplier	科尔沁奶食品	760.00	2026-03-06	7	公司支出账户	采购单PO2026052822532843653审核自动生成	1	2026-05-28 14:58:49.298443	\N	purchase	1	1	管理员
+656	FK202605288304	PO202605282308349665	supplier	科尔沁奶食品	666.00	2026-03-26	7	公司支出账户	采购单PO202605282308349665审核自动生成	1	2026-05-28 15:13:14.182832	\N	purchase	1	1	管理员
+657	FK202605285929	PO2026052823181497925	supplier	那牧尔乳制品厂/纯净之源	60.00	2026-01-22	7	公司支出账户	采购单PO2026052823181497925审核自动生成	1	2026-05-28 15:20:02.95646	\N	purchase	1	1	管理员
+658	FK202605283962	PO2026052823363562242	supplier	科尔沁奶食品	99.00	2026-01-17	7	公司支出账户	采购单PO2026052823363562242审核自动生成	1	2026-05-28 15:39:29.620309	2026-05-28 15:40:52.726465	purchase	1	1	管理员
+659	FK202605283418	PO2026052823443072013	supplier	科尔沁奶食品	378.00	2026-01-17	7	公司支出账户	采购单PO2026052823443072013审核自动生成	1	2026-05-28 15:46:06.220632	\N	purchase	1	1	管理员
+660	FK202605285627	PO2026052900005420615	supplier	科尔沁奶食品	140.00	2025-12-05	7	公司支出账户	采购单PO2026052900005420615审核自动生成	1	2026-05-28 16:01:59.606724	\N	purchase	1	1	管理员
+661	FK202605287240	PO2026052900105686231	supplier	科尔沁奶食品	226.00	2025-12-04	7	公司支出账户	采购单PO2026052900105686231审核自动生成	1	2026-05-28 16:13:48.433765	\N	purchase	1	1	管理员
+662	FK202605281034	PO2026052900161363619	supplier	科尔沁奶食品	32.00	2025-12-09	7	公司支出账户	采购单PO2026052900161363619审核自动生成	1	2026-05-28 16:17:13.238429	\N	purchase	1	1	管理员
+663	FK202605284524	PO2026052900290123724	supplier	科尔沁奶食品	170.00	2026-02-13	7	公司支出账户	采购单PO2026052900290123724审核自动生成	1	2026-05-28 16:29:49.134782	\N	purchase	1	1	管理员
+664	FK202605284026	PO2026052901204472710	supplier	盛大印刷	480.00	2026-05-26	7	公司支出账户	采购单PO2026052901204472710审核自动生成	1	2026-05-28 17:22:09.124694	\N	purchase	1	1	管理员
+665	FK202605298714	PO2026052912083928733	supplier	科尔沁奶食品	440.00	2026-01-31	7	公司支出账户	采购单PO2026052912083928733审核自动生成	1	2026-05-29 04:10:23.323215	\N	purchase	1	1	管理员
+666	FK202605294384	PO2026052912143656846	supplier	科尔沁奶食品	100.00	2025-12-30	7	公司支出账户	采购单PO2026052912143656846审核自动生成	1	2026-05-29 04:15:33.656188	\N	purchase	1	1	管理员
+667	FK202605299480	PO2026052912393122943	supplier	那牧尔乳制品厂/纯净之源	110.00	2025-12-18	7	公司支出账户	采购单PO2026052912393122943审核自动生成	1	2026-05-29 04:40:40.118619	\N	purchase	1	1	管理员
+668	FK202605298289	PO2026052912475205567	supplier	科尔沁奶食品	34.00	2026-02-01	7	公司支出账户	采购单PO2026052912475205567审核自动生成	1	2026-05-29 04:48:57.646385	\N	purchase	1	1	管理员
+669	FK202605291147	PO202605291250546762	supplier	科尔沁奶食品	155.00	2026-03-26	7	公司支出账户	采购单PO202605291250546762审核自动生成	1	2026-05-29 04:53:16.88026	\N	purchase	1	1	管理员
+670	FK202605292286	PO2026052913120507893	supplier	科尔沁奶食品	95.00	2026-03-18	7	公司支出账户	采购单PO2026052913120507893审核自动生成	1	2026-05-29 05:12:57.636708	\N	purchase	1	1	管理员
+671	FK202605293428	PO2026052913212525832	supplier	科尔沁奶食品	112.00	2025-12-07	7	公司支出账户	采购单PO2026052913212525832审核自动生成	1	2026-05-29 05:25:31.860669	\N	purchase	1	1	管理员
+638	FK202605121753	CG202603319485	supplier	翁牛特旗奶果子	2000.00	2026-01-09	7	公司支出账户	采购单CG202603319485审核自动生成	1	2026-05-12 05:49:02.776302	\N	purchase	1	1	管理员
+673	FK202605293160	PO2026052913310450637	supplier	科尔沁奶食品	50.00	2026-01-08	7	公司支出账户	采购单PO2026052913310450637审核自动生成	1	2026-05-29 05:31:54.784854	\N	purchase	1	1	管理员
+674	FK202605295785	PO2026052913370308133	supplier	科尔沁奶食品	850.00	2026-02-23	7	公司支出账户	采购单PO2026052913370308133审核自动生成	1	2026-05-29 05:37:36.812031	\N	purchase	1	1	管理员
+675	FK202605294971	PO2026052914341170964	supplier	科尔沁奶食品	110.00	2026-03-20	7	公司支出账户	采购单PO2026052914341170964审核自动生成	1	2026-05-29 06:35:18.416894	\N	purchase	1	1	管理员
+676	FK202605292434	PO2026052914444866357	supplier	巴音珠萨朗	240.00	2026-05-29	7	公司支出账户	采购单PO2026052914444866357审核自动生成	1	2026-05-29 06:51:25.953235	\N	purchase	1	1	管理员
+677	FK202605299319	PO2026052918554541426	supplier	博盈商品	305.00	2026-05-29	7	公司支出账户	采购单PO2026052918554541426审核自动生成	1	2026-05-29 10:57:16.228327	\N	purchase	1	1	管理员
+680	FK202605307843	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-24	7	公司支出账户	采购单CG202603318798审核自动生成	1	2026-05-30 09:16:39.937542	2026-05-30 09:17:21.899392	purchase	1	1	管理员
+655	FK202605282140	PO2026052823031168051	supplier	科尔沁奶食品	22.00	2025-12-01	7	公司支出账户	采购单PO2026052823031168051审核自动生成	1	2026-05-28 15:04:30.594809	2026-05-30 09:45:32.394537	purchase	1	1	管理员
+683	FK202605305536	PO2026053018031117983	supplier	那牧尔乳制品厂/纯净之源	275.00	2025-12-15	7	公司支出账户	采购单PO2026053018031117983审核自动生成	1	2026-05-30 10:04:07.193476	\N	purchase	1	1	管理员
+684	FK202605303645	PO2026053018092954881	supplier	科尔沁奶食品	190.00	2026-04-24	7	公司支出账户	采购单PO2026053018092954881审核自动生成	1	2026-05-30 10:10:23.626049	\N	purchase	1	1	管理员
+685	FK202605307529	PO2026053018111338473	supplier	科尔沁奶食品	110.00	2026-04-22	7	公司支出账户	采购单PO2026053018111338473审核自动生成	1	2026-05-30 10:11:47.503056	\N	purchase	1	1	管理员
+686	FK202605304778	PO2026053018152611741	supplier	科尔沁奶食品	145.00	2026-04-10	7	公司支出账户	采购单PO2026053018152611741审核自动生成	1	2026-05-30 10:16:20.119439	\N	purchase	1	1	管理员
+687	FK202605301125	PO2026053018171487033	supplier	科尔沁奶食品	245.00	2026-04-14	7	公司支出账户	采购单PO2026053018171487033审核自动生成	1	2026-05-30 10:19:34.150345	\N	purchase	1	1	管理员
+688	FK202605303241	PO2026053018200601186	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-04-07	7	公司支出账户	采购单PO2026053018200601186审核自动生成	1	2026-05-30 10:20:48.517875	\N	purchase	1	1	管理员
+689	FK202605308031	PO2026053018211541820	supplier	科尔沁奶食品	410.00	2026-04-05	7	公司支出账户	采购单PO2026053018211541820审核自动生成	1	2026-05-30 10:23:26.683496	\N	purchase	1	1	管理员
+692	FK202605303556	PO2026053018310240985	supplier	科尔沁奶食品	1251.00	2026-04-09	7	公司支出账户	采购单PO2026053018310240985审核自动生成	1	2026-05-30 10:33:08.545672	\N	purchase	1	1	管理员
+693	FK202605308847	PO2026053018352352391	supplier	科尔沁奶食品	206.00	2026-02-09	7	公司支出账户	采购单PO2026053018352352391审核自动生成	1	2026-05-30 10:37:05.827051	\N	purchase	1	1	管理员
+694	FK202605305588	PO2026053018400448932	supplier	奥特尔奶食品店	100.00	2026-04-06	7	公司支出账户	采购单PO2026053018400448932审核自动生成	1	2026-05-30 10:40:44.393087	\N	purchase	1	1	管理员
+695	FK202605309745	PO2026053018415181369	supplier	科尔沁奶食品	200.00	2025-12-14	7	公司支出账户	采购单PO2026053018415181369审核自动生成	1	2026-05-30 10:44:14.984159	\N	purchase	1	1	管理员
+696	FK202605304210	PO2026053018471705426	supplier	奥都奶食品	100.00	2026-04-16	7	公司支出账户	采购单PO2026053018471705426审核自动生成	1	2026-05-30 10:48:12.146439	\N	purchase	1	1	管理员
+697	FK202605303749	PO2026053018490856356	supplier	奥都奶食品	160.00	2026-03-26	7	公司支出账户	采购单PO2026053018490856356审核自动生成	1	2026-05-30 10:50:57.535949	\N	purchase	1	1	管理员
+698	FK202605305073	PO2026053019184528016	supplier	那牧尔乳制品厂/纯净之源	90.00	2026-05-03	7	公司支出账户	采购单PO2026053019184528016审核自动生成	1	2026-05-30 11:19:56.482003	\N	purchase	1	1	管理员
+699	FK202605305543	PO2026053019212439925	supplier	额吉伊德	25.00	2026-04-09	7	公司支出账户	采购单PO2026053019212439925审核自动生成	1	2026-05-30 11:22:17.390691	\N	purchase	1	1	管理员
+700	FK202605307019	PO2026053019261706294	supplier	乌日汗奶食品店	956.00	2026-02-21	7	公司支出账户	采购单PO2026053019261706294审核自动生成	1	2026-05-30 11:33:03.767895	\N	purchase	1	1	管理员
+701	FK202605308844	CG202603316981	supplier	杂/采购商	144.00	2025-12-17	7	公司支出账户	采购单CG202603316981审核自动生成	1	2026-05-30 11:57:58.820852	2026-05-30 11:58:15.031274	purchase	1	1	管理员
+703	FK202605309725		supplier	科尔沁奶食品	4161.00	2026-05-30	7	公司支出账户	补单据费用	1	2026-05-30 14:42:06.604339	\N		1	1	管理员
+705	FK202605307009		supplier	科尔沁奶食品	2.00	2026-05-30	7	公司支出账户	采购单付款 #525	1	2026-05-30 15:18:37.351794	2026-05-30 15:21:52.153302		1	1	管理员
+706	FK202605301795		supplier	科尔沁奶食品	10.00	2026-05-30	7	公司支出账户	采购单付款 #411	1	2026-05-30 15:18:38.48235	2026-05-30 15:21:53.167389		1	1	管理员
+707	FK202605309861		supplier	科尔沁奶食品	75.00	2026-05-30	7	公司支出账户	采购单付款 #405	1	2026-05-30 15:18:39.739319	2026-05-30 15:21:54.190885		1	1	管理员
+708	FK202605308610		supplier	科尔沁奶食品	713.00	2026-05-30	7	公司支出账户	采购单付款 #394	1	2026-05-30 15:18:41.421647	2026-05-30 15:21:55.876625		1	1	管理员
+709	FK202605303534		supplier	科尔沁奶食品	140.00	2026-05-30	7	公司支出账户	采购单付款 #373	1	2026-05-30 15:18:42.746129	2026-05-30 15:21:57.444988		1	1	管理员
+691	FK202605307533	PO2026053018273221330	supplier	额吉伊德	280.00	2026-03-18	7	公司支出账户	采购单PO2026053018273221330审核自动生成	1	2026-05-30 10:29:40.161758	2026-06-13 06:44:14.20259	purchase	1	1	管理员
+690	FK202605303505	PO2026053018255584263	supplier	杂/采购商	21.00	2025-12-10	7	公司支出账户	采购单PO2026053018255584263审核自动生成	1	2026-05-30 10:26:41.674672	\N	purchase	1	1	管理员
+679	FK202605291215	CG202603316675	supplier	科尔沁奶食品	945.00	2026-02-13	7	公司支出账户	采购单CG202603316675审核自动生成	1	2026-05-29 11:29:04.931661	\N	purchase	1	1	管理员
+702	FK202605302250	CG202603319778	supplier	杂/采购商	140.00	2025-12-17	7	公司支出账户	采购单CG202603319778审核自动生成	1	2026-05-30 11:58:30.195741	\N	purchase	1	1	管理员
+682	FK202605309329	PO2026052823031168051	supplier	科尔沁奶食品	22.00	2025-12-01	7	公司支出账户	采购单PO2026052823031168051审核自动生成 [orphan]	1	2026-05-30 09:46:18.532588	\N	purchase	1	1	管理员
+678	FK202605297349	CG202603312332	supplier	科尔沁奶食品	50.00	2026-01-18	7	公司支出账户	采购单CG202603312332审核自动生成	1	2026-05-29 11:19:00.172176	\N	purchase	1	1	管理员
+704	FK202605306388		supplier	科尔沁奶食品	505.00	2026-05-30	7	公司支出账户	采购单付款 #545	1	2026-05-30 15:18:35.734921	2026-05-30 15:21:36.660068		1	1	管理员
+710	FK202605305871		supplier	科尔沁奶食品	1163.00	2026-05-30	7	公司支出账户	采购单付款 #369	1	2026-05-30 15:18:43.859836	2026-05-30 15:21:58.855616		1	1	管理员
+711	FK202605308197		supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #365	1	2026-05-30 15:18:45.360982	2026-05-30 15:21:59.94135		1	1	管理员
+712	FK202605303756		supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #361	1	2026-05-30 15:18:46.642773	2026-05-30 15:22:00.916597		1	1	管理员
+713	FK202605303781		supplier	科尔沁奶食品	145.00	2026-05-30	7	公司支出账户	采购单付款 #359	1	2026-05-30 15:18:47.887556	2026-05-30 15:22:01.978172		1	1	管理员
+714	FK202605305210		supplier	科尔沁奶食品	450.00	2026-05-30	7	公司支出账户	采购单付款 #355	1	2026-05-30 15:18:49.073703	2026-05-30 15:22:04.599553		1	1	管理员
+715	FK202605307773		supplier	科尔沁奶食品	858.00	2026-05-30	7	公司支出账户	采购单付款 #354	1	2026-05-30 15:18:50.263239	2026-05-30 15:22:05.888185		1	1	管理员
+716	FK202605307672	CG202603MERGE001	supplier	科尔沁奶食品	505.00	2026-05-30	7	公司支出账户	采购单付款 #545	1	2026-05-30 15:22:34.182533	\N		1	1	管理员
+717	FK202605308615	PO2026052823031168051	supplier	科尔沁奶食品	2.00	2026-05-30	7	公司支出账户	采购单付款 #525	1	2026-05-30 15:22:35.497598	\N		1	1	管理员
+718	FK202605303287	CG202603317218	supplier	科尔沁奶食品	10.00	2026-05-30	7	公司支出账户	采购单付款 #411	1	2026-05-30 15:22:36.708094	\N		1	1	管理员
+719	FK202605306137	CG202603311283	supplier	科尔沁奶食品	75.00	2026-05-30	7	公司支出账户	采购单付款 #405	1	2026-05-30 15:22:37.733619	\N		1	1	管理员
+720	FK202605307015	CG202603316221	supplier	科尔沁奶食品	713.00	2026-05-30	7	公司支出账户	采购单付款 #394	1	2026-05-30 15:22:38.739121	\N		1	1	管理员
+721	FK202605305935	CG202603319456	supplier	科尔沁奶食品	140.00	2026-05-30	7	公司支出账户	采购单付款 #373	1	2026-05-30 15:22:39.786682	\N		1	1	管理员
+722	FK202605307599	CG202603319794	supplier	科尔沁奶食品	1163.00	2026-05-30	7	公司支出账户	采购单付款 #369	1	2026-05-30 15:22:42.45583	\N		1	1	管理员
+723	FK202605304720	CG202603317708	supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #365	1	2026-05-30 15:22:43.535561	\N		1	1	管理员
+724	FK202605302951	CG202603317412	supplier	科尔沁奶食品	50.00	2026-05-30	7	公司支出账户	采购单付款 #361	1	2026-05-30 15:22:44.600631	\N		1	1	管理员
+725	FK202605302158	CG202603313525	supplier	科尔沁奶食品	145.00	2026-05-30	7	公司支出账户	采购单付款 #359	1	2026-05-30 15:22:47.163224	\N		1	1	管理员
+726	FK202605309792	CG202603313612	supplier	科尔沁奶食品	450.00	2026-05-30	7	公司支出账户	采购单付款 #355	1	2026-05-30 15:22:48.214712	\N		1	1	管理员
+727	FK202605309659	CG202603318635	supplier	科尔沁奶食品	858.00	2026-05-30	7	公司支出账户	采购单付款 #354	1	2026-05-30 15:22:49.208406	\N		1	1	管理员
+728	FK202606058703	PO202606051017064654	supplier	科尔沁奶食品	330.00	2026-06-05	7	公司支出账户	采购单PO202606051017064654审核自动生成	1	2026-06-05 02:18:13.354599	\N	purchase	1	1	管理员
+729	FK202606074943	PO2026060714193221766	other	车费	60.00	2026-06-07	7	公司支出账户	采购附加费用 #568:运费 [翁牛特旗奶果子]	1	2026-06-07 06:23:16.655584	\N		1	1	管理员
+731	FK202606079444	PO2026060714325332740	supplier	浙江金矿包装	570.96	2026-05-23	7	公司支出账户	采购单PO2026060714325332740审核自动生成	1	2026-06-07 06:37:10.415438	\N	purchase	1	1	管理员
+732	FK202606072041	PO2026060714455091530	supplier	翁牛特旗奶果子	1629.75	2026-04-09	7	公司支出账户	采购单PO2026060714455091530审核自动生成	1	2026-06-07 06:51:26.228294	\N	purchase	1	1	管理员
+733	FK202606074399	PO2026060714455091530	other	车费	60.00	2026-06-07	7	公司支出账户	采购附加费用 #570:运费 [翁牛特旗奶果子]	1	2026-06-07 06:51:45.213443	2026-06-07 06:51:59.751292		1	1	管理员
+734	FK202606077491	PO2026060714455091530	other	车费	60.00	2026-04-09	7	公司支出账户	采购附加费用 #570:运费 [翁牛特旗奶果子]	1	2026-06-07 06:52:54.214273	\N		1	1	管理员
+730	FK202606072408	PO2026060714193221766	supplier	那牧尔乳制品厂/纯净之源	873.30	2026-06-07	7	公司支出账户	采购附加费用 #568:包装费 [翁牛特旗奶果子]	1	2026-06-07 06:23:25.769709	\N		1	1	管理员
+735	FK202606072611	PO2026060714455091530	supplier	那牧尔乳制品厂/纯净之源	296.00	2026-04-09	7	公司支出账户	采购附加费用 #570:包装费 [翁牛特旗奶果子]	1	2026-06-07 06:53:08.161182	\N		1	1	管理员
+736	FK202606079901	PO202606071531535955	supplier	盛大印刷	97.20	2026-06-07	7	公司支出账户	采购单PO202606071531535955审核自动生成	1	2026-06-07 07:32:54.901914	\N	purchase	1	1	管理员
+737	FK202606078550	PO2026060716001489521	supplier	科尔沁奶食品	330.00	2026-06-07	7	公司支出账户	采购单PO2026060716001489521审核自动生成	1	2026-06-07 08:02:06.214274	\N	purchase	1	1	管理员
+738	FK202606075107	PO2026060717373589935	supplier	浙江金矿包装	243.39	2026-02-25	7	公司支出账户	采购单PO2026060717373589935审核自动生成	1	2026-06-07 09:40:45.475372	\N	purchase	1	1	管理员
+739	FK202606071912	PO2026060718075097772	supplier	永巨茶业	610.00	2026-02-26	7	公司支出账户	采购单PO2026060718075097772审核自动生成	1	2026-06-07 10:10:19.080962	\N	purchase	1	1	管理员
+740	FK202606073815	PO2026060718184856196	supplier	拼多多/木勺	53.46	2026-01-04	7	公司支出账户	采购单PO2026060718184856196审核自动生成	1	2026-06-07 10:19:59.106994	\N	purchase	1	1	管理员
+741	FK202606077996	PO2026060718231877330	supplier	浙江金矿包装	243.39	2026-02-24	7	公司支出账户	采购单PO2026060718231877330审核自动生成	1	2026-06-07 10:24:08.868801	\N	purchase	1	1	管理员
+742	FK202606071424	CG202603318310	supplier	浙江金矿包装	611.78	2026-01-11	7	公司支出账户	采购单付款 #390	1	2026-06-07 10:28:08.329325	\N		1	1	管理员
+743	FK202606076480	PO2026060718331762974	supplier	山东锦食食品	687.00	2026-04-17	7	公司支出账户	采购单PO2026060718331762974审核自动生成	1	2026-06-07 10:34:39.072866	\N	purchase	1	1	管理员
+744	FK202606075538	PO2026060718364487147	supplier	广州维记	2535.00	2026-03-22	7	公司支出账户	采购单PO2026060718364487147审核自动生成	1	2026-06-07 10:38:55.19627	\N	purchase	1	1	管理员
+745	FK202606078074	PO2026060718392055752	supplier	广州维记	1050.00	2026-02-12	7	公司支出账户	采购单PO2026060718392055752审核自动生成	1	2026-06-07 10:42:48.711907	\N	purchase	1	1	管理员
+746	FK202606079778	PO2026060718430558657	supplier	广州维记	42.00	2026-02-05	7	公司支出账户	采购单PO2026060718430558657审核自动生成	1	2026-06-07 10:43:56.729525	\N	purchase	1	1	管理员
+747	FK202606075456	PO2026060719254963613	supplier	巴音珠萨朗	740.00	2026-04-06	7	公司支出账户	采购单PO2026060719254963613审核自动生成	1	2026-06-07 11:28:04.822572	\N	purchase	1	1	管理员
+748	FK202606077762	PO2026060719295660396	supplier	巴音珠萨朗	335.00	2025-12-30	7	公司支出账户	采购单PO2026060719295660396审核自动生成	1	2026-06-07 11:30:55.799759	\N	purchase	1	1	管理员
+749	FK202606076253	PO202606071931245928	supplier	巴音珠萨朗	390.00	2025-12-15	7	公司支出账户	采购单PO202606071931245928审核自动生成	1	2026-06-07 11:33:01.125879	\N	purchase	1	1	管理员
+750	FK202606072184	CG202603315981	supplier	巴音珠萨朗	310.00	2025-12-28	7	公司支出账户	采购单付款 #404	1	2026-06-07 11:38:01.550521	\N		1	1	管理员
+752	FK202606071688	CG202603315339	supplier	永巨茶业	3310.00	2026-01-16	7	公司支出账户	采购单付款 #385	1	2026-06-07 11:39:22.580682	\N		1	1	管理员
+753	FK202606076786	PO202606072143392521	supplier	小米厂家阿旗	740.00	2026-04-06	7	公司支出账户	采购单PO202606072143392521审核自动生成	1	2026-06-07 13:47:11.348443	\N	purchase	1	1	管理员
+754	FK202606073649	PO2026060722052379648	supplier	乌日汗奶食品店	100.00	2026-04-16	7	公司支出账户	采购单PO2026060722052379648审核自动生成	1	2026-06-07 14:06:30.910748	\N	purchase	1	1	管理员
+755	FK202606075167	PO2026060722270197996	supplier	奥特尔奶食品店	410.00	2026-02-21	7	公司支出账户	采购单PO2026060722270197996审核自动生成	1	2026-06-07 14:28:45.359416	\N	purchase	1	1	管理员
+756	FK202606077337	PO2026060722515244096	supplier	科尔沁奶食品	380.00	2026-06-01	7	公司支出账户	采购单PO2026060722515244096审核自动生成	1	2026-06-07 14:53:17.606919	\N	purchase	1	1	管理员
+757	FK202606089399	PO2026060812281032249	supplier	沈阳东源包材厂	3180.00	2025-08-07	7	公司支出账户	采购单PO2026060812281032249审核自动生成	1	2026-06-08 04:29:22.620877	2026-06-08 04:29:51.382025	purchase	1	1	管理员
+758	FK202606084440	PO2026060812281032249	supplier	沈阳东源包材厂	3180.00	2025-08-07	9	乌日力格	采购单PO2026060812281032249审核自动生成	1	2026-06-08 04:30:01.700439	\N	purchase	1	1	管理员
+340	FK202604117214	CG202603313713	supplier	沈阳东源包材厂	2381.12	2025-09-30	9	乌日力格	采购单CG202603313713审核自动生成	1	2026-04-11 07:09:37.981783	2026-06-08 06:01:49.577435	purchase	1	1	管理员
+759	FK202606085110	PO2026060814463308038	supplier	盛大印刷	92.40	2026-01-23	7	公司支出账户	采购单PO2026060814463308038审核自动生成	1	2026-06-08 06:47:57.144277	2026-06-08 06:48:19.744593	purchase	1	1	管理员
+761	FK202606081289	PO2026060814463308038	supplier	盛大印刷	56.70	2026-01-23	7	公司支出账户	采购单付款 #589	1	2026-06-08 06:50:27.290186	\N		1	1	管理员
+762	FK202606095699	PO2026060910060636734	supplier	科尔沁奶食品	533.00	2026-06-09	7	公司支出账户	采购单PO2026060910060636734审核自动生成	1	2026-06-09 02:17:55.671388	\N	purchase	1	1	管理员
+763	FK202606098668	PO2026060910254942721	supplier	巴音珠萨朗	330.00	2026-06-09	7	公司支出账户	采购单PO2026060910254942721审核自动生成	1	2026-06-09 02:26:54.168364	\N	purchase	1	1	管理员
+764	FK202606095036	HT20260608001	other	圆通	18.00	2026-06-08	7	公司支出账户	销售订单附加费用 #291:快递/物流 [圆通]	1	2026-06-09 04:46:42.26643	\N		1	1	管理员
+765	FK202606093616	PO2026060914470477658	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-06-09	7	公司支出账户	采购单PO2026060914470477658审核自动生成	1	2026-06-09 06:47:32.919687	\N	purchase	1	1	管理员
+766	FK202606105874	PO202606091505449597	supplier	科尔沁奶食品	390.00	2026-06-09	7	公司支出账户	采购单PO202606091505449597审核自动生成	1	2026-06-10 04:53:27.438126	\N	purchase	1	1	管理员
+767	FK202606116767	PO2026061115090786886	supplier	科尔沁奶食品	200.00	2026-06-11	7	公司支出账户	采购单PO2026061115090786886审核自动生成	1	2026-06-11 07:10:09.876556	\N	purchase	1	1	管理员
+768	FK202606112718	PO2026061119212198130	supplier	阿润查干	90.00	2026-06-11	7	公司支出账户	采购单PO2026061119212198130审核自动生成	1	2026-06-11 11:23:50.322277	\N	purchase	1	1	管理员
+769	FK202606121489	PO2026061211213321962	supplier	科尔沁奶食品	670.00	2026-06-12	7	公司支出账户	采购单PO2026061211213321962审核自动生成	1	2026-06-12 03:24:08.216742	\N	purchase	1	1	管理员
+770	FK202606133491	PO2026061311080402886	supplier	阿润查干	60.00	2026-06-13	7	公司支出账户	采购单PO2026061311080402886审核自动生成	1	2026-06-13 03:10:18.177401	\N	purchase	1	1	管理员
+771	FK202606135959		other	美团-广告推广	100.00	2026-04-29	7	公司支出账户	[美团平台]	1	2026-06-13 03:32:53.490162	\N		1	1	管理员
+772	FK202606133756	HT20260603001	other	汇鑫物流	120.00	2026-06-13	7	公司支出账户	销售订单附加费用 #288:快递/物流 [汇鑫物流]	1	2026-06-13 05:24:34.98194	\N		1	1	管理员
+773	FK202606136449	HT20260611001	other	汇鑫物流	10.00	2026-06-13	7	公司支出账户	销售订单附加费用 #292:快递/物流 [汇鑫物流]	1	2026-06-13 05:25:01.917241	\N		1	1	管理员
+774	FK202606137365		supplier	广告推广	189.33	2025-12-31	7		[拼多多] 2025年12月推广广告费用	1	2026-06-13 06:26:06.435935	\N		1	1	管理员
+775	FK202606137592	PO2026061314314110367	supplier	奥都奶食品	1000.00	2026-02-20	7	公司支出账户	采购单PO2026061314314110367审核自动生成	1	2026-06-13 06:37:33.288806	\N	purchase	1	1	管理员
+776	FK202606135412	PO2026061314382294132	supplier	格日勒	213.00	2026-02-25	7	公司支出账户	采购单PO2026061314382294132审核自动生成	1	2026-06-13 06:40:18.893677	\N	purchase	1	1	管理员
+777	FK202606138061	PO2026053018273221330	supplier	额吉伊德	280.00	2026-03-18	7	公司支出账户	采购单PO2026053018273221330审核自动生成	1	2026-06-13 06:44:52.443798	\N	purchase	1	1	管理员
+778	FK202606139771	PO2026061314445962835	supplier	额吉伊德	70.00	2026-03-17	7	公司支出账户	采购单PO2026061314445962835审核自动生成	1	2026-06-13 06:46:20.874635	\N	purchase	1	1	管理员
+779	FK202606139691		other	淘宝/杂	341.00	2026-03-05	7	公司支出账户	[样品] 淘宝瓶子样品\n拼多多购物袋定制/2000个/287\n江苏永发玻璃黄油罐样品/6个/39	1	2026-06-13 07:25:52.188415	\N		1	1	管理员
+780	FK202606142568		other	圆通快递	1327.00	2026-03-27	7	公司支出账户	快递运费	1	2026-06-14 06:58:15.420767	\N		1	1	管理员
+782	FK202606149580		other	阿姨劳工费	764.00	2026-02-18	7	公司支出账户	店面	1	2026-06-14 07:31:03.932212	\N		1	1	管理员
+784	FK202606141781		other	阿姨劳工费	500.00	2026-06-05	7	公司支出账户	店面	1	2026-06-14 07:32:05.208571	\N		1	1	管理员
+783	FK202606143944		other	阿姨劳工费	500.00	2026-05-27	7	公司支出账户	店面	1	2026-06-14 07:31:44.968884	\N		1	1	管理员
+781	FK202606146314		other	阿姨劳工费	350.00	2026-01-10	7	公司支出账户	店面	1	2026-06-14 07:30:06.673406	\N		1	1	管理员
+785	FK202606146965		other	暖气电锅炉	300.00	2025-11-13	7	公司支出账户	店面	1	2026-06-14 08:05:51.93613	\N		1	1	管理员
+786	FK202606146463		other	暖气电锅炉	498.92	2025-11-16	7	公司支出账户	店面	1	2026-06-14 08:05:53.033651	\N		1	1	管理员
+787	FK202606149298		other	暖气电锅炉	99.71	2025-12-01	7	公司支出账户	店面	1	2026-06-14 08:05:54.27505	\N		1	1	管理员
+788	FK202606146711		other	暖气电锅炉	499.82	2025-12-07	7	公司支出账户	店面	1	2026-06-14 08:05:55.327961	\N		1	1	管理员
+789	FK202606141810		other	暖气电锅炉	499.12	2025-12-14	7	公司支出账户	店面	1	2026-06-14 08:05:56.383334	\N		1	1	管理员
+790	FK202606147114		other	暖气电锅炉	150.00	2025-12-24	7	公司支出账户	店面	1	2026-06-14 08:05:57.783624	\N		1	1	管理员
+791	FK202606141363		other	暖气电锅炉	499.72	2025-12-27	7	公司支出账户	店面	1	2026-06-14 08:05:58.820848	\N		1	1	管理员
+792	FK202606142916		other	暖气电锅炉	500.00	2026-01-09	7	公司支出账户	店面	1	2026-06-14 08:05:59.830152	\N		1	1	管理员
+793	FK202606141496		other	暖气电锅炉	500.00	2026-01-16	7	公司支出账户	店面	1	2026-06-14 08:06:00.861899	\N		1	1	管理员
+794	FK202606142056		other	暖气电锅炉	500.00	2026-01-28	7	公司支出账户	店面	1	2026-06-14 08:06:01.892167	\N		1	1	管理员
+795	FK202606142650		other	暖气电锅炉	500.00	2026-02-06	7	公司支出账户	店面	1	2026-06-14 08:06:02.90254	\N		1	1	管理员
+796	FK202606145821		other	暖气电锅炉	200.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 08:06:03.907209	\N		1	1	管理员
+797	FK202606141417		other	暖气电锅炉	500.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 08:06:05.207554	\N		1	1	管理员
+798	FK202606148301		other	暖气电锅炉	200.00	2026-03-10	7	公司支出账户	店面	1	2026-06-14 08:06:06.237014	\N		1	1	管理员
+799	FK202606143904		other	暖气电锅炉	200.00	2026-03-10	7	公司支出账户	店面	1	2026-06-14 08:06:07.286795	\N		1	1	管理员
+800	FK202606144613		supplier	泰成物流	960.00	2026-02-10	7	公司支出账户		1	2026-06-14 08:52:43.425707	\N		1	1	管理员
+801	FK202606145994		other	店面电费	100.00	2025-10-27	7	公司支出账户	店面	1	2026-06-14 09:01:45.434561	\N		1	1	管理员
+802	FK202606147276		other	店面电费	50.00	2025-11-25	7	公司支出账户	店面	1	2026-06-14 09:01:46.478823	\N		1	1	管理员
+803	FK202606147950		other	店面电费	100.00	2025-12-14	7	公司支出账户	店面	1	2026-06-14 09:01:47.496113	\N		1	1	管理员
+804	FK202606142197		other	店面电费	100.00	2025-12-22	7	公司支出账户	店面	1	2026-06-14 09:01:48.584996	\N		1	1	管理员
+805	FK202606142982		other	店面电费	150.00	2025-12-30	7	公司支出账户	店面	1	2026-06-14 09:01:49.678618	\N		1	1	管理员
+806	FK202606141238		other	店面电费	100.00	2026-01-09	7	公司支出账户	店面	1	2026-06-14 09:01:50.70206	\N		1	1	管理员
+807	FK202606142763		other	店面电费	200.00	2026-01-16	7	公司支出账户	店面	1	2026-06-14 09:01:51.770439	\N		1	1	管理员
+808	FK202606147549		other	店面电费	200.00	2026-01-25	7	公司支出账户	店面	1	2026-06-14 09:01:53.251247	\N		1	1	管理员
+809	FK202606145905		other	店面电费	197.00	2026-01-31	7	公司支出账户	店面	1	2026-06-14 09:01:54.322603	\N		1	1	管理员
+810	FK202606144817		other	店面电费	300.00	2026-02-28	7	公司支出账户	店面	1	2026-06-14 09:01:55.349587	\N		1	1	管理员
+811	FK202606148515		other	店面电费	100.00	2026-03-15	7	公司支出账户	店面	1	2026-06-14 09:01:56.383354	\N		1	1	管理员
+812	FK202606147560		other	店面电费	200.00	2026-03-21	7	公司支出账户	店面	1	2026-06-14 09:01:57.414313	\N		1	1	管理员
+813	FK202606145717		other	店面电费	100.00	2026-03-31	7	公司支出账户	店面	1	2026-06-14 09:01:58.443225	\N		1	1	管理员
+814	FK202606147980		other	店面电费	100.00	2026-04-07	7	公司支出账户	店面	1	2026-06-14 09:01:59.498327	\N		1	1	管理员
+815	FK202606149506		other	店面电费	100.00	2026-04-16	7	公司支出账户	店面	1	2026-06-14 09:02:00.522242	\N		1	1	管理员
+816	FK202606144657		other	店面电费	100.00	2026-04-23	7	公司支出账户	店面	1	2026-06-14 09:02:01.532563	\N		1	1	管理员
+817	FK202606147079		other	店面电费	100.00	2026-04-29	7	公司支出账户	店面	1	2026-06-14 09:02:02.545273	\N		1	1	管理员
+818	FK202606146356		other	店面电费	199.49	2026-05-06	7	公司支出账户	店面	1	2026-06-14 09:02:03.54904	\N		1	1	管理员
+819	FK202606148564		other	店面电费	197.00	2026-05-15	7	公司支出账户	店面	1	2026-06-14 09:02:04.560965	\N		1	1	管理员
+820	FK202606143946		other	店面电费	200.00	2026-05-23	7	公司支出账户	店面	1	2026-06-14 09:02:05.576501	\N		1	1	管理员
+821	FK202606147006		other	店面电费	397.00	2026-06-13	7	公司支出账户	店面	1	2026-06-14 09:02:06.582145	\N		1	1	管理员
+681	FK202605308257	CG202603318798	supplier	科尔沁奶食品	140.00	2025-12-24	7	公司支出账户	采购单PO2026052900005420615审核自动生成	1	2026-05-30 09:17:54.08422	\N	purchase	1	1	管理员
+332	FK202604095070	CG202603313861	supplier	淘宝紫辰包装	10.20	2025-09-30	9	乌日力格	采购单CG202603313861审核自动生成	1	2026-04-09 14:56:20.436486	\N	purchase	1	1	管理员
+341	FK202604113455	CG202603311700	supplier	盛大印刷	5.20	2025-09-30	9	乌日力格	采购单CG202603311700审核自动生成	1	2026-04-11 07:13:35.722123	\N	purchase	1	1	管理员
+342	FK202604119897	CG202603317026	supplier	淘宝紫辰包装	49.50	2025-09-30	9	乌日力格	采购单CG202603317026审核自动生成	1	2026-04-11 07:17:50.112577	\N	purchase	1	1	管理员
+343	FK202604117997	CG202603312374	supplier	盛大印刷	1.74	2025-09-30	9	乌日力格	采购单CG202603312374审核自动生成	1	2026-04-11 07:18:55.211002	\N	purchase	1	1	管理员
+345	FK202604119416	CG202603318344	supplier	盛大印刷	0.39	2025-09-30	9	乌日力格	采购单CG202603318344审核自动生成	1	2026-04-11 07:28:16.57574	\N	purchase	1	1	管理员
+346	FK202604113663	CG202603316897	supplier	盛大印刷	1469.00	2025-09-30	9	乌日力格	采购单CG202603316897审核自动生成	1	2026-04-11 07:30:25.137374	\N	purchase	1	1	管理员
+347	FK202604112050	CG202603311453	supplier	沈阳乾兴包装	254.80	2025-09-30	9	乌日力格	采购单CG202603311453审核自动生成	1	2026-04-11 08:04:40.303687	\N	purchase	1	1	管理员
+350	FK202604115520	CG202603317823	supplier	盛大印刷	66.66	2025-09-30	9	乌日力格	采购单CG202603317823审核自动生成	1	2026-04-11 09:09:14.444567	\N	purchase	1	1	管理员
+352	FK202604111164	CG202603314893	supplier	淘宝紫辰包装	56.10	2025-09-30	9	乌日力格	采购单CG202603314893审核自动生成	1	2026-04-11 09:13:44.961254	\N	purchase	1	1	管理员
+354	FK202604112273	CG202603315759	supplier	淘宝紫辰包装	3.40	2025-09-30	9	乌日力格	采购单CG202603315759审核自动生成	1	2026-04-11 09:28:56.427135	\N	purchase	1	1	管理员
+355	FK202604115729	CG202603317580	supplier	淘宝/江苏永发玻璃制品厂	89.10	2025-09-30	9	乌日力格	采购单CG202603317580审核自动生成	1	2026-04-11 09:51:32.282962	\N	purchase	1	1	管理员
+356	FK202604113490	CG202603314842	supplier	盛大印刷	970.45	2025-09-30	9	乌日力格	采购单CG202603314842审核自动生成	1	2026-04-11 09:52:34.349068	\N	purchase	1	1	管理员
+357	FK202604111735	CG202603316532	supplier	巴音珠萨朗	420.00	2025-10-12	9	乌日力格	采购单CG202603316532审核自动生成	1	2026-04-11 11:00:49.366553	\N	purchase	1	1	管理员
+358	FK202604114437	CG202603313871	supplier	恩赫奶制品厂	270.00	2025-10-10	9	乌日力格	采购单CG202603313871审核自动生成	1	2026-04-11 12:18:16.263441	\N	purchase	1	1	管理员
+360	FK202604121025	CG202603315163	supplier	永巨茶业	2825.04	2025-10-06	9	乌日力格	采购单CG202603315163审核自动生成	1	2026-04-12 02:43:49.696879	\N	purchase	1	1	管理员
+361	FK202604127420	CG202603318958	supplier	广州维记	1455.00	2025-10-09	9	乌日力格	采购单CG202603318958审核自动生成	1	2026-04-12 02:45:40.893721	\N	purchase	1	1	管理员
+362	FK202604127954	CG202603311647	supplier	优如包装	2250.00	2025-10-11	9	乌日力格	采购单CG202603311647审核自动生成	1	2026-04-12 02:56:54.060475	\N	purchase	1	1	管理员
+364	FK202604122813	CG202603312892	supplier	淘宝欧信	1700.00	2025-10-22	9	乌日力格	采购单CG202603312892审核自动生成	1	2026-04-12 03:05:29.301332	\N	purchase	1	1	管理员
+365	FK202604123964	CG202603319598	supplier	山东锦食食品	151.10	2025-10-01	9	乌日力格	采购单CG202603319598审核自动生成	1	2026-04-12 03:07:02.263845	\N	purchase	1	1	管理员
+367	FK202604126510	CG202603312351	supplier	拼多多/木勺	63.96	2025-10-01	9	乌日力格	采购单CG202603312351审核自动生成	1	2026-04-12 03:08:50.298811	\N	purchase	1	1	管理员
+368	FK202604125739	CG202603317743	supplier	拼多多/木勺	159.90	2025-11-16	7	公司支出账户	采购单CG202603317743审核自动生成	1	2026-04-12 03:09:22.958612	\N	purchase	1	1	管理员
+369	FK202604126691	CG202603318243	supplier	盛大印刷	360.00	2025-10-01	9	乌日力格	采购单CG202603318243审核自动生成	1	2026-04-12 03:11:33.400987	\N	purchase	1	1	管理员
+380	FK202604126461	CG202603315155	supplier	广州维记	1820.00	2025-10-26	9	乌日力格	采购单CG202603315155审核自动生成	1	2026-04-12 04:32:43.305888	\N	purchase	1	1	管理员
+381	FK202604121917	CG202603314251	supplier	锡盟艾润萨利SC	470.00	2025-10-26	9	乌日力格	采购单CG202603314251审核自动生成	1	2026-04-12 04:37:50.072252	\N	purchase	1	1	管理员
+392	FK202604174708	CG202603317794	supplier	恩赫奶制品厂	284.40	2025-10-20	9	乌日力格	采购单CG202603317794审核自动生成	1	2026-04-17 13:28:29.345562	\N	purchase	1	1	管理员
+395	FK202604176554	CG202603312155	supplier	山东锦食食品	550.00	2025-11-01	9	乌日力格	采购单CG202603312155审核自动生成	1	2026-04-17 14:52:45.537096	\N	purchase	1	1	管理员
+396	FK202604183052	CG202603314365	supplier	广州维记	1817.00	2025-11-07	7	公司支出账户	采购单CG202603314365审核自动生成	1	2026-04-18 11:11:52.735608	\N	purchase	1	1	管理员
+397	FK202604185404	CG202603312275-D426	supplier	广州维记	3380.00	2025-12-10	7	公司支出账户	采购单CG202603312275-D426审核自动生成	1	2026-04-18 11:12:37.540723	\N	purchase	1	1	管理员
+398	FK202604184603	CG202603314495	supplier	巴音珠萨朗	350.00	2025-11-16	7	公司支出账户	采购单CG202603314495审核自动生成	1	2026-04-18 11:17:59.345082	\N	purchase	1	1	管理员
+399	FK202604185757	CG202603313821	supplier	巴音珠萨朗	854.00	2026-01-06	7	公司支出账户	采购单CG202603313821审核自动生成	1	2026-04-18 11:19:11.501805	\N	purchase	1	1	管理员
+400	FK202604189776	CG202603315747	supplier	拼多多/热缩膜	245.49	2025-11-16	7	公司支出账户	采购单CG202603315747审核自动生成	1	2026-04-18 11:36:20.404362	\N	purchase	1	1	管理员
+435	FK202604255343	CG202603312647	supplier	恩赫奶制品厂	367.20	2025-12-10	9	乌日力格	采购单CG202603312647审核自动生成	1	2026-04-25 11:14:29.295467	\N	purchase	1	1	管理员
+407	FK202604258214	CG202603315058	supplier	盛大印刷	743.89	2025-12-04	7	公司支出账户	采购单CG202603315058审核自动生成	1	2026-04-25 05:27:09.829592	\N	purchase	1	1	管理员
+408	FK202604253343	CG202603316462	supplier	盛大印刷	960.00	2025-12-10	8	孟根	采购单CG202603316462审核自动生成	1	2026-04-25 05:35:25.961571	\N	purchase	1	1	管理员
+411	FK202604259028	CG202603318832	supplier	拼多多/随机店采购	2800.00	2025-11-16	8	孟根	采购单CG202603318832审核自动生成	1	2026-04-25 10:11:06.116262	\N	purchase	1	1	管理员
+412	FK202604251093	CG202603315329	supplier	拼多多/随机店采购	38.00	2025-11-16	7	公司支出账户	采购单CG202603315329审核自动生成	1	2026-04-25 10:12:25.34692	\N	purchase	1	1	管理员
+414	FK202604258449	CG202603319667	supplier	淘宝紫辰包装	70.40	2025-12-01	7	公司支出账户	采购单CG202603319667审核自动生成	1	2026-04-25 10:14:37.622578	\N	purchase	1	1	管理员
+415	FK202604258640	CG202603319001	supplier	淘宝/江苏永发玻璃制品厂	648.00	2025-12-01	8	孟根	采购单CG202603319001审核自动生成	1	2026-04-25 10:15:19.849434	\N	purchase	1	1	管理员
+416	FK202604256097	CG202603318178	supplier	淘宝/杂	925.00	2025-12-01	8	孟根	采购单CG202603318178审核自动生成	1	2026-04-25 10:16:11.534225	\N	purchase	1	1	管理员
+419	FK202604256562	CG202603312047	supplier	科尔沁奶食品	154.00	2025-12-04	7	公司支出账户	采购单CG202603312047审核自动生成	1	2026-04-25 10:20:57.202888	\N	purchase	1	1	管理员
+420	FK202604251981	CG202603319416	supplier	杂/采购商	107.00	2025-12-05	7	公司支出账户	采购单CG202603319416审核自动生成	1	2026-04-25 10:22:11.848563	\N	purchase	1	1	管理员
+421	FK202604254132	CG202603312757	supplier	科尔沁奶食品	166.00	2025-12-05	7	公司支出账户	采购单CG202603312757审核自动生成	1	2026-04-25 10:23:01.71716	\N	purchase	1	1	管理员
+422	FK202604253636	CG202603314528	supplier	科尔沁奶食品	751.00	2025-12-09	7	公司支出账户	采购单CG202603314528审核自动生成	1	2026-04-25 10:28:11.351906	\N	purchase	1	1	管理员
+425	FK202604258495	CG202603317629	supplier	科尔沁奶食品	400.00	2026-01-24	7	公司支出账户	采购单CG202603317629审核自动生成	1	2026-04-25 10:41:56.750299	\N	purchase	1	1	管理员
+430	FK202604253204	CG202603319655	supplier	优如包装	3800.00	2025-12-07	8	孟根	采购单CG202603319655审核自动生成	1	2026-04-25 11:00:05.650903	\N	purchase	1	1	管理员
+432	FK202604257783	CG202603312552	supplier	奥都奶食品	240.00	2025-12-07	8	孟根	采购单CG202603312552审核自动生成	1	2026-04-25 11:02:07.71983	\N	purchase	1	1	管理员
+437	FK202604254423	CG202603312319	supplier	科尔沁奶食品	526.00	2025-12-10	7	公司支出账户	采购单CG202603312319审核自动生成	1	2026-04-25 11:23:23.840327	\N	purchase	1	1	管理员
+441	FK202604257180	CG202603315567	supplier	科尔沁奶食品	555.00	2025-12-17	7	公司支出账户	采购单CG202603315567审核自动生成	1	2026-04-25 14:46:11.302629	\N	purchase	1	1	管理员
+446	FK202604259180	CG202603319749	supplier	盛大印刷	33.50	2025-12-25	7	公司支出账户	采购单CG202603319749审核自动生成	1	2026-04-25 14:59:16.176819	\N	purchase	1	1	管理员
+448	FK202604258318	CG202603319076	supplier	阿润查干	182.00	2025-12-25	7	公司支出账户	采购单CG202603319076审核自动生成	1	2026-04-25 15:01:08.995748	\N	purchase	1	1	管理员
+455	FK202604267194	CG202603318785	supplier	雷记炒货	200.00	2026-01-11	7	公司支出账户	采购单CG202603318785审核自动生成	1	2026-04-26 15:49:52.626787	\N	purchase	1	1	管理员
+459	FK202604262204	CG202603319425	supplier	糖炮	240.00	2026-01-16	7	公司支出账户	采购单CG202603319425审核自动生成	1	2026-04-26 16:02:59.424178	\N	purchase	1	1	管理员
+465	FK202604267803	CG202603313356	supplier	杂/采购商	49.36	2026-01-20	7	公司支出账户	采购单CG202603313356审核自动生成	1	2026-04-26 16:10:30.519371	\N	purchase	1	1	管理员
+466	FK202604261159	CG202603319923	supplier	奥特尔奶食品店	526.00	2026-01-27	7	公司支出账户	采购单CG202603319923审核自动生成	1	2026-04-26 16:16:22.109416	\N	purchase	1	1	管理员
+467	FK202604265937	CG202603312825	supplier	额吉伊德	161.00	2026-01-27	7	公司支出账户	采购单CG202603312825审核自动生成	1	2026-04-26 16:16:58.389325	\N	purchase	1	1	管理员
+633	FK202605104460	CG202603311981	supplier	巴音珠萨朗	183.00	2025-12-16	7		采购单CG202603311981审核自动生成	1	2026-05-10 04:41:47.340227	\N		1	1	管理员
+639	FK202605121144	CG202603318280	supplier	翁牛特旗奶果子	2146.00	2025-11-30	9	乌日力格	采购单CG202603318280审核自动生成	1	2026-05-12 05:49:04.388494	\N	purchase	1	1	管理员
+641	FK202605123384	CG202603311625	supplier	民族印刷厂	120.00	2025-11-16	7		采购单CG202603311625审核自动生成	1	2026-05-12 09:26:47.448794	\N	purchase	1	1	管理员
+760	FK202606085311	PO2026060814463308038	supplier	盛大印刷	92.40	2026-01-23	7	公司支出账户	采购单PO2026060814463308038审核自动生成 [orphan]	1	2026-06-08 06:49:07.031538	\N	purchase	1	1	管理员
+541	FK202605041833	CG202603314468	supplier	纯净奶食品	310.00	2026-02-01	7	公司支出账户	采购单付款 #409	1	2026-05-04 04:51:19.481044	\N		1	1	管理员
+822	FK202606154832	LS202606148804	other	顺丰	127.00	2026-04-06	7	公司支出账户	零售附加费用 #1474:运费	1	2026-06-15 15:16:03.352919	\N		1	1	管理员
+823	FK202606163073	PO2026061621560672971	supplier	科尔沁奶食品	50.00	2026-06-16	7	公司支出账户	采购单PO2026061621560672971审核自动生成	1	2026-06-16 13:56:33.455049	\N	purchase	1	1	管理员
+824	FK202606195007		other	阿姨劳工费	500.00	2026-06-16	7	公司支出账户	劳务费	1	2026-06-19 06:50:56.952546	\N		1	1	管理员
+825	FK202606202438	PO202606201610588640	supplier	科尔沁奶食品	330.00	2026-06-20	7	公司支出账户	采购单PO202606201610588640审核自动生成	1	2026-06-20 08:11:55.109764	\N	purchase	1	1	管理员
+826	FK202606226939	PO2026062211360496627	supplier	科尔沁奶食品	640.00	2026-06-22	7	公司支出账户	采购单PO2026062211360496627审核自动生成	1	2026-06-22 03:38:38.443941	\N	purchase	1	1	管理员
+827	FK202606228627	PO2026062211385423444	supplier	科尔沁奶食品	656.00	2026-06-13	7	公司支出账户	采购单PO2026062211385423444审核自动生成	1	2026-06-22 03:42:24.727378	\N	purchase	1	1	管理员
+828	FK202606221666	PO2026062211424384186	supplier	科尔沁奶食品	200.00	2026-06-21	7	公司支出账户	采购单PO2026062211424384186审核自动生成	1	2026-06-22 03:43:26.350675	\N	purchase	1	1	管理员
+829	FK202606223308	PO2026062214182043723	supplier	那牧尔乳制品厂/纯净之源	550.00	2026-06-22	7	公司支出账户	采购单PO2026062214182043723审核自动生成	1	2026-06-22 06:19:24.982317	\N	purchase	1	1	管理员
+830	FK202606229868	PO2026062215271297352	supplier	科尔沁奶食品	340.00	2026-06-22	7	公司支出账户	采购单PO2026062215271297352审核自动生成	1	2026-06-22 07:27:51.994528	\N	purchase	1	1	管理员
+831	FK202606225637	PO2026062215561861413	supplier	巴音珠萨朗	470.00	2026-06-22	7	公司支出账户	采购单PO2026062215561861413审核自动生成	1	2026-06-22 07:58:17.05122	\N	purchase	1	1	管理员
+832	FK202606238949	PO202606231742474342	supplier	科尔沁奶食品	205.00	2026-06-23	7	公司支出账户	采购单PO202606231742474342审核自动生成	1	2026-06-23 09:44:38.691626	\N	purchase	1	1	管理员
+833	FK202606305600	PO2026063010174698423	supplier	科尔沁奶食品	155.00	2026-06-30	7	公司支出账户	采购单PO2026063010174698423审核自动生成	1	2026-06-30 02:18:31.903611	\N	purchase	1	1	管理员
+834	FK202606307003	PO2026063010302146351	supplier	科尔沁奶食品	50.00	2026-06-30	7	公司支出账户	采购单PO2026063010302146351审核自动生成	1	2026-06-30 02:30:57.767806	\N	purchase	1	1	管理员
+835	FK202607026195	PO2026070216142419815	supplier	科尔沁奶食品	475.00	2026-07-02	7	公司支出账户	采购单PO2026070216142419815审核自动生成	1	2026-07-02 08:14:54.559381	\N	purchase	1	1	管理员
+836	FK202607047081	PO2026070416575364554	supplier	广州维记	1690.00	2026-07-04	7	公司支出账户	采购单PO2026070416575364554审核自动生成	1	2026-07-04 08:58:38.409787	\N	purchase	1	1	管理员
+837	FK202607075423	PO2026070711073264031	supplier	科尔沁奶食品	50.00	2026-07-07	7	公司支出账户	采购单PO2026070711073264031审核自动生成	1	2026-07-07 03:07:55.854025	\N	purchase	1	1	管理员
+838	FK202607082802	PO2026070816402254688	supplier	科尔沁奶食品	340.00	2026-07-08	7	公司支出账户	采购单PO2026070816402254688审核自动生成	1	2026-07-08 08:40:58.891513	\N	purchase	1	1	管理员
+839	FK202607126700	PO2026071214043411525	supplier	广州维记	1807.00	2026-07-10	7	公司支出账户	采购单PO2026071214043411525审核自动生成	1	2026-07-12 06:06:45.995088	\N	purchase	1	1	管理员
+840	FK202607124673	PO202607121407018203	supplier	额吉伊德	68.00	2026-07-09	7	公司支出账户	采购单PO202607121407018203审核自动生成	1	2026-07-12 06:09:21.250016	\N	purchase	1	1	管理员
+841	FK202607126953	PO202607121533349182	supplier	科尔沁奶食品	50.00	2026-07-12	7	公司支出账户	采购单PO202607121533349182审核自动生成	1	2026-07-12 07:34:05.36926	\N	purchase	1	1	管理员
+842	FK202607199080	PO2026071922045383147	supplier	阿润查干	120.00	2026-07-19	7	公司支出账户	采购单PO2026071922045383147审核自动生成	1	2026-07-19 14:05:40.221994	\N	purchase	1	1	管理员
+843	FK202607194528	PO2026071922345620868	supplier	纯净奶食品	3000.00	2026-07-13	7	公司支出账户	采购单PO2026071922345620868审核自动生成	1	2026-07-19 14:36:51.74825	\N	purchase	1	1	管理员
+844	FK202607207543	PO2026072021342977610	supplier	科尔沁奶食品	50.00	2026-07-20	7	公司支出账户	采购单PO2026072021342977610审核自动生成	1	2026-07-20 13:34:57.626164	\N	purchase	1	1	管理员
+845	FK202607216790	PO2026072112024670768	supplier	科尔沁奶食品	170.00	2026-07-21	7	公司支出账户	采购单PO2026072112024670768审核自动生成	1	2026-07-21 04:03:14.585568	\N	purchase	1	1	管理员
+846	FK202607223102	PO2026072222234108185	supplier	山东锦食食品	339.60	2026-07-22	7	公司支出账户	采购单PO2026072222234108185审核自动生成	1	2026-07-22 14:25:12.413209	\N	purchase	1	1	管理员
+847	FK202607254225	PO2026072516553064920	supplier	科尔沁奶食品	340.00	2026-07-25	7	公司支出账户	采购单PO2026072516553064920审核自动生成	1	2026-07-25 08:56:38.329001	\N	purchase	1	1	管理员
+848	FK202607253741	PO2026072516564211084	supplier	格日勒	50.00	2026-07-25	7	公司支出账户	采购单PO2026072516564211084审核自动生成	1	2026-07-25 08:57:13.545703	\N	purchase	1	1	管理员
 \.
 
 
@@ -11624,6 +12476,34 @@ COPY public.procure_inhouse (id, order_no, purchase_order_id, supplier_id, suppl
 528	CGRK202607206939	623	98	科尔沁奶食品	管理员	2026-07-20	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-07-20 13:34:59.060549	\N	1
 529	CGRK202607219394	624	98	科尔沁奶食品	管理员	2026-07-21	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-07-21 04:03:17.029281	\N	1
 530	CGRK202607221854	625	108	山东锦食食品	管理员	2026-07-22	[{"num": 6, "spec": "", "price": 56.6667, "_total": 340, "remark": "", "goods_id": 997, "goods_sn": "SP0000037", "tax_rate": 0, "cate_name": "半成品", "unit_name": "件", "goods_name": "茶专用/盐包", "unit_ratio": 1000, "supplier_id": null, "price_no_tax": 56.6667, "supplier_name": "", "_base_price_no_tax": 0.056667, "_current_unit_name": "件"}]		1	189	牧区纯坊门店	2026-07-22 14:25:14.101053	\N	1
+531	CGRK202607259576	626	98	科尔沁奶食品	管理员	2026-07-25	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 3107, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "块", "goods_name": "科尔沁中奶豆腐", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "块"}]		1	189	牧区纯坊门店	2026-07-25 08:56:39.210279	\N	1
+532	CGRK202607251504	627	75	格日勒	管理员	2026-07-25	[{"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 811, "goods_sn": "SP0000225", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "蒙古果子/格日勒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-07-25 08:57:14.332585	\N	1
+533	CGRK202607279823	628	98	科尔沁奶食品	管理员	2026-07-27	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}]		1	189	牧区纯坊门店	2026-07-27 14:43:24.81333	\N	1
+534	CGRK202607277337	629	142	佳赫糕点	管理员	2026-07-27	[{"num": 6, "spec": "", "price": 2.5, "_total": 15, "remark": "", "goods_id": 3187, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "玉米棒蛋糕/面包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 2.5, "supplier_name": "", "_base_price_no_tax": 2.5, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 8, "_total": 48, "remark": "", "goods_id": 3188, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "奶制品月饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 5, "spec": "", "price": 5, "_total": 25, "remark": "", "goods_id": 3189, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "蒙古细果条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 3190, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "软方饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 3192, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "蒙古大果条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 5, "_total": 15, "remark": "", "goods_id": 3191, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "酥饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 8, "_total": 48, "remark": "", "goods_id": 3195, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "河北黄庄月饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 5, "_total": 15, "remark": "", "goods_id": 3194, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "吐司面包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-07-27 15:00:15.58008	\N	1
+535	CGRK202607289919	630	93	杂/采购商	管理员	2026-07-28	[{"num": 10, "spec": "", "price": 3.5, "_total": 35, "remark": "", "goods_id": 929, "goods_sn": "SP0000106", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "白砂糖", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 3.5, "supplier_name": "", "_base_price_no_tax": 3.5, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-07-28 05:53:04.660963	\N	1
+536	CGRK202607311695	631	80	奥特尔奶食品店		2026-07-31	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 810, "goods_sn": "SP0000226", "tax_rate": 0, "cate_name": "散货", "unit_name": "散", "goods_name": "乌日莫/奥特尔", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "散"}]		1	189	牧区纯坊门店	2026-07-31 05:41:56.389789	\N	1
+537	CGRK202608046518	632	117	巴音珠萨朗	管理员	2026-08-04	[{"num": 12.8, "spec": "", "price": 15.625, "_total": 200, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.625, "supplier_name": "", "_base_price_no_tax": 15.625, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-04 02:46:25.495185	\N	1
+538	CGRK202608041644	633	93	杂/采购商	管理员	2026-08-04	[{"num": 100, "spec": "", "price": 0.25, "_total": 25, "remark": "", "goods_id": 1027, "goods_sn": "SP0000007", "tax_rate": 0, "cate_name": "塑料袋", "unit_name": "张", "goods_name": "真空袋", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.25, "supplier_name": "", "_base_price_no_tax": 0.25, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-08-04 06:20:20.048672	\N	1
+539	CGRK202608056588	634	92	奥都奶食品	管理员	2026-08-05	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-05 04:56:37.054278	\N	1
+540	CGRK202608051486	635	98	科尔沁奶食品	管理员	2026-08-05	[{"num": 10, "spec": "", "price": 13, "_total": 130, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-05 04:57:51.962212	\N	1
+541	CGRK202608089602	636	144	旧苏木蒙古果子	管理员	2026-08-08	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 811, "goods_sn": "SP0000225", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "蒙古果子/格日勒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-08-08 03:20:42.19247	\N	1
+542	CGRK202608089703	637	76	乌日汗奶食品店	管理员	2026-08-08	[{"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3125, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "细奶条/原味/乌日汗", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 816, "goods_sn": "SP0000220", "tax_rate": 0, "cate_name": "成品", "unit_name": "瓶", "goods_name": "乌日汗大瓶酸奶", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "瓶"}, {"num": 2, "spec": "", "price": 6, "_total": 12, "remark": "", "goods_id": 826, "goods_sn": "SP0000210", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "瓶", "goods_name": "乌日汗酸奶/中", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6, "supplier_name": "", "_base_price_no_tax": 6, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	2026-08-08 03:24:07.581878	\N	1
+543	CGRK202608082925	638	98	科尔沁奶食品	管理员	2026-08-07	[{"num": 8, "spec": "", "price": 18, "_total": 144, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-08 03:24:53.796258	\N	1
+544	CGRK202608085875	639	111	优如包装	管理员	2026-07-30	[{"num": 2000, "spec": "", "price": 0.2, "_total": 400, "remark": "", "goods_id": 3197, "goods_sn": "", "tax_rate": 0, "cate_name": "青砖奶茶", "unit_name": "张", "goods_name": "新茶包/盐底纸", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.2, "supplier_name": "", "_base_price_no_tax": 0.2, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-08-08 04:13:11.922523	\N	1
+545	CGRK202608088993	640	112	广州维记	管理员	2026-07-27	[{"num": 10, "spec": "", "price": 180.7, "_total": 1807, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 180.7, "supplier_name": "", "_base_price_no_tax": 0.45175, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	2026-08-08 04:28:29.436339	\N	1
+546	CGRK202608099259	641	139	阿斯娜	管理员	2026-06-26	[{"num": 18, "spec": "", "price": 16.5, "_total": 297, "remark": "", "goods_id": 3184, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "阿旗冰箱贴", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.5, "supplier_name": "", "_base_price_no_tax": 16.5, "_current_unit_name": "个"}, {"num": 1, "spec": "", "price": 8.8, "_total": 8.8, "remark": "", "goods_id": 3199, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "佑系帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 1, "spec": "", "price": 8.8, "_total": 8.8, "remark": "", "goods_id": 3200, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "包你百顺帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 8.8, "_total": 17.6, "remark": "", "goods_id": 3198, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "宝山备马帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 30, "spec": "", "price": 0.85, "_total": 25.5, "remark": "", "goods_id": 3117, "goods_sn": "SP2605252385", "tax_rate": 0, "cate_name": "文创", "unit_name": "张", "goods_name": "车载香片", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.85, "supplier_name": "", "_base_price_no_tax": 0.85, "_current_unit_name": "张"}, {"num": 2, "spec": "", "price": 63, "_total": 126, "remark": "", "goods_id": 3201, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "阳光种植/桶装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 63, "supplier_name": "", "_base_price_no_tax": 63, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 45, "_total": 90, "remark": "", "goods_id": 3111, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "", "goods_name": "蒙古元素永生花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 45, "supplier_name": "", "_base_price_no_tax": 45, "_current_unit_name": ""}, {"num": 4, "spec": "", "price": 29, "_total": 116, "remark": "", "goods_id": 3202, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "种个惊喜", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 29, "supplier_name": "", "_base_price_no_tax": 29, "_current_unit_name": "个"}, {"num": 7, "spec": "", "price": 16, "_total": 112, "remark": "", "goods_id": 3203, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "小草娃娃", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16, "supplier_name": "", "_base_price_no_tax": 16, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 41, "_total": 82, "remark": "", "goods_id": 3204, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "蒙草明信片套装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 41, "supplier_name": "", "_base_price_no_tax": 41, "_current_unit_name": "个"}, {"num": 8, "spec": "", "price": 26, "_total": 208, "remark": "", "goods_id": 3205, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "书签/可种植", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 26, "supplier_name": "", "_base_price_no_tax": 26, "_current_unit_name": "个"}, {"num": 100, "spec": "", "price": 1.9, "_total": 190, "remark": "", "goods_id": 3183, "goods_sn": "", "tax_rate": 0, "cate_name": "牧区纯坊X游牧奇遇", "unit_name": "张", "goods_name": "阿旗礼袋蒙文", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 1.9, "supplier_name": "", "_base_price_no_tax": 1.9, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-08-09 06:24:31.490664	\N	1
+547	CGRK202608102345	642	98	科尔沁奶食品	管理员	2026-08-10	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	2026-08-10 08:08:36.951254	\N	1
+548	CGRK202608113357	643	97	纯净奶食品	管理员	2026-08-11	[{"num": 20, "spec": "", "price": 25, "_total": 500, "remark": "", "goods_id": 926, "goods_sn": "SP0000109", "tax_rate": 0, "cate_name": "散装", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 25, "supplier_name": "", "_base_price_no_tax": 25, "_current_unit_name": "个"}]		0	189	牧区纯坊门店	2026-08-11 15:27:47.689394	\N	1
+549	CGRK202608127432	644	90	阿润查干		2026-08-12	[{"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 883, "goods_sn": "SP0000152", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 882, "goods_sn": "SP0000153", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 881, "goods_sn": "SP0000154", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶皮子馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 880, "goods_sn": "SP0000155", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	2026-08-12 09:08:07.099898	\N	1
+550	CGRK202608129432	645	98	科尔沁奶食品	管理员	2026-08-12	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-12 09:08:42.824891	\N	1
+551	CGRK202608171585	646	98	科尔沁奶食品	管理员	2026-08-17	[{"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-17 05:04:40.488038	\N	1
+552	CGRK202608172951	647	98	科尔沁奶食品	管理员	2026-08-17	[{"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-17 05:05:08.22027	\N	1
+553	CGRK202608179425	648	115	那牧尔乳制品厂/纯净之源	管理员	2026-08-17	[{"num": 100, "spec": "", "price": 5.5, "_total": 550, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "冻炒米成品盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5.5, "supplier_name": "", "_base_price_no_tax": 5.5, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	2026-08-17 05:08:17.674569	\N	1
+554	CGRK202608172005	649	113	永巨茶业	管理员	2026-08-17	[{"num": 5, "spec": "", "price": 342, "_total": 1710, "remark": "", "goods_id": 1011, "goods_sn": "SP0000023", "tax_rate": 0, "cate_name": "半成品", "unit_name": "件", "goods_name": "茶包", "unit_ratio": 2000, "supplier_id": null, "price_no_tax": 342, "supplier_name": "", "_base_price_no_tax": 0.171, "_current_unit_name": "件"}]		1	189	牧区纯坊门店	2026-08-17 05:11:03.824618	\N	1
+555	CGRK202608172346	650	92	奥都奶食品	管理员	2026-08-17	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-17 05:11:40.111901	\N	1
+556	CGRK202608222586	651	98	科尔沁奶食品	管理员	2026-08-22	[{"num": 5, "spec": "", "price": 17, "_total": 85, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	1	默认仓库	2026-08-22 02:47:39.522297	\N	1
+557	CGRK202608227397	652	80	奥特尔奶食品店	管理员	2026-08-22	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-22 03:53:41.475701	\N	1
+558	CGRK202608223437	653	117	巴音珠萨朗	管理员	2026-08-13	[{"num": 10, "spec": "", "price": 15.5, "_total": 155, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.5, "supplier_name": "", "_base_price_no_tax": 15.5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	2026-08-22 03:55:30.349282	\N	1
 \.
 
 
@@ -11648,17 +12528,25 @@ COPY public.procure_return (id, order_no, order_sn, order_id, supplier_id, suppl
 --
 
 COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, admin_name, order_date, total_amount, pay_amount, freight_amount, goods_info, remark, status, warehouse_id, warehouse_name, fund_id, fund_name, created_at, deleted_at, discount_type, discount_value, after_discount, expense_amount, freight_bearer, installment, delivery_date, need_invoice, attachments_info, fee_items, shop_id, admin_id) FROM stdin;
+626	PO2026072516553064920	PO2026072516553064920	98	科尔沁奶食品	管理员	2026-07-25	340.00	340.00	0.00	[{"num": 20, "spec": "", "price": 17, "_total": 340, "remark": "", "goods_id": 3107, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "块", "goods_name": "科尔沁中奶豆腐", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "块"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-25 08:56:38.036709	\N	none	0.00	340.00	0.00	buyer	f	\N	f	[]	[]	1	1
+628	PO2026072722424871143	PO2026072722424871143	98	科尔沁奶食品	管理员	2026-07-27	155.00	155.00	0.00	[{"num": 1, "spec": "", "price": 155, "_total": 155, "remark": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667, "_current_unit_name": "麻袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-27 14:43:22.756125	\N	none	0.00	155.00	0.00	buyer	f	\N	f	[]	[]	1	1
+632	PO2026080410450844175	PO2026080410450844175	117	巴音珠萨朗	管理员	2026-08-04	200.00	200.00	0.00	[{"num": 12.8, "spec": "", "price": 15.625, "_total": 200, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.625, "supplier_name": "", "_base_price_no_tax": 15.625, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-04 02:46:23.505209	\N	none	0.00	200.00	0.00	buyer	f	\N	f	[]	[]	1	1
 468	CG202603315878	CG202603316532	117	巴音珠萨朗	管理员	2025-10-12	422.56	420.00	0.00	[{"num": 16.41, "spec": "250克/一袋", "price": 16, "unit_id": 0, "goods_id": 1014, "goods_sn": "SP0000020", "unit_name": "斤", "goods_name": "散装/甜味奶条", "total_price": 262.56}, {"num": 10, "spec": "250克/一袋", "price": 16, "unit_id": 0, "goods_id": 1014, "goods_sn": "SP0000020", "unit_name": "斤", "goods_name": "散装/甜味奶条", "total_price": 160}]	从saas.mzth.cn导入 原单号:CG0002021	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:25.135283	\N	amount	2.56	420.00	0.00	buyer	f	\N	f	[]	[]	1	1
 470	CG202603313299	CG202603313871	116	恩赫奶制品厂	管理员	2025-10-10	270.00	270.00	0.00	[{"num": 15, "spec": "250克/一袋", "price": 18, "unit_id": 0, "goods_id": 1015, "goods_sn": "SP0000019", "unit_name": "斤", "goods_name": "散装/原味奶条", "total_price": 270}]	从saas.mzth.cn导入 原单号:CG0002022	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:29.977498	\N	none	0.00	270.00	0.00	buyer	f	\N	f	[]	[]	1	1
 472	CG202603319414	CG202603315163	113	永巨茶业	管理员	2025-10-06	2825.04	2825.04	0.00	[{"num": 8, "spec": "1件2000包/300元/1件", "price": 353.13, "unit_id": 0, "goods_id": 1011, "goods_sn": "SP0000023", "unit_name": "件", "goods_name": "茶包", "total_price": 2825.04}]	从saas.mzth.cn导入 原单号:CG0002026	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:31.932898	\N	none	0.00	2825.04	0.00	buyer	f	\N	f	[]	[]	1	1
 481	CG202603317526	CG202603319598	108	山东锦食食品	管理员	2025-10-01	151.10	151.10	0.00	[{"num": 2, "spec": "2g", "price": 68.75, "unit_id": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "件", "goods_name": "茶专用/盐包", "total_price": 137.5}, {"num": 200, "spec": "2g", "price": 0.068, "unit_id": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "小包", "goods_name": "茶专用/盐包", "total_price": 13.6}]	从saas.mzth.cn导入 原单号:CG0002152	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:43.052798	\N	none	0.00	151.10	0.00	buyer	f	\N	f	[]	[]	1	1
 460	CG202603319388	CG202603312155	108	山东锦食食品	管理员	2025-11-01	550.00	550.00	0.00	[{"num": 8, "spec": "2g", "price": 68.75, "unit_id": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "件", "goods_name": "茶专用/盐包", "total_price": 550}]	从saas.mzth.cn导入 原单号:CG0002418	1	189	牧区纯坊门店	9	乌日力格	2026-03-31 02:38:15.154954	\N	none	0.00	550.00	0.00	buyer	f	\N	f	[]	[]	1	1
 457	CG202603313230	CG202603314365	112	广州维记	管理员	2025-11-07	1817.00	1817.00	0.00	[{"num": 10, "spec": "400/箱/0.423/球", "price": 181.7, "unit_id": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "件", "goods_name": "奶油球", "total_price": 1817}]	从saas.mzth.cn导入 原单号:CG0002603	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:38:08.488914	\N	none	0.00	1817.00	0.00	buyer	f	\N	f	[]	[]	1	1
+627	PO2026072516564211084	PO2026072516564211084	75	格日勒	管理员	2026-07-25	50.00	50.00	0.00	[{"num": 5, "spec": "", "price": 10, "_total": 50, "remark": "", "goods_id": 811, "goods_sn": "SP0000225", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "蒙古果子/格日勒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-25 08:57:13.274647	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1	1
+629	PO2026072722545606423	PO2026072722545606423	142	佳赫糕点	管理员	2026-07-27	230.00	230.00	0.00	[{"num": 6, "spec": "", "price": 2.5, "_total": 15, "remark": "", "goods_id": 3187, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "玉米棒蛋糕/面包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 2.5, "supplier_name": "", "_base_price_no_tax": 2.5, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 8, "_total": 48, "remark": "", "goods_id": 3188, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "奶制品月饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 5, "spec": "", "price": 5, "_total": 25, "remark": "", "goods_id": 3189, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "蒙古细果条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 3190, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "软方饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 3192, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "蒙古大果条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 5, "_total": 15, "remark": "", "goods_id": 3191, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "酥饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}, {"num": 6, "spec": "", "price": 8, "_total": 48, "remark": "", "goods_id": 3195, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "河北黄庄月饼", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 5, "_total": 15, "remark": "", "goods_id": 3194, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "吐司面包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-27 15:00:09.241508	\N	none	0.00	230.00	0.00	buyer	f	\N	f	[]	[]	1	1
 426	CG202603313799	CG202603312275-D426	112	广州维记	管理员	2025-12-10	3380.00	3380.00	0.00	[{"num": 20, "spec": "400/箱/0.423/球", "price": 169, "unit_id": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "件", "goods_name": "奶油球", "total_price": 3380}]	从saas.mzth.cn导入 原单号:CG0002956	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:36:48.291876	\N	none	0.00	3380.00	0.00	buyer	f	\N	f	[]	[]	1	1
 504	CG202604248289	CG202604243041	124	孟克河	管理员	2026-04-25	978.50	0.00	0.00	[{"num": 2, "price": 65, "goods_id": 3083, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "敖汉小米5㎏"}, {"num": 3, "price": 42, "goods_id": 3084, "goods_sn": "", "cate_name": "", "unit_name": "盒", "goods_name": "四色小米2㎏"}, {"num": 24, "price": 6.5, "goods_id": 3085, "goods_sn": "", "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g"}, {"num": 5, "price": 37, "goods_id": 3086, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "布袋小米2.5㎏"}, {"num": 5, "price": 29, "goods_id": 3087, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "郁金川2.5㎏"}, {"num": 10, "price": 19.35, "goods_id": 3088, "goods_sn": "", "cate_name": "", "unit_name": "斤", "goods_name": "黑芝麻丸5㎏"}, {"num": 1, "price": 43, "goods_id": 3089, "goods_sn": "", "cate_name": "", "unit_name": "箱", "goods_name": "有机黄小米2㎏"}]		1	1	默认仓库	0		2026-04-24 10:27:12.839735	\N	none	0.00	978.50	0.00	buyer	f	\N	f	[]	[]	1	1
 375	CG202603311425	CG202603317286	106	拼多多/热缩膜	管理员	2026-01-20	140.00	0.00	0.00	[{"num": 2000, "spec": "1", "price": 0.07, "unit_id": 0, "goods_id": 993, "goods_sn": "SP0000041", "unit_name": "张", "goods_name": "冻炒米专用/塑膜袋", "total_price": 140}]	从saas.mzth.cn导入 原单号:CG0003945	1	189	牧区纯坊门店	0		2026-03-31 02:35:07.9499	\N	none	0.00	140.00	0.00	buyer	f	\N	f	[]	[]	1	1
 59	CG202603308044	CG202603306508	79		管理员	2026-01-27	0.00	0.00	0.00	[{"num": 540, "price": 5.1592, "unit_id": 0, "goods_id": 836, "goods_name": "礼盒/2026", "total_price": 2785.97}]	从saas.mzth.cn导入 原单号:CG0004118	0	0		0		2026-03-30 16:55:36.558127	2026-03-30 17:18:15.843438	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 112	CG202603304219	CG202603304161	93		管理员	2025-12-10	0.00	0.00	0.00	[{"num": 6, "price": 3.5, "unit_id": 0, "goods_id": 929, "goods_name": "白砂糖", "total_price": 21}]	从saas.mzth.cn导入 原单号:CG0002994	0	0		0		2026-03-30 16:56:12.540091	2026-03-30 17:10:44.787931	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+633	PO2026080414192605390	PO2026080414192605390	93	杂/采购商	管理员	2026-08-04	25.00	25.00	0.00	[{"num": 100, "spec": "", "price": 0.25, "_total": 25, "remark": "", "goods_id": 1027, "goods_sn": "SP0000007", "tax_rate": 0, "cate_name": "塑料袋", "unit_name": "张", "goods_name": "真空袋", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.25, "supplier_name": "", "_base_price_no_tax": 0.25, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-04 06:20:17.202009	\N	none	0.00	25.00	0.00	buyer	f	\N	f	[]	[]	1	1
+630	PO2026072813523477436	PO2026072813523477436	93	杂/采购商	管理员	2026-07-28	35.00	35.00	0.00	[{"num": 10, "spec": "", "price": 3.5, "_total": 35, "remark": "", "goods_id": 929, "goods_sn": "SP0000106", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "白砂糖", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 3.5, "supplier_name": "", "_base_price_no_tax": 3.5, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-28 05:53:02.790874	\N	none	0.00	35.00	0.00	buyer	f	\N	f	[]	[]	1	1
+634	PO202608051256008232	PO202608051256008232	92	奥都奶食品	管理员	2026-08-05	170.00	170.00	0.00	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-05 04:56:34.56089	\N	none	0.00	170.00	0.00	buyer	f	\N	f	[]	[]	1	1
 393	CG202603313876	CG202603311601	108	山东锦食食品	管理员	2026-01-09	687.00	0.00	0.00	[{"num": 10, "spec": "2g", "price": 68.7, "unit_id": 0, "goods_id": 997, "goods_sn": "SP0000037", "unit_name": "件", "goods_name": "茶专用/盐包", "total_price": 687}]	从saas.mzth.cn导入 原单号:CG0003666	1	0		5	道力干记录付款单	2026-03-31 02:35:32.879494	\N	none	0.00	687.00	0.00	buyer	f	\N	f	[]	[]	1	1
 503	CG202604219314	CG202604214024	124	孟克河	管理员	\N	1007.90	0.00	0.00	[{"num": 2, "price": 65, "goods_id": 3083, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "敖汉小米5㎏"}, {"num": 3, "price": 42, "goods_id": 3084, "goods_sn": "", "cate_name": "", "unit_name": "盒", "goods_name": "四色小米2㎏"}, {"num": 24, "price": 6.5, "goods_id": 3085, "goods_sn": "", "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g"}, {"num": 5, "price": 37, "goods_id": 3086, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "布袋小米2.5㎏"}, {"num": 5, "price": 29, "goods_id": 3087, "goods_sn": "", "cate_name": "", "unit_name": "袋", "goods_name": "郁金川2.5㎏"}, {"num": 10, "price": 19.35, "goods_id": 3088, "goods_sn": "", "cate_name": "", "unit_name": "斤", "goods_name": "黑芝麻丸5㎏"}, {"num": 1, "price": 43, "goods_id": 3089, "goods_sn": "", "cate_name": "", "unit_name": "箱", "goods_name": "有机黄小米2㎏"}]		0	0		0		2026-04-21 07:35:36.486815	2026-04-25 02:33:14.283125	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 398	CG202603311038	CG202603316779	97	纯净奶食品	管理员	2026-01-03	60.00	60.00	0.00	[{"num": 10, "spec": "400ke", "price": 6, "unit_id": 0, "goods_id": 866, "goods_sn": "SP0000169", "unit_name": "瓶", "goods_name": "酸奶/纯净", "total_price": 60}]	从saas.mzth.cn导入 原单号:CG0003504	1	0		7	公司支出账户	2026-03-31 02:35:41.304442	\N	none	0.00	60.00	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -11666,25 +12554,36 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 271	CG202603309418	CG202603308919	112	广州维记	管理员	2025-12-10	3380.00	0.00	0.00	[{"num": 20, "spec": "400/箱/0.423/球", "price": 169, "unit_id": 0, "goods_id": 1010, "goods_sn": "SP0000024", "unit_name": "件", "goods_name": "奶油球", "total_price": 3380}]	从saas.mzth.cn导入 原单号:CG0002956	0	0		0		2026-03-30 17:38:01.661932	2026-04-04 07:15:22.883606	none	0.00	3380.00	0.00	buyer	f	\N	f	[]	[]	1	1
 509	PO2026042915313785163	PO2026042915313785163	98	科尔沁奶食品	管理员	2026-04-29	50.00	50.00	0.00	[{"num": 10, "spec": "斤", "price": 5, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5}]		1	189	牧区纯坊门店	7	公司支出账户	2026-04-29 07:33:03.45451	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1	1
 392	CG202603319904	CG202603319485	105	翁牛特旗奶果子	管理员	2026-01-09	3653.00	2000.00	0.00	[{"num": 119, "spec": "平均一块儿", "price": 30.6975, "remark": "", "batch_no": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "cate_name": "", "unit_name": "斤", "goods_name": "奶果子/散装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 30.6975, "supplier_name": "", "_base_price_no_tax": 30.6975}]	从saas.mzth.cn导入 原单号:CG0003667	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:35:31.868741	\N	none	0.00	3653.00	0.00	buyer	f	\N	f	[]	[]	1	1
+631	PO2026073113412688991	PO2026073113412688991	80	奥特尔奶食品店	管理员	2026-07-31	100.00	100.00	0.00	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 810, "goods_sn": "SP0000226", "tax_rate": 0, "cate_name": "散货", "unit_name": "散", "goods_name": "乌日莫/奥特尔", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "散"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-31 05:41:55.705899	\N	none	0.00	100.00	0.00	buyer	f	\N	f	[]	[]	1	1
 441	CG202603314585	CG202603315058	121	盛大印刷	管理员	2025-12-04	743.89	743.89	0.00	[{"num": 20000, "spec": "1", "price": 0.0265, "unit_id": 0, "goods_id": 979, "goods_sn": "SP0000055", "unit_name": "张", "goods_name": "新茶包/纸", "total_price": 530}, {"num": 500, "spec": "1", "price": 0.0682, "unit_id": 0, "goods_id": 1020, "goods_sn": "SP0000014", "unit_name": "张", "goods_name": "标签/不干胶/奶果子", "total_price": 34.1}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 950, "goods_sn": "SP0000085", "unit_name": "张", "goods_name": "透专标签/奶皮卷", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 951, "goods_sn": "SP0000084", "unit_name": "张", "goods_name": "透专标签/冻炒米", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 952, "goods_sn": "SP0000083", "unit_name": "张", "goods_name": "透专标签/奶酪/原味", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 953, "goods_sn": "SP0000082", "unit_name": "张", "goods_name": "透专标签/奶酪/甜味", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 954, "goods_sn": "SP0000081", "unit_name": "张", "goods_name": "透专标签/乳清奶条/甜味", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 955, "goods_sn": "SP0000080", "unit_name": "张", "goods_name": "透专标签/乳清奶条/原味", "total_price": 25.69}, {"num": 500, "spec": "1张", "price": 0.05137, "unit_id": 0, "goods_id": 956, "goods_sn": "SP0000079", "unit_name": "张", "goods_name": "透专标签/鲜奶皮", "total_price": 25.69}]	从saas.mzth.cn导入 原单号:CG0002855	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:37:33.943652	\N	none	0.00	743.89	0.00	buyer	f	\N	f	[]	[]	1	1
 443	CG202603318249	CG202603317797	97	纯净奶食品	管理员	2025-12-04	772.00	0.00	0.00	[{"num": 20, "spec": "150克", "price": 14.5, "unit_id": 0, "goods_id": 973, "goods_sn": "SP0000061", "unit_name": "袋", "goods_name": "精品/奶豆腐块儿/甜味/", "total_price": 290}, {"num": 20, "spec": "150克", "price": 14.5, "unit_id": 0, "goods_id": 986, "goods_sn": "SP0000048", "unit_name": "袋", "goods_name": "精品/奶豆腐块儿/原味", "total_price": 290}, {"num": 32, "spec": "1", "price": 6, "unit_id": 0, "goods_id": 974, "goods_sn": "SP0000060", "unit_name": "瓶", "goods_name": "纯净黄油/瓶装好的", "total_price": 192}]	从saas.mzth.cn导入 原单号:CG0002852	1	0		5	道力干记录付款单	2026-03-31 02:37:41.726816	\N	none	0.00	772.00	0.00	buyer	f	\N	f	[]	[]	1	1
 96	CG202603309903	CG202603306098	121		管理员	2025-12-25	0.00	0.00	0.00	[{"num": 500, "price": 0.067, "unit_id": 0, "goods_id": 898, "goods_name": "透专标签/奶皮千层", "total_price": 33.5}]	从saas.mzth.cn导入 原单号:CG0003289	0	0		0		2026-03-30 16:56:02.075126	2026-03-30 17:17:06.079334	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+635	PO2026080512564475657	PO2026080512564475657	98	科尔沁奶食品	管理员	2026-08-05	330.00	330.00	0.00	[{"num": 10, "spec": "", "price": 13, "_total": 130, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13, "_current_unit_name": "斤"}, {"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-05 04:57:47.97436	\N	none	0.00	330.00	0.00	buyer	f	\N	f	[]	[]	1	1
+636	PO2026080811193335543	PO2026080811193335543	144	旧苏木蒙古果子	管理员	2026-08-08	100.00	100.00	0.00	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 811, "goods_sn": "SP0000225", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "蒙古果子/格日勒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-08 03:20:39.695797	\N	none	0.00	100.00	0.00	buyer	f	\N	f	[]	[]	1	1
 394	CG202603319112	CG202603316221	98	科尔沁奶食品	管理员	2026-01-07	713.00	713.00	0.00	[{"num": 1, "spec": "10斤装/麻袋", "price": 48, "unit_id": 0, "goods_id": 923, "goods_sn": "SP0000112", "unit_name": "麻袋", "goods_name": "炒米/散装/硬口", "total_price": 48}, {"num": 10, "spec": "斤/两盒", "price": 22, "unit_id": 0, "goods_id": 981, "goods_sn": "SP0000053", "unit_name": "斤", "goods_name": "烤奶皮", "total_price": 220}, {"num": 3, "spec": "1斤", "price": 85, "unit_id": 0, "goods_id": 908, "goods_sn": "SP0000127", "unit_name": "袋", "goods_name": "哈斯乌拉牛肉干500g原味", "total_price": 255}, {"num": 2, "spec": "1斤", "price": 95, "unit_id": 0, "goods_id": 907, "goods_sn": "SP0000128", "unit_name": "袋", "goods_name": "风干牛肉500g大片", "total_price": 190}]	从saas.mzth.cn导入 原单号:CG0003599	1	0		5	道力干记录付款单	2026-03-31 02:35:35.884014	\N	none	0.00	713.00	0.00	buyer	f	\N	f	[]	[]	1	1
 391	CG202603315468	CG202603319912	98	科尔沁奶食品	管理员	2026-01-11	50.00	50.00	0.00	[{"num": 10, "spec": "斤", "price": 5, "remark": "", "batch_no": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5}]	从saas.mzth.cn导入 原单号:CG0003704	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:35:30.559859	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1	1
+637	PO2026080811204731280	PO2026080811204731280	76	乌日汗奶食品店	管理员	2026-08-08	224.00	224.00	0.00	[{"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3125, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "袋", "goods_name": "细奶条/原味/乌日汗", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "袋"}, {"num": 4, "spec": "", "price": 8, "_total": 32, "remark": "", "goods_id": 816, "goods_sn": "SP0000220", "tax_rate": 0, "cate_name": "成品", "unit_name": "瓶", "goods_name": "乌日汗大瓶酸奶", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8, "supplier_name": "", "_base_price_no_tax": 8, "_current_unit_name": "瓶"}, {"num": 2, "spec": "", "price": 6, "_total": 12, "remark": "", "goods_id": 826, "goods_sn": "SP0000210", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "瓶", "goods_name": "乌日汗酸奶/中", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6, "supplier_name": "", "_base_price_no_tax": 6, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-08 03:24:04.656818	\N	none	0.00	224.00	0.00	buyer	f	\N	f	[]	[]	1	1
 409	CG202603315570	CG202603314468	97	纯净奶食品	管理员	2025-12-25	2310.00	2310.00	0.00	[{"num": 40, "spec": "180克", "price": 14, "unit_id": 0, "goods_id": 946, "goods_sn": "SP0000089", "unit_name": "盒", "goods_name": "半成品/透明/鲜奶皮", "total_price": 560}, {"num": 50, "spec": "180克", "price": 13, "unit_id": 0, "goods_id": 945, "goods_sn": "SP0000090", "unit_name": "盒", "goods_name": "半成品/透明/奶皮卷", "total_price": 650}, {"num": 20, "spec": "150克", "price": 12, "unit_id": 0, "goods_id": 944, "goods_sn": "SP0000091", "unit_name": "盒", "goods_name": "半成品/透明/奶皮千层", "total_price": 240}, {"num": 35, "spec": "1", "price": 6, "unit_id": 0, "goods_id": 974, "goods_sn": "SP0000060", "unit_name": "瓶", "goods_name": "纯净黄油/瓶装好的", "total_price": 210}, {"num": 10, "spec": "1斤装", "price": 22, "unit_id": 0, "goods_id": 899, "goods_sn": "SP0000136", "unit_name": "瓶", "goods_name": "纯净/黄油/斤", "total_price": 220}, {"num": 4, "spec": "斤", "price": 10, "unit_id": 0, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体", "total_price": 40}, {"num": 30, "spec": "150-180克", "price": 13, "unit_id": 0, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮", "total_price": 390}]	从saas.mzth.cn导入 原单号:CG0003286	1	0		7	公司支出账户	2026-03-31 02:36:11.454396	\N	none	0.00	2310.00	0.00	buyer	f	\N	f	[]	[]	1	1
 584	PO202606072143392521	PO202606072143392521	78	小米厂家阿旗	管理员	2026-04-06	740.00	740.00	0.00	[{"num": 10, "spec": "", "price": 19, "remark": "", "goods_id": 830, "goods_sn": "SP0000206", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "小米/10斤/小袋/红嘴/阿旗", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 19, "supplier_name": "", "_base_price_no_tax": 19, "_current_unit_name": "袋"}, {"num": 10, "spec": "", "price": 55, "remark": "", "goods_id": 809, "goods_sn": "SP0000227", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "10斤装/小米/绿色纸盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 55, "supplier_name": "", "_base_price_no_tax": 55, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-07 13:47:10.460291	\N	none	0.00	740.00	0.00	buyer	f	\N	f	[]	[]	1	1
+638	PO2026080811241759999	PO2026080811241759999	98	科尔沁奶食品	管理员	2026-08-07	144.00	180.00	0.00	[{"num": 8, "spec": "", "price": 18, "_total": 144, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-08 03:24:51.7196	\N	none	0.00	144.00	0.00	buyer	f	\N	f	[]	[]	1	1
 386	CG202603317814	CG202603319425	85	糖炮	管理员	2026-01-16	240.00	240.00	0.00	[{"num": 40, "spec": "3棵", "price": 6, "remark": "", "batch_no": "", "goods_id": 858, "goods_sn": "SP0000177", "tax_rate": 0, "cate_name": "", "unit_name": "盒", "goods_name": "糖葫芦", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6, "supplier_name": "", "_base_price_no_tax": 6}]	从saas.mzth.cn导入 原单号:CG0003839	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:35:22.933175	\N	none	0.00	240.00	0.00	buyer	f	\N	f	[]	[]	1	1
+639	PO2026080812110973613	PO2026080812110973613	111	优如包装	管理员	2026-07-30	400.00	400.00	0.00	[{"num": 2000, "spec": "", "price": 0.2, "_total": 400, "remark": "", "goods_id": 3197, "goods_sn": "", "tax_rate": 0, "cate_name": "青砖奶茶", "unit_name": "张", "goods_name": "新茶包/盐底纸", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.2, "supplier_name": "", "_base_price_no_tax": 0.2, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-08 04:13:09.754283	\N	none	0.00	400.00	0.00	buyer	f	\N	f	[]	[]	1	1
 129	CG202603306178	CG202603301099	101		管理员	2025-12-05	0.00	0.00	0.00	[{"num": 100, "price": 0.7882, "unit_id": 0, "goods_id": 949, "goods_name": "专袋/乌日莫/炒米", "total_price": 78.82}, {"num": 100, "price": 0.458, "unit_id": 0, "goods_id": 948, "goods_name": "专袋/乌日莫", "total_price": 45.8}]	从saas.mzth.cn导入 原单号:CG0002856	0	0		0		2026-03-30 16:56:24.154006	2026-03-30 17:10:33.795384	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 511	PO2026050217095594410	PO2026050217095594410	98	科尔沁奶食品	管理员	2026-05-02	220.00	220.00	0.00	[{"num": 10, "spec": "1斤散称", "price": 22, "remark": "", "goods_id": 921, "goods_sn": "SP0000114", "tax_rate": 0, "cate_name": "糖果sugar", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 22, "supplier_name": "", "_base_price_no_tax": 22}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-02 09:11:20.821085	\N	none	0.00	220.00	0.00	buyer	f	\N	f	[]	[]	1	1
+640	PO2026080812270330052	PO2026080812270330052	112	广州维记	管理员	2026-07-27	1807.00	1807.00	0.00	[{"num": 10, "spec": "", "price": 180.7, "_total": 1807, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 400, "supplier_id": null, "price_no_tax": 180.7, "supplier_name": "", "_base_price_no_tax": 0.45175, "_current_unit_name": "箱"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-08 04:28:27.32085	\N	none	0.00	1807.00	0.00	buyer	f	\N	f	[]	[]	1	1
 363	CG202603315671	CG202603313040	98	科尔沁奶食品	管理员	2026-02-09	95.00	95.00	0.00	[{"num": 5, "spec": "1", "price": 19, "unit_id": 0, "goods_id": 829, "goods_sn": "SP0000207", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "total_price": 95}]	从saas.mzth.cn导入 原单号:CG0004368	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:34:40.712927	\N	none	0.00	95.00	0.00	buyer	f	\N	f	[]	[]	1	1
 372	CG202603314311	CG202603312825	81	额吉伊德	管理员	2026-01-27	161.00	161.00	0.00	[{"num": 20, "spec": "250克", "price": 4.5, "remark": "", "batch_no": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "cate_name": "", "unit_name": "瓶", "goods_name": "乳清饮料", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.5, "supplier_name": "", "_base_price_no_tax": 4.5}, {"num": 6, "spec": "250克", "price": 6, "remark": "", "batch_no": "", "goods_id": 846, "goods_sn": "SP0000189", "tax_rate": 0, "cate_name": "", "unit_name": "瓶", "goods_name": "酸奶/额吉伊德", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6, "supplier_name": "", "_base_price_no_tax": 6}, {"num": 5, "spec": "500克", "price": 7, "remark": "", "batch_no": "", "goods_id": 847, "goods_sn": "SP0000188", "tax_rate": 0, "cate_name": "", "unit_name": "袋", "goods_name": "乌日莫/袋装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 7, "supplier_name": "", "_base_price_no_tax": 7}]	从saas.mzth.cn导入 原单号:CG0004116	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:35:03.362411	\N	none	0.00	161.00	0.00	buyer	f	\N	f	[]	[]	1	1
+641	PO2026080914190562870	PO2026080914190562870	139	阿斯娜	管理员	2026-06-26	1281.70	0.00	0.00	[{"num": 18, "spec": "", "price": 16.5, "_total": 297, "remark": "", "goods_id": 3184, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "阿旗冰箱贴", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.5, "supplier_name": "", "_base_price_no_tax": 16.5, "_current_unit_name": "个"}, {"num": 1, "spec": "", "price": 8.8, "_total": 8.8, "remark": "", "goods_id": 3199, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "佑系帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 1, "spec": "", "price": 8.8, "_total": 8.8, "remark": "", "goods_id": 3200, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "包你百顺帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 8.8, "_total": 17.6, "remark": "", "goods_id": 3198, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "宝山备马帆布包", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 8.8, "supplier_name": "", "_base_price_no_tax": 8.8, "_current_unit_name": "个"}, {"num": 30, "spec": "", "price": 0.85, "_total": 25.5, "remark": "", "goods_id": 3117, "goods_sn": "SP2605252385", "tax_rate": 0, "cate_name": "文创", "unit_name": "张", "goods_name": "车载香片", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 0.85, "supplier_name": "", "_base_price_no_tax": 0.85, "_current_unit_name": "张"}, {"num": 2, "spec": "", "price": 63, "_total": 126, "remark": "", "goods_id": 3201, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "阳光种植/桶装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 63, "supplier_name": "", "_base_price_no_tax": 63, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 45, "_total": 90, "remark": "", "goods_id": 3111, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "", "goods_name": "蒙古元素永生花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 45, "supplier_name": "", "_base_price_no_tax": 45, "_current_unit_name": ""}, {"num": 4, "spec": "", "price": 29, "_total": 116, "remark": "", "goods_id": 3202, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "种个惊喜", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 29, "supplier_name": "", "_base_price_no_tax": 29, "_current_unit_name": "个"}, {"num": 7, "spec": "", "price": 16, "_total": 112, "remark": "", "goods_id": 3203, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "小草娃娃", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16, "supplier_name": "", "_base_price_no_tax": 16, "_current_unit_name": "个"}, {"num": 2, "spec": "", "price": 41, "_total": 82, "remark": "", "goods_id": 3204, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "蒙草明信片套装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 41, "supplier_name": "", "_base_price_no_tax": 41, "_current_unit_name": "个"}, {"num": 8, "spec": "", "price": 26, "_total": 208, "remark": "", "goods_id": 3205, "goods_sn": "", "tax_rate": 0, "cate_name": "周边", "unit_name": "个", "goods_name": "书签/可种植", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 26, "supplier_name": "", "_base_price_no_tax": 26, "_current_unit_name": "个"}, {"num": 100, "spec": "", "price": 1.9, "_total": 190, "remark": "", "goods_id": 3183, "goods_sn": "", "tax_rate": 0, "cate_name": "牧区纯坊X游牧奇遇", "unit_name": "张", "goods_name": "阿旗礼袋蒙文", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 1.9, "supplier_name": "", "_base_price_no_tax": 1.9, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-09 06:24:23.429996	\N	none	0.00	1281.70	0.00	buyer	f	\N	f	[]	[]	1	1
 512	PO2026051011090836273	PO2026051011090836273	75	格日勒	管理员	2026-05-10	65.00	65.00	0.00	[{"num": 5, "spec": "250克", "price": 13, "remark": "", "goods_id": 811, "goods_sn": "SP0000225", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "袋", "goods_name": "蒙古果子/格日勒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-10 03:10:18.59358	\N	none	0.00	65.00	0.00	buyer	f	\N	f	[]	[]	1	1
+642	PO2026081016075140866	PO2026081016075140866	98	科尔沁奶食品	管理员	2026-08-10	170.00	170.00	0.00	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-10 08:08:35.483999	\N	none	0.00	170.00	0.00	buyer	f	\N	f	[]	[]	1	1
 427	CG202603319218	CG202603316462	121	盛大印刷	管理员	2025-12-10	960.00	960.00	0.00	[{"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 900, "goods_sn": "SP0000135", "unit_name": "张", "goods_name": "透专标签/脆香奶条/微甜", "total_price": 160}, {"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 950, "goods_sn": "SP0000085", "unit_name": "张", "goods_name": "透专标签/奶皮卷", "total_price": 160}, {"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 951, "goods_sn": "SP0000084", "unit_name": "张", "goods_name": "透专标签/冻炒米", "total_price": 160}, {"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 952, "goods_sn": "SP0000083", "unit_name": "张", "goods_name": "透专标签/奶酪/原味", "total_price": 160}, {"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 953, "goods_sn": "SP0000082", "unit_name": "张", "goods_name": "透专标签/奶酪/甜味", "total_price": 160}, {"num": 500, "spec": "1张", "price": 0.32, "unit_id": 0, "goods_id": 956, "goods_sn": "SP0000079", "unit_name": "张", "goods_name": "透专标签/鲜奶皮", "total_price": 160}]	从saas.mzth.cn导入 原单号:CG0002955	1	189	牧区纯坊门店	8	孟根	2026-03-31 02:36:54.17581	\N	none	0.00	960.00	0.00	buyer	f	\N	f	[]	[{"name": "附加费用", "amount": 3, "bearer": "buyer"}]	1	1
 181	CG202603304954	CG202603303144	120		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 90, "price": 0.55, "unit_id": 0, "goods_id": 1022, "goods_name": "专袋/传统奶豆腐", "total_price": 49.5}]	从saas.mzth.cn导入 原单号:CG0002009	0	0		0		2026-03-30 16:57:05.530868	2026-03-30 17:10:06.405771	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 147	CG202603303986	CG202603305447	108		管理员	2025-11-01	0.00	0.00	0.00	[{"num": 3560, "price": 0.068, "unit_id": 0, "goods_id": 997, "goods_name": "茶专用/盐包", "total_price": 242.08}]	从saas.mzth.cn导入 原单号:CG0002475	0	0		0		2026-03-30 16:56:36.165791	2026-03-30 17:10:24.885343	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 179	CG202603308954	CG202603309398	121		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 13, "price": 0.03, "unit_id": 0, "goods_id": 1020, "goods_name": "标签/不干胶/奶果子", "total_price": 0.39}]	从saas.mzth.cn导入 原单号:CG0002011	0	0		0		2026-03-30 16:57:01.769902	2026-03-30 17:10:07.583607	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+643	PO2026081123264574537	PO2026081123264574537	97	纯净奶食品	管理员	2026-08-11	500.00	0.00	0.00	[{"num": 20, "spec": "", "price": 25, "_total": 500, "remark": "", "goods_id": 926, "goods_sn": "SP0000109", "tax_rate": 0, "cate_name": "散装", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 25, "supplier_name": "", "_base_price_no_tax": 25, "_current_unit_name": "个"}]		0	189	牧区纯坊门店	7	公司支出账户	2026-08-11 15:27:44.993795	2026-08-22 03:55:58.716727	none	0.00	500.00	0.00	buyer	f	\N	f	[]	[]	1	1
 420	CG202603312951	CG202603319333	115	那牧尔乳制品厂/纯净之源	管理员	2025-12-14	390.00	390.00	0.00	[{"num": 10, "spec": "80克", "price": 5, "unit_id": 0, "goods_id": 891, "goods_sn": "SP0000144", "unit_name": "小包", "goods_name": "芝士奶豆腐月饼", "total_price": 50}, {"num": 10, "spec": "80克", "price": 5, "unit_id": 0, "goods_id": 893, "goods_sn": "SP0000142", "unit_name": "小包", "goods_name": "奶豆腐月饼", "total_price": 50}, {"num": 10, "spec": "250", "price": 4, "unit_id": 0, "goods_id": 892, "goods_sn": "SP0000143", "unit_name": "盒", "goods_name": "那牧尔酸奶", "total_price": 40}, {"num": 10, "spec": "80克", "price": 5, "unit_id": 0, "goods_id": 895, "goods_sn": "SP0000140", "unit_name": "小包", "goods_name": "黄油渣月饼", "total_price": 50}, {"num": 10, "spec": "80克", "price": 5, "unit_id": 0, "goods_id": 896, "goods_sn": "SP0000139", "unit_name": "小包", "goods_name": "奶皮月饼", "total_price": 50}, {"num": 10, "spec": "5", "price": 10, "unit_id": 0, "goods_id": 897, "goods_sn": "SP0000138", "unit_name": "袋", "goods_name": "早餐包/那牧尔", "total_price": 100}, {"num": 10, "spec": "80克", "price": 5, "unit_id": 0, "goods_id": 894, "goods_sn": "SP0000141", "unit_name": "小包", "goods_name": "酸奶月饼", "total_price": 50}]	从saas.mzth.cn导入 原单号:CG0003017	1	189	牧区纯坊门店	8	孟根	2026-03-31 02:36:37.983958	\N	none	0.00	390.00	0.00	buyer	f	\N	f	[]	[]	1	1
 520	PO2026052519441038959	PO2026052519441038959	138	苏日钦·酸马奶	管理员	2026-05-25	600.00	600.00	0.00	[{"num": 50, "spec": "260mL", "price": 12, "remark": "", "goods_id": 3116, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "瓶", "goods_name": "酸马奶/蒙医院", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 12, "supplier_name": "", "_base_price_no_tax": 12}]		1	189	牧区纯坊门店	9	乌日力格	2026-05-25 11:45:21.284995	\N	none	0.00	600.00	0.00	buyer	f	\N	f	[]	[]	1	1
+644	PO2026081217071848182	PO2026081217071848182	90	阿润查干	管理员	2026-08-12	120.00	120.00	0.00	[{"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 883, "goods_sn": "SP0000152", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 882, "goods_sn": "SP0000153", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 881, "goods_sn": "SP0000154", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/奶皮子馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}, {"num": 3, "spec": "", "price": 10, "_total": 30, "remark": "", "goods_id": 880, "goods_sn": "SP0000155", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-12 09:08:05.452576	\N	none	0.00	120.00	0.00	buyer	f	\N	f	[]	[]	1	1
 374	CG202603319664	CG202603317629	98	科尔沁奶食品	管理员	2026-01-24	400.00	400.00	0.00	[{"num": 5, "spec": "1斤散称", "price": 22, "unit_id": 0, "goods_id": 902, "goods_sn": "SP0000133", "unit_name": "斤", "goods_name": "乌日莫糖/散装", "total_price": 110}, {"num": 5, "spec": "1斤散称", "price": 10, "unit_id": 0, "goods_id": 922, "goods_sn": "SP0000113", "unit_name": "斤", "goods_name": "酸奶炒米糖/散装", "total_price": 50}, {"num": 5, "spec": "1斤散称", "price": 15, "unit_id": 0, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装", "total_price": 75}, {"num": 5, "spec": "1.2", "price": 33, "unit_id": 0, "goods_id": 856, "goods_sn": "SP0000179", "unit_name": "张", "goods_name": "科尔沁/大奶豆腐", "total_price": 165}]	从saas.mzth.cn导入 原单号:CG0004043	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:35:06.963197	\N	none	0.00	400.00	0.00	buyer	f	\N	f	[]	[]	1	1
 367	CG202603314313	CG202603319793	90	阿润查干	管理员	2026-02-01	200.00	0.00	0.00	[{"num": 10, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 880, "goods_sn": "SP0000155", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "total_price": 100}, {"num": 5, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 882, "goods_sn": "SP0000153", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "total_price": 50}, {"num": 5, "spec": "1斤装", "price": 10, "unit_id": 0, "goods_id": 831, "goods_sn": "SP0000205", "unit_name": "袋", "goods_name": "果条/阿润", "total_price": 50}]	从saas.mzth.cn导入 原单号:CG0004242	1	0		5	道力干记录付款单	2026-03-31 02:34:49.756395	\N	none	0.00	200.00	0.00	buyer	f	\N	f	[]	[]	1	1
 521	PO2026052519452885358	PO2026052519452885358	98	科尔沁奶食品	管理员	2026-05-25	50.00	50.00	0.00	[{"num": 10, "spec": "斤", "price": 5, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5}]		1	189	牧区纯坊门店	9	乌日力格	2026-05-25 11:46:01.135519	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -11700,6 +12599,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 525	PO2026052823031168051	PO2026052823031168051	98	科尔沁奶食品	管理员	2025-12-01	24.00	24.00	0.00	[{"num": 2, "spec": "斤/两盒", "price": 12, "remark": "", "batch_no": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "盒", "goods_name": "烤奶皮", "unit_ratio": 0.5, "supplier_id": null, "price_no_tax": 12, "supplier_name": "", "_base_price_no_tax": 24}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-28 15:04:30.106818	\N	none	0.00	24.00	0.00	buyer	f	\N	f	[]	[]	1	1
 60	CG202603307003	CG202603303645	80		管理员	2026-01-27	0.00	0.00	0.00	[{"num": 3, "price": 32, "unit_id": 0, "goods_id": 838, "goods_name": "奶粉蒙古国", "total_price": 96}, {"num": 4, "price": 12, "unit_id": 0, "goods_id": 839, "goods_name": "奶皮子粉", "total_price": 48}, {"num": 2, "price": 15, "unit_id": 0, "goods_id": 840, "goods_name": "奶茶粉战粮", "total_price": 30}, {"num": 2, "price": 18, "unit_id": 0, "goods_id": 841, "goods_name": "奶茶粉贡格尔", "total_price": 36}, {"num": 2, "price": 22, "unit_id": 0, "goods_id": 842, "goods_name": "努德勒沁调和茶", "total_price": 44}, {"num": 2, "price": 22, "unit_id": 0, "goods_id": 843, "goods_name": "阿依古丽奶茶专用红茶", "total_price": 44}, {"num": 2, "price": 22, "unit_id": 0, "goods_id": 844, "goods_name": "希日嘎拉奶茶专用茶", "total_price": 44}, {"num": 5, "price": 28, "unit_id": 0, "goods_id": 837, "goods_name": "甜味奶豆腐块儿/大", "total_price": 140}, {"num": 2, "price": 22, "unit_id": 0, "goods_id": 844, "goods_name": "希日嘎拉奶茶专用茶", "total_price": 44}]	从saas.mzth.cn导入 原单号:CG0004117	0	0		0		2026-03-30 16:55:37.199818	2026-03-30 17:18:13.528686	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 48	CG202603307140	CG202603307065	76		管理员	2026-02-10	0.00	0.00	0.00	[{"num": 3, "price": 15, "unit_id": 0, "goods_id": 825, "goods_name": "故乡宝酸马奶", "total_price": 45}, {"num": 5, "price": 9, "unit_id": 0, "goods_id": 826, "goods_name": "乌日汗酸奶", "total_price": 45}]	从saas.mzth.cn导入 原单号:CG0004387	0	0		0		2026-03-30 16:55:29.711864	2026-03-30 17:20:51.832713	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+645	PO2026081217080930540	PO2026081217080930540	98	科尔沁奶食品	管理员	2026-08-12	50.00	50.00	0.00	[{"num": 10, "spec": "", "price": 5, "_total": 50, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5, "supplier_name": "", "_base_price_no_tax": 5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-12 09:08:41.352262	\N	none	0.00	50.00	0.00	buyer	f	\N	f	[]	[]	1	1
 519	PO2026051811051272486	PO2026051811051272486	98	科尔沁奶食品	管理员	2026-05-18	470.00	470.00	0.00	[{"num": 5, "spec": "", "price": 15, "remark": "", "batch_no": "", "goods_id": 3110, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "樱桃味/干噎酸奶/散", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15, "supplier_name": "", "_base_price_no_tax": 15}, {"num": 10, "spec": "", "price": 24, "remark": "", "batch_no": "", "goods_id": 3109, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "奶派/坚果/芒果", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 24, "supplier_name": "", "_base_price_no_tax": 24}, {"num": 1, "spec": "1斤", "price": 155, "remark": "", "batch_no": "", "goods_id": 901, "goods_sn": "SP0000134", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "unit_ratio": 30, "supplier_id": null, "price_no_tax": 155, "supplier_name": "", "_base_price_no_tax": 5.166667}]		1	189	牧区纯坊门店	9	乌日力格	2026-05-18 03:07:30.515667	\N	none	0.00	470.00	0.00	buyer	f	\N	f	[]	[]	1	1
 505	CG202604254206	CG202604257525	112	广州维记	管理员	2026-04-25	2535.00	2535.00	0.00	[{"num": 15, "spec": "", "price": 169, "remark": "", "batch_no": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "unit_name": "箱", "goods_name": "奶油球", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 169, "supplier_name": "", "_base_price_no_tax": 169}]		1	1	默认仓库	7	公司支出账户	2026-04-25 10:43:14.302817	\N	none	0.00	2535.00	0.00	buyer	f	\N	f	[]	[{"name": "运费", "amount": 175, "bearer": "buyer"}]	1	1
 178	CG202603307032	CG202603307690	121		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 500, "price": 0.067, "unit_id": 0, "goods_id": 1019, "goods_name": "标签/不干胶/冻炒米", "total_price": 33.5}, {"num": 1650, "price": 0.87, "unit_id": 0, "goods_id": 1032, "goods_name": "专盒/冻炒米", "total_price": 1435.5}]	从saas.mzth.cn导入 原单号:CG0002012	0	0		0		2026-03-30 16:57:00.046179	2026-03-30 17:10:08.057248	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -11708,16 +12608,23 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 350	CG202603318570	CG202603315478	98	科尔沁奶食品	管理员	2026-03-01	75.00	0.00	0.00	[{"num": 5, "spec": "1斤散称", "price": 15, "unit_id": 0, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装", "total_price": 75}]	从saas.mzth.cn导入 原单号:CG0004470	0	0		9	乌日力格	2026-03-31 02:34:13.340438	2026-05-29 05:40:01.529763	none	0.00	75.00	0.00	buyer	f	\N	f	[]	[]	1	1
 190	CG202603307317	CG202603304999	123		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 51, "price": 0.71, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 36.21}, {"num": 84, "price": 0.71, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 59.64}, {"num": 2, "price": 35.5, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 71}, {"num": 48, "price": 0.71, "unit_id": 0, "goods_id": 1033, "goods_name": "专袋/奶条", "total_price": 34.08}]	从saas.mzth.cn导入 原单号:CG0002000	0	0		0		2026-03-30 16:57:20.811372	2026-03-30 17:10:01.459798	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 189	CG202603306599	CG202603304333	121		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 32, "price": 0.87, "unit_id": 0, "goods_id": 1032, "goods_name": "专盒/冻炒米", "total_price": 27.84}]	从saas.mzth.cn导入 原单号:CG0002001	0	0		0		2026-03-30 16:57:20.182453	2026-03-30 17:10:02.338546	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+646	PO2026081713040762130	PO2026081713040762130	98	科尔沁奶食品	管理员	2026-08-17	200.00	200.00	0.00	[{"num": 10, "spec": "", "price": 20, "_total": 200, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "烤奶皮", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 20, "supplier_name": "", "_base_price_no_tax": 20, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-17 05:04:38.194635	\N	none	0.00	200.00	0.00	buyer	f	\N	f	[]	[]	1	1
 526	PO202605282308349665	PO202605282308349665	98	科尔沁奶食品	管理员	2026-03-26	666.00	666.00	0.00	[{"num": 15, "spec": "{\\"attrs\\":[{\\"name\\":\\"口味\\",\\"values\\":[\\"甜味\\",\\"原味\\"]}],\\"skus\\":{\\"甜味\\":{\\"sell_price\\":80,\\"cost_price\\":38,\\"sku_sn\\":\\"\\",\\"barcode\\":\\"\\"},\\"原味\\":{\\"sell_price\\":80,\\"cost_price\\":38,\\"sku_sn\\":\\"\\",\\"barcode\\":\\"\\"}},\\"unit_linked_goods\\":{}}", "price": 38, "remark": "", "goods_id": 3121, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "斤", "goods_name": "科尔沁奶豆腐/条/片/原/甜", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 38, "supplier_name": "", "_base_price_no_tax": 38}, {"num": 2, "spec": "10斤装/麻袋", "price": 48, "remark": "", "goods_id": 923, "goods_sn": "SP0000112", "tax_rate": 0, "cate_name": "散装", "unit_name": "麻袋", "goods_name": "炒米/散装/硬口", "unit_ratio": 10, "supplier_id": null, "price_no_tax": 48, "supplier_name": "", "_base_price_no_tax": 4.8}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-28 15:13:13.657368	\N	none	0.00	666.00	0.00	buyer	f	\N	f	[]	[]	1	1
 206	CG202603303422	CG202603303612	98	科尔沁奶食品	管理员	2026-02-09	158.00	0.00	0.00	[{"num": 30.0, "spec": "1斤", "price": 5.26667, "unit_id": 0, "goods_id": 0, "goods_sn": "", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装", "total_price": 158.0}]	从saas.mzth.cn导入 原单号:CG0004383	0	0		0		2026-03-30 17:36:31.294371	2026-03-31 02:34:00.606344	none	0.00	158.00	0.00	buyer	f	\N	f	[]	[]	1	1
+648	PO202608171305095272	PO202608171305095272	115	那牧尔乳制品厂/纯净之源	管理员	2026-08-17	550.00	550.00	0.00	[{"num": 100, "spec": "", "price": 5.5, "_total": 550, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "goods_name": "冻炒米成品盒", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 5.5, "supplier_name": "", "_base_price_no_tax": 5.5, "_current_unit_name": "盒"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-17 05:08:14.89516	\N	none	0.00	550.00	0.00	buyer	f	\N	f	[]	[]	1	1
+650	PO202608171311176209	PO202608171311176209	92	奥都奶食品	管理员	2026-08-17	170.00	170.00	0.00	[{"num": 10, "spec": "", "price": 17, "_total": 170, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-17 05:11:37.343906	\N	none	0.00	170.00	0.00	buyer	f	\N	f	[]	[]	1	1
 188	CG202603304383	CG202603302938	123		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 30, "price": 0.37, "unit_id": 0, "goods_id": 1031, "goods_name": "专底盒/奶条", "total_price": 11.1}, {"num": 3, "price": 18.5, "unit_id": 0, "goods_id": 1031, "goods_name": "专底盒/奶条", "total_price": 55.5}]	从saas.mzth.cn导入 原单号:CG0002002	0	0		0		2026-03-30 16:57:18.503848	2026-03-30 17:10:02.859397	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 523	PO2026052819011556415	PO2026052819011556415	98	科尔沁奶食品	管理员	2026-05-28	130.00	130.00	0.00	[{"num": 10, "spec": "半斤", "price": 13, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 13, "supplier_name": "", "_base_price_no_tax": 13}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-28 11:03:46.34827	\N	none	0.00	130.00	0.00	buyer	f	\N	f	[]	[]	1	1
 355	CG202603314534	CG202603313612	98	科尔沁奶食品	管理员	2026-02-23	450.00	450.00	0.00	[{"num": 5, "spec": "1.2", "price": 33, "unit_id": 0, "goods_id": 856, "goods_sn": "SP0000179", "unit_name": "张", "goods_name": "科尔沁/大奶豆腐", "total_price": 165}, {"num": 5, "spec": "1", "price": 19, "unit_id": 0, "goods_id": 829, "goods_sn": "SP0000207", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "total_price": 95}, {"num": 5, "spec": "500g", "price": 19, "unit_id": 0, "goods_id": 903, "goods_sn": "SP0000132", "unit_name": "袋", "goods_name": "盛宇燃奶豆腐/甜味", "total_price": 95}, {"num": 5, "spec": "500g", "price": 19, "unit_id": 0, "goods_id": 904, "goods_sn": "SP0000131", "unit_name": "袋", "goods_name": "盛宇燃奶豆腐/原味", "total_price": 95}]	从saas.mzth.cn导入 原单号:CG0004428	1	0		0		2026-03-31 02:34:24.513226	\N	none	0.00	450.00	0.00	buyer	f	\N	f	[]	[]	1	1
 182	CG202603302690	CG202603307956	121		管理员	2025-09-30	0.00	0.00	0.00	[{"num": 77, "price": 0.05, "unit_id": 0, "goods_id": 1024, "goods_name": "标签/不干胶/奶条/甜味", "total_price": 3.85}, {"num": 27, "price": 0.05, "unit_id": 0, "goods_id": 1023, "goods_name": "标签/不干胶/奶条/原味", "total_price": 1.35}]	从saas.mzth.cn导入 原单号:CG0002008	0	0		0		2026-03-30 16:57:08.281023	2026-03-30 17:10:05.806407	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 150	CG202603306484	CG202603307894	116		管理员	2025-10-20	0.00	0.00	0.00	[{"num": 15.8, "price": 18, "unit_id": 0, "goods_id": 1015, "goods_name": "散装/原味奶条", "total_price": 284.4}]	从saas.mzth.cn导入 原单号:CG0002417	0	0		0		2026-03-30 16:56:38.651138	2026-03-30 17:10:22.776538	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 132	CG202603301459	CG202603303407	97		管理员	2025-12-04	0.00	0.00	0.00	[{"num": 20, "price": 14.5, "unit_id": 0, "goods_id": 973, "goods_name": "精品/奶豆腐块儿/甜味/", "total_price": 290}, {"num": 20, "price": 14.5, "unit_id": 0, "goods_id": 986, "goods_name": "精品/奶豆腐块儿/原味", "total_price": 290}, {"num": 32, "price": 6, "unit_id": 0, "goods_id": 974, "goods_name": "纯净黄油/瓶装好的", "total_price": 192}]	从saas.mzth.cn导入 原单号:CG0002852	0	0		0		2026-03-30 16:56:26.011527	2026-03-30 17:10:32.395137	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+647	PO2026081713044459412	PO2026081713044459412	98	科尔沁奶食品	管理员	2026-08-17	180.00	180.00	0.00	[{"num": 10, "spec": "", "price": 18, "_total": 180, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "unit_name": "斤", "goods_name": "烤奶花", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 18, "supplier_name": "", "_base_price_no_tax": 18, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-17 05:05:05.325673	\N	none	0.00	180.00	0.00	buyer	f	\N	f	[]	[]	1	1
 249	CG202603306447	CG202603309267	117	巴音珠萨朗	管理员	2025-12-28	310.20	0.00	0.00	[{"num": 18.8, "spec": "250克/一袋", "price": 16.5, "unit_id": 0, "goods_id": 1014, "goods_sn": "SP0000020", "unit_name": "斤", "goods_name": "散装/甜味奶条", "total_price": 310.2}]	从saas.mzth.cn导入 原单号:CG0003398	0	0		0		2026-03-30 17:37:29.399047	2026-04-04 07:15:22.883606	none	0.00	310.20	0.00	buyer	f	\N	f	[]	[]	1	1
 527	PO2026052823181497925	PO2026052823181497925	115	那牧尔乳制品厂/纯净之源	管理员	2026-01-22	60.00	60.00	0.00	[{"num": 15, "spec": "250", "price": 4, "remark": "", "goods_id": 892, "goods_sn": "SP0000143", "tax_rate": 0, "cate_name": "供货品", "unit_name": "瓶", "goods_name": "那牧尔酸奶", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4, "supplier_name": "", "_base_price_no_tax": 4}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-28 15:20:01.969658	\N	none	0.00	60.00	0.00	buyer	f	\N	f	[]	[]	1	1
+649	PO2026081713093466727	PO2026081713093466727	113	永巨茶业	管理员	2026-08-17	1710.00	1710.00	0.00	[{"num": 5, "spec": "", "price": 342, "_total": 1710, "remark": "", "goods_id": 1011, "goods_sn": "SP0000023", "tax_rate": 0, "cate_name": "半成品", "unit_name": "件", "goods_name": "茶包", "unit_ratio": 2000, "supplier_id": null, "price_no_tax": 342, "supplier_name": "", "_base_price_no_tax": 0.171, "_current_unit_name": "件"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-17 05:10:59.691165	\N	none	0.00	1710.00	0.00	buyer	f	\N	f	[]	[]	1	1
+651	PO2026082210465932867	PO2026082210465932867	98	科尔沁奶食品	管理员	2026-08-22	85.00	85.00	0.00	[{"num": 5, "spec": "", "price": 17, "_total": 85, "remark": "", "goods_id": 829, "goods_sn": "SP0000207", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "张", "goods_name": "奶豆腐/原味/中/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 17, "supplier_name": "", "_base_price_no_tax": 17, "_current_unit_name": "张"}]		1	1	默认仓库	7	公司支出账户	2026-08-22 02:47:37.196845	\N	none	0.00	85.00	0.00	buyer	f	\N	f	[]	[]	1	1
+652	PO2026082211521113294	PO2026082211521113294	80	奥特尔奶食品店	管理员	2026-08-22	100.00	100.00	0.00	[{"num": 10, "spec": "", "price": 10, "_total": 100, "remark": "", "goods_id": 920, "goods_sn": "SP0000115", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "手工乌日末液体", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 10, "supplier_name": "", "_base_price_no_tax": 10, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-22 03:53:39.946212	\N	none	0.00	100.00	0.00	buyer	f	\N	f	[]	[]	1	1
 131	CG202603306307	CG202603303366	96		管理员	2025-12-04	0.00	0.00	0.00	[{"num": 240, "price": 0.8, "unit_id": 0, "goods_id": 963, "goods_name": "小/方形/亚克力盒/", "total_price": 192}, {"num": 258, "price": 0.85, "unit_id": 0, "goods_id": 962, "goods_name": "中/方形/亚克力盒/", "total_price": 219.3}, {"num": 200, "price": 0.85, "unit_id": 0, "goods_id": 960, "goods_name": "三角/奶皮千层盒", "total_price": 170}, {"num": 300, "price": 1.75, "unit_id": 0, "goods_id": 961, "goods_name": "扁盒/亚克力/带内托", "total_price": 525}, {"num": 246, "price": 2.6, "unit_id": 0, "goods_id": 959, "goods_name": "大/牛薄脆盒/亚克力", "total_price": 639.6}, {"num": 183, "price": 1.2, "unit_id": 0, "goods_id": 958, "goods_name": "小/长方/亚克力/乳清奶条盒", "total_price": 219.6}, {"num": 180, "price": 1.3, "unit_id": 0, "goods_id": 957, "goods_name": "大/长方/亚克力/待用", "total_price": 234}]	从saas.mzth.cn导入 原单号:CG0002853	0	0		0		2026-03-30 16:56:25.402208	2026-03-30 17:10:32.868729	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
 528	PO2026052823363562242	PO2026052823363562242	98	科尔沁奶食品	管理员	2026-01-17	99.00	99.00	0.00	[{"num": 3, "spec": "1.2", "price": 33, "remark": "", "goods_id": 856, "goods_sn": "SP0000179", "tax_rate": 0, "cate_name": "成品", "unit_name": "张", "goods_name": "科尔沁/大奶豆腐", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 33, "supplier_name": "", "_base_price_no_tax": 33}]		0	189	牧区纯坊门店	7	公司支出账户	2026-05-28 15:39:28.734436	2026-05-28 15:42:46.266373	none	0.00	99.00	0.00	buyer	f	\N	f	[]	[]	1	1
 125	CG202603303418	CG202603305464	97		管理员	2025-12-05	0.00	0.00	0.00	[{"num": 19, "price": 25, "unit_id": 0, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤", "total_price": 475}, {"num": 20, "price": 20, "unit_id": 0, "goods_id": 927, "goods_name": "小奶豆腐砖/1斤", "total_price": 400}, {"num": 20, "price": 20, "unit_id": 0, "goods_id": 925, "goods_name": "小/无印花/奶豆腐砖/1斤", "total_price": 400}, {"num": 29, "price": 14, "unit_id": 0, "goods_id": 946, "goods_name": "半成品/透明/鲜奶皮", "total_price": 406}, {"num": 6, "price": 14, "unit_id": 0, "goods_id": 945, "goods_name": "半成品/透明/奶皮卷", "total_price": 84}, {"num": 40, "price": 13, "unit_id": 0, "goods_id": 939, "goods_name": "半成品/透明/原味/鲜奶酪", "total_price": 520}, {"num": 40, "price": 13, "unit_id": 0, "goods_id": 940, "goods_name": "半成品/透明/甜味/鲜奶酪", "total_price": 520}]	从saas.mzth.cn导入 原单号:CG0002866	0	0		0		2026-03-30 16:56:21.654815	2026-03-30 17:10:35.735691	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -11727,6 +12634,7 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 247	CG202603301851	CG202603307866	98	科尔沁奶食品	管理员	2025-12-28	75.00	0.00	0.00	[{"num": 5, "spec": "1斤散称", "price": 15, "unit_id": 0, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装", "total_price": 75}]	从saas.mzth.cn导入 原单号:CG0003418	0	0		0		2026-03-30 17:37:27.695592	2026-04-04 07:15:22.883606	none	0.00	75.00	0.00	buyer	f	\N	f	[]	[]	1	1
 258	CG202603309920	CG202603308504	97	纯净奶食品	管理员	2025-12-21	325.00	0.00	0.00	[{"num": 25, "spec": "180克", "price": 13, "unit_id": 0, "goods_id": 945, "goods_sn": "SP0000090", "unit_name": "盒", "goods_name": "半成品/透明/奶皮卷", "total_price": 325}]	从saas.mzth.cn导入 原单号:CG0003139	0	0		0		2026-03-30 17:37:42.459079	2026-04-04 07:15:22.883606	none	0.00	325.00	0.00	buyer	f	\N	f	[]	[]	1	1
 410	CG202603313911	CG202603319076	90	阿润查干	管理员	2025-12-25	182.00	182.00	0.00	[{"num": 4, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 880, "goods_sn": "SP0000155", "unit_name": "袋", "goods_name": "阿润月饼/五仁馅", "total_price": 40}, {"num": 4, "spec": "1", "price": 5.5, "unit_id": 0, "goods_id": 879, "goods_sn": "SP0000156", "unit_name": "盒", "goods_name": "干肉奶茶", "total_price": 22}, {"num": 4, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 881, "goods_sn": "SP0000154", "unit_name": "袋", "goods_name": "阿润月饼/奶皮子馅", "total_price": 40}, {"num": 4, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 882, "goods_sn": "SP0000153", "unit_name": "袋", "goods_name": "阿润月饼/黄油渣馅", "total_price": 40}, {"num": 4, "spec": "4颗/350克", "price": 10, "unit_id": 0, "goods_id": 883, "goods_sn": "SP0000152", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅", "total_price": 40}]	从saas.mzth.cn导入 原单号:CG0003285	1	189	牧区纯坊门店	7	公司支出账户	2026-03-31 02:36:14.630683	\N	none	0.00	182.00	0.00	buyer	f	\N	f	[]	[]	1	1
+653	PO2026082211534364880	PO2026082211534364880	117	巴音珠萨朗	管理员	2026-08-13	155.00	155.00	0.00	[{"num": 10, "spec": "", "price": 15.5, "_total": 155, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 15.5, "supplier_name": "", "_base_price_no_tax": 15.5, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-08-22 03:55:29.615315	\N	none	0.00	155.00	0.00	buyer	f	\N	f	[]	[]	1	1
 530	PO2026052900005420615	PO2026052900005420615	98	科尔沁奶食品	管理员	2025-12-05	140.00	140.00	0.00	[{"num": 10, "spec": "半斤", "price": 14, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "unit_name": "斤", "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 14, "supplier_name": "", "_base_price_no_tax": 14}]		1	189	牧区纯坊门店	7	公司支出账户	2026-05-28 16:01:58.722216	\N	none	0.00	140.00	0.00	buyer	f	\N	f	[]	[]	1	1
 251	CG202603309029	CG202603307437	121	盛大印刷	管理员	2025-12-25	43.20	0.00	0.00	[{"num": 500, "spec": "1", "price": 0.0432, "unit_id": 0, "goods_id": 983, "goods_sn": "SP0000051", "unit_name": "张", "goods_name": "甜味/标签/不干胶/传统奶豆腐", "total_price": 21.6}, {"num": 500, "spec": "1", "price": 0.0432, "unit_id": 0, "goods_id": 1021, "goods_sn": "SP0000013", "unit_name": "张", "goods_name": "原味/标签/不干胶/传统奶豆腐", "total_price": 21.6}]	从saas.mzth.cn导入 原单号:CG0003290	0	0		0		2026-03-30 17:37:31.750366	2026-04-04 07:15:22.883606	none	0.00	43.20	0.00	buyer	f	\N	f	[]	[]	1	1
 252	CG202603304874	CG202603305547	121	盛大印刷	管理员	2025-12-25	33.50	0.00	0.00	[{"num": 500, "spec": "1张", "price": 0.067, "unit_id": 0, "goods_id": 898, "goods_sn": "SP0000137", "unit_name": "张", "goods_name": "透专标签/奶皮千层", "total_price": 33.5}]	从saas.mzth.cn导入 原单号:CG0003289	0	0		0		2026-03-30 17:37:32.594024	2026-04-04 07:15:22.883606	none	0.00	33.50	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -11820,8 +12728,8 @@ COPY public.purchase_order (id, order_no, order_sn, supplier_id, supplier_name, 
 573	PO2026060717373589935	PO2026060717373589935	96	浙江金矿包装	管理员	2026-02-25	243.39	243.39	0.00	[{"num": 183, "spec": "", "price": 1.33, "remark": "", "goods_id": 958, "goods_sn": "SP0000077", "tax_rate": 0, "cate_name": "亚克力", "unit_name": "盒", "goods_name": "小/长方/亚克力/乳清奶条/奶锅巴通用", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 1.33, "supplier_name": "", "_base_price_no_tax": 1.33}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-07 09:40:44.987124	\N	none	0.00	243.39	0.00	buyer	f	\N	f	[]	[]	1	1
 581	PO2026060719254963613	PO2026060719254963613	117	巴音珠萨朗	管理员	2026-04-06	740.00	740.00	0.00	[{"num": 46, "spec": "", "price": 16.087, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "散装/甜味奶条", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 16.087, "supplier_name": "", "_base_price_no_tax": 16.087, "_current_unit_name": "斤"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-07 11:28:03.988894	\N	none	0.00	740.00	0.00	buyer	f	\N	f	[]	[]	1	1
 570	PO2026060714455091530	PO2026060714455091530	105	翁牛特旗奶果子	管理员	2026-04-09	1629.75	1629.75	0.00	[{"num": 65.19, "spec": "", "price": 25, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "cate_name": "半成品", "unit_name": "斤", "goods_name": "奶果子/散装", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 25, "supplier_name": "", "_base_price_no_tax": 25}]	平均成本30.46	1	189	牧区纯坊门店	7	公司支出账户	2026-06-07 06:51:25.689628	\N	none	0.00	1629.75	0.00	buyer	f	\N	f	[]	[{"name": "运费", "amount": 60, "bearer": "buyer"}, {"name": "包装费", "amount": 296, "bearer": "buyer"}]	1	1
-608	PO2026062215312473851	PO2026062215312473851	124	孟克河	管理员	2026-06-22	1300.00	0.00	0.00	[{"num": 200, "spec": "", "price": 6.5, "_total": 1300, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6.5, "supplier_name": "", "_base_price_no_tax": 6.5, "_current_unit_name": "桶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 07:32:26.516364	\N	none	0.00	1300.00	0.00	buyer	f	\N	f	[]	[]	1	1
 83	CG202603304139	CG202603309625	108		管理员	2026-01-09	0.00	0.00	0.00	[{"num": 10, "price": 68.7, "unit_id": 0, "goods_id": 997, "goods_name": "茶专用/盐包", "total_price": 687}]	从saas.mzth.cn导入 原单号:CG0003666	0	0		0		2026-03-30 16:55:53.020931	2026-03-30 17:17:27.617018	none	0.00	0.00	0.00	buyer	f	\N	f	[]	[]	1	1
+608	PO2026062215312473851	PO2026062215312473851	124	孟克河	管理员	2026-06-22	1200.00	0.00	0.00	[{"num": 200, "spec": "", "price": 6, "_total": 1200, "remark": "", "batch_no": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "cate_name": "", "unit_name": "桶", "goods_name": "小米锅巴110g", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 6, "supplier_name": "", "_base_price_no_tax": 6, "_current_unit_name": "桶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-06-22 07:32:26.516364	\N	none	0.00	1200.00	0.00	buyer	f	\N	f	[]	[]	1	1
 614	PO2026070216142419815	PO2026070216142419815	98	科尔沁奶食品	管理员	2026-07-02	475.00	475.00	0.00	[{"num": 5, "spec": "", "price": 95, "_total": 475, "remark": "", "goods_id": 907, "goods_sn": "SP0000128", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "goods_name": "风干牛肉500g大片", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 95, "supplier_name": "", "_base_price_no_tax": 95, "_current_unit_name": "袋"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-02 08:14:54.024738	\N	none	0.00	475.00	0.00	buyer	f	\N	f	[]	[]	1	1
 353	CG202603318392	CG202603315198	74	德吉奶食品	管理员	2026-02-26	270.00	0.00	0.00	[{"num": 10, "spec": "1L", "price": 15, "unit_id": 0, "goods_id": 804, "goods_sn": "SP0000232", "unit_name": "瓶", "goods_name": "德吉酸奶/2斤装", "total_price": 150}, {"num": 10, "spec": "500mL", "price": 8, "unit_id": 0, "goods_id": 805, "goods_sn": "SP0000231", "unit_name": "瓶", "goods_name": "德吉酸奶/一斤装", "total_price": 80}, {"num": 10, "spec": "250mL", "price": 4, "unit_id": 0, "goods_id": 806, "goods_sn": "SP0000230", "unit_name": "瓶", "goods_name": "德吉酸奶/半斤", "total_price": 40}]	从saas.mzth.cn导入 原单号:CG0004475	1	0		5	道力干记录付款单	2026-03-31 02:34:18.458981	\N	none	0.00	270.00	0.00	buyer	f	\N	f	[]	[]	1	1
 619	PO202607121407018203	PO202607121407018203	81	额吉伊德	管理员	2026-07-09	68.00	68.00	0.00	[{"num": 15, "spec": "", "price": 4.533333, "_total": 68, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "cate_name": "广告物料", "unit_name": "瓶", "goods_name": "乳清饮料", "unit_ratio": 1, "supplier_id": null, "price_no_tax": 4.533333, "supplier_name": "", "_base_price_no_tax": 4.533333, "_current_unit_name": "瓶"}]		1	189	牧区纯坊门店	7	公司支出账户	2026-07-12 06:09:20.771662	\N	none	0.00	68.00	0.00	buyer	f	\N	f	[]	[]	1	1
@@ -12265,76 +13173,143 @@ COPY public.retail_members (id, name, mobile, gender, birthday, balance, points,
 
 COPY public.retail_orders (id, order_sn, member_id, member_name, goods_info, total_amount, pay_amount, pay_type, order_date, remark, status, created_at, discount_amount, store_id, store_name, shop_id, fee_items, admin_id, admin_name) FROM stdin;
 1586	LS202607249486	0		[{"num": 5.2143, "price": 6.999981, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 2607.1g", "line_amount": 36.5, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 22, "goods_id": 3095, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油小瓶", "line_amount": 22, "discount_share": 0, "original_price": 22}]	58.50	58.50	cash	2026-07-24		1	2026-07-24 09:20:12.621069	0.00	1	牧区纯坊门店	1	[]	638	002/苏叶
+1587	LS202607253127	0		[{"num": 1, "price": 15, "goods_id": 883, "goods_sn": "SP0000152", "unit_name": "袋", "cost_price": 10, "goods_name": "阿润月饼/奶豆腐馅", "line_amount": 15, "discount_share": 0, "original_price": 15}, {"num": 0.3333, "price": 30.003, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 166.7g", "line_amount": 10, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 0.0667, "price": 29.985007, "is_bulk": true, "goods_id": 3090, "goods_sn": "", "unit_name": "斤", "cost_price": 25, "goods_name": "手工棒棒糖 33.3g", "line_amount": 2, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	27.00	27.00	wechat	2026-07-25		1	2026-07-25 04:50:42.838089	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1589	LS202607265356	0		[{"num": 1.144, "price": 24.833916, "is_bulk": true, "goods_id": 885, "goods_sn": "", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装 572.0g", "line_amount": 28.41, "discount_share": 0.19, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 0.68, "price": 24.823529, "is_bulk": true, "goods_id": 921, "goods_sn": "", "unit_name": "斤", "cost_price": 22, "goods_name": "嚼口脆炒米糖/散装 340.0g", "line_amount": 16.88, "discount_share": 0.12, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 0.5667, "price": 29.786483, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 283.3g", "line_amount": 16.88, "discount_share": 0.12, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 1, "price": 24.83, "goods_id": 857, "goods_sn": "SP0000178", "unit_name": "张", "cost_price": 19, "goods_name": "厚奶皮", "line_amount": 24.83, "discount_share": 0.17, "original_price": 25}]	87.60	87.00	wechat	2026-07-26		1	2026-07-26 12:39:22.100423	0.60	1	牧区纯坊门店	1	[]	1	管理员
+1590	LS202607262487	0		[{"num": 1, "price": 25, "goods_id": 3120, "goods_sn": "", "unit_name": "袋", "cost_price": 12.5, "goods_name": "科尔沁袋装/——奶豆腐条/片/", "line_amount": 25, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 500.0g", "line_amount": 7, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	32.00	32.00	wechat	2026-07-26		1	2026-07-26 12:39:59.054124	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1591	LS202607266578	0		[{"num": 1, "price": 15.17, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "cost_price": 10, "goods_name": "蒙古果子/格日勒", "line_amount": 15.17, "discount_share": -0.17, "original_price": 15}, {"num": 1, "price": 16.79, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "line_amount": 16.79, "discount_share": -0.19, "original_price": 16.6}, {"num": 1, "price": 12.13, "goods_id": 3178, "goods_sn": "", "unit_name": "", "cost_price": 0, "goods_name": "佳赫蛋糕", "line_amount": 12.13, "discount_share": -0.13, "original_price": 12}, {"num": 1, "price": 30.34, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30.34, "discount_share": -0.34, "original_price": 30}, {"num": 0.5, "price": 30.34, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 250.0g", "line_amount": 15.17, "discount_share": -0.17, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 2, "price": 18.2, "goods_id": 868, "goods_sn": "SP0000167", "unit_name": "袋", "cost_price": 10.17, "goods_name": "16g青砖袋泡茶", "line_amount": 36.4, "discount_share": -0.4, "original_price": 18}]	124.60	126.00	wechat	2026-07-26		1	2026-07-26 13:56:54.488448	-1.40	1	牧区纯坊门店	1	[]	1	管理员
+1592	LS202607272832	0		[{"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	10.00	10.00	wechat	2026-07-27		1	2026-07-27 03:33:20.985995	0.00	1	牧区纯坊门店	1	[]	1	管理员
 859	20260226000005	0		[{"num": 1, "price": 10, "goods_id": 833, "goods_sn": "SP0000203", "unit_name": "袋", "goods_name": "10元/脆香奶条"}, {"num": 1, "price": 10, "goods_id": 848, "goods_sn": "SP0000187", "unit_name": "袋", "goods_name": "10元组合糖"}, {"num": 1, "price": 16, "goods_id": 807, "goods_sn": "SP0000229", "unit_name": "袋", "goods_name": "蒙古果/格日勒/大"}]	36.00	36.00		2026-02-26		1	2026-04-04 04:19:05.729691	0.00	1	牧区纯坊门店	1	[]	1	管理员
 858	20260227000001	0		[{"num": 2, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "goods_name": "小/奶皮"}]	30.00	30.00		2026-02-27		1	2026-04-04 04:19:05.248036	0.00	1	牧区纯坊门店	1	[]	1	管理员
 855	20260227000004	0		[{"num": 1, "price": 26.6, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "goods_name": "透明成品/奶皮卷/线下"}]	26.60	26.60		2026-02-27		1	2026-04-04 04:19:03.712756	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1588	LS202607256649	0		[{"num": 2, "price": 24.365, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 48.73, "discount_share": 1.27, "original_price": 25}, {"num": 2, "price": 34.11, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 68.22, "discount_share": 1.78, "original_price": 35}, {"num": 2, "price": 56.52, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 113.04, "discount_share": 2.96, "original_price": 58}, {"num": 1, "price": 0.01, "goods_id": 3183, "goods_sn": "", "unit_name": "张", "cost_price": 1.9, "goods_name": "阿旗礼袋蒙文", "line_amount": 0.01, "discount_share": 0, "original_price": 0.01}]	236.01	230.00	wechat	2026-07-25		1	2026-07-25 04:51:37.057397	6.01	1	牧区纯坊门店	1	[]	1	管理员
+1593	LS202607272474	0		[{"num": 5, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 2500.0g", "line_amount": 35, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 13, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "cost_price": 10, "goods_name": "蒙古果子/格日勒", "line_amount": 13, "discount_share": 0, "original_price": 13}]	48.00	48.00	cash	2026-07-27		1	2026-07-27 03:34:28.657847	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1594	LS202607278626	0		[{"num": 6, "price": 48.575, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 291.45, "discount_share": 56.55, "original_price": 58}, {"num": 6.001, "price": 38.525246, "goods_id": 3184, "goods_sn": "", "unit_name": "个", "cost_price": 16.5, "goods_name": "阿旗冰箱贴", "line_amount": 231.19, "discount_share": 44.86, "original_price": 46}, {"num": 12, "price": 19.178333, "goods_id": 3097, "goods_sn": "", "unit_name": "盒", "cost_price": 0, "goods_name": "明信片/风景版", "line_amount": 230.14, "discount_share": 44.66, "original_price": 22.9}, {"num": 6, "price": 43.55, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 261.3, "discount_share": 50.7, "original_price": 52}, {"num": 6, "price": 22.611667, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 135.67, "discount_share": 26.33, "original_price": 27}, {"num": 6, "price": 8.375, "goods_id": 3183, "goods_sn": "", "unit_name": "张", "cost_price": 1.9, "goods_name": "阿旗礼袋蒙文", "line_amount": 50.25, "discount_share": 9.75, "original_price": 10}]	1432.85	1200.00	wechat	2026-07-27		1	2026-07-27 03:37:45.061857	232.85	1	牧区纯坊门店	1	[]	1	管理员
 875	20260223000004	0		[{"num": 12, "price": 10, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "goods_name": "蒙古果子/格日勒"}]	120.00	120.00		2026-02-23		1	2026-04-04 04:19:14.092656	0.00	1	牧区纯坊门店	1	[]	1	管理员
 873	20260224000002	0		[{"num": 1, "price": 58, "goods_id": 996, "goods_sn": "SP0000038", "unit_name": "盒", "goods_name": "青砖奶茶成品"}, {"num": 6, "price": 6, "goods_id": 845, "goods_sn": "SP0000190", "unit_name": "瓶", "goods_name": "乳清饮料"}, {"num": 1, "price": 58, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "goods_name": "奶果子/盒装/成品"}, {"num": 1, "price": 27, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "goods_name": "透明成品/奶锅巴/线下"}, {"num": 1, "price": 15, "goods_id": 849, "goods_sn": "SP0000186", "unit_name": "袋", "goods_name": "15元组合糖"}, {"num": 1, "price": 8, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "goods_name": "礼盒/蓝界"}]	202.00	194.00		2026-02-24		1	2026-04-04 04:19:12.823719	8.00	1	牧区纯坊门店	1	[]	1	管理员
 872	20260224000003	0		[{"num": 1, "price": 29.8, "goods_id": 941, "goods_sn": "SP0000094", "unit_name": "盒", "goods_name": "透明成品/鲜奶酪/原味/线下"}, {"num": 1, "price": 29.8, "goods_id": 937, "goods_sn": "SP0000098", "unit_name": "盒", "goods_name": "透明成品/鲜奶皮/线下"}]	59.60	59.60		2026-02-24		1	2026-04-04 04:19:12.331028	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1595	LS202607274181	0		[{"num": 1.2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 600.0g", "line_amount": 12, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 1, "price": 30, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.7, "goods_name": "散装/甜味奶条 500.0g", "line_amount": 30, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	42.00	42.00	wechat	2026-07-27		1	2026-07-27 14:41:28.718468	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1600	LS202608017855	0		[{"num": 2, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 70, "discount_share": 0, "original_price": 35}, {"num": 1, "price": 52, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 52, "discount_share": 0, "original_price": 52}]	122.00	122.00	wechat	2026-08-01		1	2026-08-01 03:58:07.734603	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1601	LS202608017103	0		[{"num": 3, "price": 25, "goods_id": 877, "goods_sn": "SP0000158", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "line_amount": 75, "discount_share": 6, "original_price": 27}]	81.00	75.00	wechat	2026-08-01		1	2026-08-01 03:59:28.835725	6.00	1	牧区纯坊门店	1	[]	1	管理员
+1602	LS202608011907	0		[{"num": 4, "price": 20, "goods_id": 3177, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "蒙古国饮料", "line_amount": 80, "discount_share": 0, "original_price": 20}]	80.00	80.00	wechat	2026-08-01		1	2026-08-01 04:00:10.63967	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1636	LS202608138873	0		[{"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}]	50.00	50.00	wechat	2026-08-13		1	2026-08-13 02:19:10.527978	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1637	LS202608135573	0		[{"num": 0.472, "price": 25, "is_bulk": true, "goods_id": 885, "goods_sn": "", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装 236.0g", "line_amount": 11.8, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 0.6733, "price": 30.001485, "is_bulk": true, "goods_id": 981, "goods_sn": "", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮 336.7g", "line_amount": 20.2, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	32.00	32.00	wechat	2026-08-13		1	2026-08-13 02:20:14.038958	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1638	LS202608133948	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-08-13		1	2026-08-13 02:33:53.656174	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1648	LS202608182814	0		[{"num": 1, "price": 6.5, "goods_id": 929, "goods_sn": "SP0000106", "unit_name": "袋", "cost_price": 3.5, "goods_name": "白砂糖", "line_amount": 6.5, "discount_share": 0, "original_price": 6.5}, {"num": 0.65, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 325.0g", "line_amount": 6.5, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	13.00	13.00	wechat	2026-08-18		1	2026-08-18 13:59:35.432472	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1649	LS202608212023	0		[{"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 58, "discount_share": 0, "original_price": 58}, {"num": 1, "price": 15, "goods_id": 3104, "goods_sn": "", "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "line_amount": 15, "discount_share": 0, "original_price": 15}]	73.00	73.00	wechat	2026-08-21		1	2026-08-21 12:28:39.022646	0.00	1	牧区纯坊门店	1	[]	1	管理员
 882	20260222000004	0		[{"num": 1, "price": 8, "goods_id": 836, "goods_sn": "SP0000199", "unit_name": "个", "goods_name": "礼盒/2026"}, {"num": 2, "price": 58, "goods_id": 996, "goods_sn": "SP0000038", "unit_name": "盒", "goods_name": "青砖奶茶成品"}, {"num": 2, "price": 15, "goods_id": 883, "goods_sn": "SP0000152", "unit_name": "袋", "goods_name": "阿润月饼/奶豆腐馅"}, {"num": 2, "price": 8, "goods_id": 832, "goods_sn": "SP0000204", "unit_name": "袋", "goods_name": "8元烤奶皮/成品"}, {"num": 2, "price": 7.5, "goods_id": 932, "goods_sn": "SP0000103", "unit_name": "袋", "goods_name": "炒米海丰"}, {"num": 2, "price": 15, "goods_id": 849, "goods_sn": "SP0000186", "unit_name": "袋", "goods_name": "15元组合糖"}]	215.00	190.00		2026-02-22		1	2026-04-04 04:19:17.461418	25.00	1	牧区纯坊门店	1	[]	1	管理员
 880	20260222000006	0		[{"num": 1, "price": 18, "goods_id": 890, "goods_sn": "SP0000145", "unit_name": "斤", "goods_name": "红枣"}]	18.00	18.00		2026-02-22		1	2026-04-04 04:19:16.502289	0.00	1	牧区纯坊门店	1	[]	1	管理员
 885	20260222000001	0		[{"num": 54, "price": 2.5, "goods_id": 991, "goods_sn": "SP0000043", "unit_name": "块儿", "goods_name": "奶果子/散装"}, {"num": 1.36, "price": 25, "goods_id": 885, "goods_sn": "SP0000150", "unit_name": "斤", "goods_name": "冻炒米/散装"}]	169.00	169.00		2026-02-22		1	2026-04-04 04:19:18.913711	0.00	1	牧区纯坊门店	1	[]	1	管理员
 888	20260221000009	0		[{"num": 2, "price": 20, "goods_id": 884, "goods_sn": "SP0000151", "unit_name": "个", "goods_name": "实惠/奶豆腐"}, {"num": 2, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "goods_name": "小/奶皮"}]	70.00	70.00		2026-02-21		1	2026-04-04 04:19:20.640761	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1596	LS202607288806	0		[{"num": 1, "price": 5, "goods_id": 3187, "goods_sn": "", "unit_name": "袋", "cost_price": 2.5, "goods_name": "玉米棒蛋糕/面包", "line_amount": 5, "discount_share": 0, "original_price": 5}, {"num": 1, "price": 8, "goods_id": 3194, "goods_sn": "", "unit_name": "袋", "cost_price": 5, "goods_name": "吐司面包", "line_amount": 8, "discount_share": 0, "original_price": 8}, {"num": 1, "price": 16, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "line_amount": 16, "discount_share": 0, "original_price": 16}]	29.00	29.00	wechat	2026-07-28		1	2026-07-28 01:07:17.007814	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1603	LS202608019776	0		[{"num": 1.3333, "price": 7.500188, "is_bulk": true, "goods_id": 923, "goods_sn": "", "unit_name": "斤", "cost_price": 4.8, "goods_name": "海丰炒米/散装/硬口/ 666.7g", "line_amount": 10, "discount_share": 0, "original_price": 7.5, "bulk_grams_per_base": 500}, {"num": 1, "price": 12, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 12, "discount_share": 0, "original_price": 12, "bulk_grams_per_base": 500}]	22.00	22.00	wechat	2026-08-01		1	2026-08-01 09:53:26.249894	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1639	LS202608152902	0		[{"num": 1, "price": 20, "goods_id": 3206, "goods_sn": "", "unit_name": "瓶", "cost_price": 16, "goods_name": "锡盟松格都格策格酸马奶", "line_amount": 20, "discount_share": 0, "original_price": 20}]	20.00	20.00	wechat	2026-08-15		1	2026-08-15 05:06:22.829088	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1650	LS202608224541	0		[{"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 58, "discount_share": 0, "original_price": 58}, {"num": 1, "price": 16, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6, "goods_name": "小米锅巴110g", "line_amount": 16, "discount_share": 0, "original_price": 16}, {"num": 1, "price": 27, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 27, "discount_share": 0, "original_price": 27}, {"num": 1, "price": 30, "goods_id": 3119, "goods_sn": "", "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "line_amount": 30, "discount_share": 0, "original_price": 30}, {"num": 1, "price": 46, "goods_id": 3184, "goods_sn": "", "unit_name": "个", "cost_price": 16.5, "goods_name": "阿旗冰箱贴", "line_amount": 46, "discount_share": 0, "original_price": 46}]	177.00	177.00	wechat	2026-08-22		1	2026-08-22 03:59:05.783176	0.00	1	牧区纯坊门店	1	[]	1	管理员
 899	20260220000007	0		[{"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "goods_name": "新/青砖奶茶"}, {"num": 1.3, "price": 48, "goods_id": 824, "goods_sn": "SP0000212", "unit_name": "散", "goods_name": "黄油/散装"}]	120.40	105.00		2026-02-20		1	2026-04-04 04:19:26.446372	15.40	1	牧区纯坊门店	1	[]	1	管理员
 904	20260220000002	0		[{"num": 6, "price": 25, "goods_id": 857, "goods_sn": "SP0000178", "unit_name": "张", "goods_name": "厚奶皮"}, {"num": 2, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮"}]	190.00	172.00		2026-02-20		1	2026-04-04 04:19:28.862453	18.00	1	牧区纯坊门店	1	[]	1	管理员
 895	20260221000002	0		[{"num": 1, "price": 8, "goods_id": 836, "goods_sn": "SP0000199", "unit_name": "个", "goods_name": "礼盒/2026"}]	8.00	0.00		2026-02-21		1	2026-04-04 04:19:24.170411	8.00	1	牧区纯坊门店	1	[]	1	管理员
 903	20260220000003	0		[{"num": 2, "price": 10, "goods_id": 847, "goods_sn": "SP0000188", "unit_name": "袋", "goods_name": "乌日莫/袋装"}]	20.00	20.00		2026-02-20		1	2026-04-04 04:19:28.377398	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1597	LS202607316897	0		[{"num": 1, "price": 5, "goods_id": 929, "goods_sn": "SP0000106", "unit_name": "袋", "cost_price": 3.5, "goods_name": "白砂糖", "line_amount": 5, "discount_share": 0, "original_price": 5}]	5.00	5.00	cash	2026-07-31		1	2026-07-31 04:25:35.466944	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1604	LS202608014811	0		[{"num": 0.86, "price": 30, "is_bulk": true, "goods_id": 981, "goods_sn": "", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮 430.0g", "line_amount": 25.8, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	25.80	25.80	wechat	2026-08-01		1	2026-08-01 11:54:31.437497	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1640	LS202608177577	0		[{"num": 2, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1000.0g", "line_amount": 14, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 500.0g", "line_amount": 10, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	24.00	24.00	wechat	2026-08-17		1	2026-08-17 04:36:05.497245	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1651	LS202608235303	0		[{"num": 1, "price": 46.8, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 46.8, "discount_share": 11.2, "original_price": 58}, {"num": 1, "price": 46.8, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 46.8, "discount_share": 11.2, "original_price": 58}, {"num": 1, "price": 41.96, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 41.96, "discount_share": 10.04, "original_price": 52}, {"num": 1, "price": 33.89, "goods_id": 989, "goods_sn": "SP0000045", "unit_name": "瓶", "cost_price": 8.111600000000001, "goods_name": "蒙古黄油/瓶装成品", "line_amount": 33.89, "discount_share": 8.11, "original_price": 42}, {"num": 1, "price": 24.21, "goods_id": 3119, "goods_sn": "", "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "line_amount": 24.21, "discount_share": 5.79, "original_price": 30}, {"num": 2, "price": 18.475, "goods_id": 3097, "goods_sn": "", "unit_name": "盒", "cost_price": 0, "goods_name": "明信片/风景版", "line_amount": 36.95, "discount_share": 8.85, "original_price": 22.9}, {"num": 1, "price": 12.1, "goods_id": 849, "goods_sn": "SP0000186", "unit_name": "袋", "cost_price": 8.49, "goods_name": "15元组合糖", "line_amount": 12.1, "discount_share": 2.9, "original_price": 15}, {"num": 1, "price": 21.79, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 21.79, "discount_share": 5.21, "original_price": 27}, {"num": 1, "price": 6.45, "goods_id": 836, "goods_sn": "SP0000199", "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "line_amount": 6.45, "discount_share": 1.55, "original_price": 8}, {"num": 1, "price": 29.05, "goods_id": 994, "goods_sn": "SP0000040", "unit_name": "盒", "cost_price": 7.657, "goods_name": "冻炒米成品盒", "line_amount": 29.05, "discount_share": 6.95, "original_price": 36}]	371.80	300.00	wechat	2026-08-23		1	2026-08-23 03:16:27.013194	71.80	1	牧区纯坊门店	1	[]	1	管理员
+1652	LS202608238609	0		[{"num": 2, "price": 6.735, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1000.0g", "line_amount": 13.47, "discount_share": 0.53, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 14.43, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 10, "goods_name": "手工乌日末液体 500.0g", "line_amount": 14.43, "discount_share": 0.57, "original_price": 15, "bulk_grams_per_base": 500}, {"num": 1, "price": 25.59, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "line_amount": 25.59, "discount_share": 1.01, "original_price": 26.6}, {"num": 1, "price": 7.7, "goods_id": 3103, "goods_sn": "", "unit_name": "瓶", "cost_price": 3, "goods_name": "牧区酸奶小", "line_amount": 7.7, "discount_share": 0.3, "original_price": 8}, {"num": 2, "price": 2.405, "goods_id": 3181, "goods_sn": "", "unit_name": "袋", "cost_price": 0, "goods_name": "牛奶浓", "line_amount": 4.81, "discount_share": 0.19, "original_price": 2.5}]	68.60	66.00	wechat	2026-08-23		1	2026-08-23 11:37:17.106218	2.60	1	牧区纯坊门店	1	[]	1	管理员
+1653	LS202608232819	0		[{"num": 1, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 500.0g", "line_amount": 7, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	7.00	7.00	wechat	2026-08-23		1	2026-08-23 14:02:18.390564	0.00	1	牧区纯坊门店	1	[]	1	管理员
 920	20260218000005	0		[{"num": 6, "price": 25, "goods_id": 857, "goods_sn": "SP0000178", "unit_name": "张", "goods_name": "厚奶皮"}]	150.00	150.00		2026-02-18		1	2026-04-04 04:19:37.095492	0.00	1	牧区纯坊门店	1	[]	1	管理员
 907	20260219000005	0		[{"num": 1, "price": 15, "goods_id": 917, "goods_sn": "SP0000118", "unit_name": "斤", "goods_name": "机器乌日末液体"}, {"num": 1, "price": 26.6, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "goods_name": "透明成品/奶皮卷/线下"}, {"num": 1, "price": 18, "goods_id": 868, "goods_sn": "SP0000167", "unit_name": "袋", "goods_name": "16g青砖袋泡茶"}, {"num": 0.856, "price": 25, "goods_id": 885, "goods_sn": "SP0000150", "unit_name": "斤", "goods_name": "冻炒米/散装"}, {"num": 1, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮"}]	101.00	101.00		2026-02-19		1	2026-04-04 04:19:30.338021	0.00	1	牧区纯坊门店	1	[]	1	管理员
 921	20260218000004	0		[{"num": 1, "price": 15, "goods_id": 917, "goods_sn": "SP0000118", "unit_name": "斤", "goods_name": "机器乌日末液体"}]	15.00	12.00		2026-02-18		1	2026-04-04 04:19:37.573467	3.00	1	牧区纯坊门店	1	[]	1	管理员
+1598	LS202607319623	0		[{"num": 4, "price": 11.25, "goods_id": 879, "goods_sn": "SP0000156", "unit_name": "盒", "cost_price": 6, "goods_name": "干肉奶茶", "line_amount": 45, "discount_share": 3, "original_price": 12}]	48.00	45.00	wechat	2026-07-31		1	2026-07-31 04:26:02.278361	3.00	1	牧区纯坊门店	1	[]	1	管理员
+1599	LS202607313118	0		[{"num": 1, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "cost_price": 13, "goods_name": "大/奶皮", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 1, "price": 30, "goods_id": 3119, "goods_sn": "", "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "line_amount": 30, "discount_share": 0, "original_price": 30}, {"num": 1, "price": 58, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 58, "discount_share": 0, "original_price": 58}]	108.00	108.00	wechat	2026-07-31		1	2026-07-31 04:26:53.963634	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1605	LS202608017253	0		[{"num": 2, "price": 22.5, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 45, "discount_share": 5, "original_price": 25}]	50.00	45.00	wechat	2026-08-01		1	2026-08-01 11:54:41.202205	5.00	1	牧区纯坊门店	1	[]	1	管理员
+1641	LS202608173816	0		[{"num": 0.7667, "price": 29.998696, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.63, "goods_name": "散装/甜味奶条 383.3g", "line_amount": 23, "discount_share": 0, "original_price": 30, "bulk_grams_per_base": 500}]	23.00	23.00	wechat	2026-08-17		1	2026-08-17 07:24:12.825572	0.00	1	牧区纯坊门店	1	[]	1	管理员
 926	20260217000004	0		[{"num": 7, "price": 8, "goods_id": 892, "goods_sn": "SP0000143", "unit_name": "盒", "goods_name": "那牧尔酸奶"}, {"num": 2, "price": 12, "goods_id": 924, "goods_sn": "SP0000111", "unit_name": "袋", "goods_name": "冻炒米/袋装"}, {"num": 4, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 1, "price": 8, "goods_id": 836, "goods_sn": "SP0000199", "unit_name": "个", "goods_name": "礼盒/2026"}]	228.00	220.00		2026-02-17		1	2026-04-04 04:19:39.977933	8.00	1	牧区纯坊门店	1	[]	1	管理员
 929	20260217000001	0		[{"num": 4, "price": 12.5, "goods_id": 916, "goods_sn": "SP0000119", "unit_name": "盒", "goods_name": "脆奶条/散装/科尔沁"}, {"num": 1, "price": 8, "goods_id": 817, "goods_sn": "SP0000219", "unit_name": "瓶", "goods_name": "乌日汗小瓶酸奶"}]	58.00	58.00		2026-02-17		1	2026-04-04 04:19:41.421503	0.00	1	牧区纯坊门店	1	[]	1	管理员
 937	20260216000007	0		[{"num": 10, "price": 15, "goods_id": 826, "goods_sn": "SP0000210", "unit_name": "盒", "goods_name": "乌日汗酸奶"}]	150.00	150.00		2026-02-16		1	2026-04-04 04:19:45.63021	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1606	LS202608026070	0		[{"num": 2.8933, "price": 7.500086, "is_bulk": true, "goods_id": 923, "goods_sn": "", "unit_name": "斤", "cost_price": 4.8, "goods_name": "海丰炒米/散装/硬口/ 1446.7g", "line_amount": 21.7, "discount_share": 0, "original_price": 7.5, "bulk_grams_per_base": 500}]	21.70	21.70	wechat	2026-08-02		1	2026-08-02 04:39:45.237172	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1642	LS202608175583	0		[{"num": 1, "price": 22, "goods_id": 3095, "goods_sn": "", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油小瓶", "line_amount": 22, "discount_share": 0, "original_price": 22}]	22.00	22.00	wechat	2026-08-17		1	2026-08-17 13:28:44.341147	0.00	1	牧区纯坊门店	1	[]	1	管理员
 953	20260215000006	0		[{"num": 2, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮"}]	40.00	35.00		2026-02-15		1	2026-04-04 04:19:53.978007	5.00	1	牧区纯坊门店	1	[]	1	管理员
 952	20260215000007	0		[{"num": 2, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "goods_name": "小/奶皮"}, {"num": 1, "price": 32, "goods_id": 828, "goods_sn": "SP0000208", "unit_name": "张", "goods_name": "中等/奶豆腐/"}]	62.00	62.00		2026-02-15		1	2026-04-04 04:19:53.498111	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1607	LS202608021469	0		[{"num": 0.8571, "price": 7.00035, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 428.6g", "line_amount": 6, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 0.8, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 400.0g", "line_amount": 8, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	14.00	14.00	wechat	2026-08-02		1	2026-08-02 12:19:06.332862	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1643	LS202608171713	0		[{"num": 1, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "cost_price": 10, "goods_name": "小/奶皮", "line_amount": 15, "discount_share": 0, "original_price": 15}, {"num": 1, "price": 16, "goods_id": 884, "goods_sn": "SP0000151", "unit_name": "个", "cost_price": 10, "goods_name": "实惠/奶豆腐", "line_amount": 16, "discount_share": 0, "original_price": 16}, {"num": 1, "price": 2.5, "goods_id": 3181, "goods_sn": "", "unit_name": "袋", "cost_price": 0, "goods_name": "牛奶浓", "line_amount": 2.5, "discount_share": 0, "original_price": 2.5}]	33.50	33.50	wechat	2026-08-17		1	2026-08-17 14:05:09.084598	0.00	1	牧区纯坊门店	1	[]	1	管理员
 968	20260214000002	0		[{"num": 0.4, "price": 20, "goods_id": 922, "goods_sn": "SP0000113", "unit_name": "斤", "goods_name": "酸奶炒米糖/散装"}, {"num": 0.56, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}, {"num": 1, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮"}]	42.00	42.00		2026-02-14		1	2026-04-04 04:20:01.687171	0.00	1	牧区纯坊门店	1	[]	1	管理员
 967	20260214000003	0		[{"num": 1, "price": 22, "goods_id": 821, "goods_sn": "SP0000215", "unit_name": "瓶", "goods_name": "天山原浆/大"}]	22.00	18.00		2026-02-14		1	2026-04-04 04:20:01.198679	4.00	1	牧区纯坊门店	1	[]	1	管理员
+1610	LS202608032015	0		[{"num": 1, "price": 8, "goods_id": 3194, "goods_sn": "", "unit_name": "袋", "cost_price": 5, "goods_name": "吐司面包", "line_amount": 8, "discount_share": 0, "original_price": 8}, {"num": 1, "price": 20, "goods_id": 3123, "goods_sn": "", "unit_name": "瓶", "cost_price": 13.5, "goods_name": " 蒙古国糖果", "line_amount": 20, "discount_share": 0, "original_price": 20}, {"num": 0.1714, "price": 35.005834, "is_bulk": true, "goods_id": 3110, "goods_sn": "", "unit_name": "斤", "cost_price": 15, "goods_name": "樱桃味/干噎酸奶/散 85.7g", "line_amount": 6, "discount_share": 0, "original_price": 35, "bulk_grams_per_base": 500}]	34.00	34.00	wechat	2026-08-03		1	2026-08-03 08:56:48.346502	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1609	LS202608036441	0		[{"num": 10, "price": 1, "goods_id": 1027, "goods_sn": "SP0000007", "unit_name": "张", "cost_price": 0.17, "goods_name": "真空袋", "line_amount": 10, "discount_share": 0, "original_price": 1}]	10.00	10.00	cash	2026-08-03		1	2026-08-03 08:55:00.79987	0.00	0		1	[]	1	管理员
+1608	LS202608038407	0		[{"num": 1, "price": 18, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 18, "discount_share": 0, "original_price": 18}]	18.00	18.00	cash	2026-08-02		1	2026-08-03 08:54:29.231991	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1644	LS202608181296	0		[{"num": 0.5078, "price": 127.747145, "is_bulk": true, "goods_id": 3091, "goods_sn": "", "unit_name": "斤", "cost_price": 98, "goods_name": "牛肉干/散称 253.9g", "line_amount": 64.87, "discount_share": 0.13, "original_price": 128, "bulk_grams_per_base": 500}, {"num": 1, "price": 57.88, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 57.88, "discount_share": 0.12, "original_price": 58}, {"num": 1, "price": 57.88, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 57.88, "discount_share": 0.12, "original_price": 58}, {"num": 2, "price": 41.915, "goods_id": 985, "goods_sn": "SP0000049", "unit_name": "袋", "cost_price": 12.78, "goods_name": "甜味传统奶豆腐/袋装成品", "line_amount": 83.83, "discount_share": 0.17, "original_price": 42}, {"num": 1, "price": 51.89, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 51.89, "discount_share": 0.11, "original_price": 52}, {"num": 1, "price": 29.94, "is_bulk": true, "goods_id": 3118, "goods_sn": "", "unit_name": "斤", "cost_price": 17, "goods_name": "烤奶花 500.0g", "line_amount": 29.94, "discount_share": 0.06, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 1, "price": 41.91, "goods_id": 989, "goods_sn": "SP0000045", "unit_name": "瓶", "cost_price": 8.111600000000001, "goods_name": "蒙古黄油/瓶装成品", "line_amount": 41.91, "discount_share": 0.09, "original_price": 42}, {"num": 1, "price": 35.93, "goods_id": 994, "goods_sn": "SP0000040", "unit_name": "盒", "cost_price": 7.657, "goods_name": "冻炒米成品盒", "line_amount": 35.93, "discount_share": 0.07, "original_price": 36}, {"num": 2, "price": 17.965, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 35.93, "discount_share": 0.07, "original_price": 18}, {"num": 2, "price": 14.97, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "cost_price": 10, "goods_name": "蒙古果子/格日勒", "line_amount": 29.94, "discount_share": 0.06, "original_price": 15}]	491.00	490.00	wechat	2026-08-18		1	2026-08-18 02:28:14.64588	1.00	1	牧区纯坊门店	1	[]	1	管理员
+1645	LS202608181554	0		[{"num": 1, "price": 0, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "line_amount": 0, "discount_share": 8, "original_price": 8}]	8.00	0.00	wechat	2026-08-18		1	2026-08-18 02:28:32.239769	8.00	1	牧区纯坊门店	1	[]	1	管理员
 1008	20260210000002	0		[{"num": 0.64, "price": 35, "goods_id": 859, "goods_sn": "SP0000176", "unit_name": "斤", "goods_name": "糖/阿润"}]	22.40	22.00		2026-02-10		1	2026-04-04 04:20:23.331745	0.40	1	牧区纯坊门店	1	[]	1	管理员
 990	20260212000008	0		[{"num": 2, "price": 26, "goods_id": 904, "goods_sn": "SP0000131", "unit_name": "袋", "goods_name": "盛宇燃奶豆腐/原味"}]	52.00	52.00		2026-02-12		1	2026-04-04 04:20:13.373139	0.00	1	牧区纯坊门店	1	[]	1	管理员
 989	20260212000009	0		[{"num": 4, "price": 15, "goods_id": 826, "goods_sn": "SP0000210", "unit_name": "盒", "goods_name": "乌日汗酸奶"}]	60.00	48.00		2026-02-12		1	2026-04-04 04:20:12.891423	12.00	1	牧区纯坊门店	1	[]	1	管理员
 986	20260212000011	0		[{"num": 1, "price": 18, "goods_id": 878, "goods_sn": "SP0000157", "unit_name": "盒", "goods_name": "羊奶粉/1斤"}]	18.00	18.00		2026-02-12		1	2026-04-04 04:20:11.441772	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1611	LS202608031216	0		[{"num": 1, "price": 15, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "cost_price": 10, "goods_name": "蒙古果子/格日勒", "line_amount": 15, "discount_share": 0, "original_price": 15}]	15.00	15.00	wechat	2026-08-03		1	2026-08-03 09:45:21.902708	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1646	LS202608188432	0		[{"num": 2, "price": 98, "goods_id": 908, "goods_sn": "SP0000127", "unit_name": "袋", "cost_price": 89, "goods_name": "哈斯乌拉牛肉干500g原味", "line_amount": 196, "discount_share": 0, "original_price": 98}, {"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 58, "discount_share": 0, "original_price": 58}]	254.00	254.00	wechat	2026-08-18		1	2026-08-18 03:57:31.052235	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1647	LS202608187531	0		[{"num": 1, "price": 26, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "line_amount": 26, "discount_share": 0.6, "original_price": 26.6}]	26.60	26.00	wechat	2026-08-18		1	2026-08-18 03:57:44.831604	0.60	1	牧区纯坊门店	1	[]	1	管理员
 1006	20260210000004	0		[{"num": 1, "price": 30, "goods_id": 902, "goods_sn": "SP0000133", "unit_name": "斤", "goods_name": "乌日莫糖/散装"}]	30.00	30.00		2026-02-10		1	2026-04-04 04:20:22.377648	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1005	20260210000005	0		[{"num": 1.35, "price": 10, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}]	13.50	13.50		2026-02-10		1	2026-04-04 04:20:21.891707	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1003	20260211000001	0		[{"num": 1, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "goods_name": "小/奶皮"}]	65.00	65.00		2026-02-11		1	2026-04-04 04:20:19.995331	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1002	20260211000002	0		[{"num": 1, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}]	25.00	25.00		2026-02-11		1	2026-04-04 04:20:19.506916	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1612	LS202608036648	0		[{"num": 2, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1000.0g", "line_amount": 14, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}]	14.00	14.00	wechat	2026-08-03		1	2026-08-03 09:52:31.049208	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1026	20260205000002	0		[{"num": 1, "price": 7.5, "goods_id": 901, "goods_sn": "SP0000134", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装"}, {"num": 1, "price": 26, "goods_id": 903, "goods_sn": "SP0000132", "unit_name": "袋", "goods_name": "盛宇燃奶豆腐/甜味"}]	33.50	32.00		2026-02-05		1	2026-04-04 04:20:33.090512	1.50	1	牧区纯坊门店	1	[]	1	管理员
 1025	20260205000003	0		[{"num": 2, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤"}]	70.00	70.00		2026-02-05		1	2026-04-04 04:20:32.348121	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1613	LS202608034322	0		[{"num": 1, "price": 30, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30, "discount_share": 0, "original_price": 30}]	30.00	30.00	wechat	2026-08-03		1	2026-08-03 10:40:05.476989	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1084	20260123000001	0		[{"num": 1, "price": 30, "goods_id": 902, "goods_sn": "SP0000133", "unit_name": "斤", "goods_name": "乌日莫糖/散装"}]	30.00	30.00		2026-01-23		1	2026-04-04 04:21:02.913796	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1064	20260127000005	0		[{"num": 2, "price": 48, "goods_id": 856, "goods_sn": "SP0000179", "unit_name": "张", "goods_name": "科尔沁/大奶豆腐"}]	96.00	96.00		2026-01-27		1	2026-04-04 04:20:52.617633	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1042	20260201000007	0		[{"num": 1, "price": 15, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}, {"num": 1, "price": 7.5, "goods_id": 901, "goods_sn": "SP0000134", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装"}]	22.50	16.00		2026-02-01		1	2026-04-04 04:20:41.120932	6.50	1	牧区纯坊门店	1	[]	1	管理员
 1041	20260202000001	0		[{"num": 2, "price": 10, "goods_id": 847, "goods_sn": "SP0000188", "unit_name": "袋", "goods_name": "乌日莫/袋装"}]	20.00	20.00		2026-02-02		1	2026-04-04 04:20:40.63727	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1614	LS202608048795	0		[{"num": 1, "price": 8, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "line_amount": 8, "discount_share": 0, "original_price": 8}, {"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 58, "discount_share": 0, "original_price": 58}, {"num": 2, "price": 58, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 116, "discount_share": 0, "original_price": 58}, {"num": 1, "price": 36, "goods_id": 994, "goods_sn": "SP0000040", "unit_name": "盒", "cost_price": 7.657, "goods_name": "冻炒米成品盒", "line_amount": 36, "discount_share": 0, "original_price": 36}, {"num": 1, "price": 27, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 27, "discount_share": 0, "original_price": 27}, {"num": 2, "price": 22.9, "goods_id": 3097, "goods_sn": "", "unit_name": "盒", "cost_price": 0, "goods_name": "明信片/风景版", "line_amount": 45.8, "discount_share": 0, "original_price": 22.9}, {"num": 2, "price": 43.6, "goods_id": 3098, "goods_sn": "", "unit_name": "块", "cost_price": 33, "goods_name": "大奶豆腐/科尔沁", "line_amount": 87.2, "discount_share": 0, "original_price": 43.6}, {"num": 0.8, "price": 25, "is_bulk": true, "goods_id": 3094, "goods_sn": "", "unit_name": "斤", "cost_price": 10, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 400.0g", "line_amount": 20, "discount_share": 0, "original_price": 25, "bulk_grams_per_base": 500}, {"num": 1, "price": 52, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 52, "discount_share": 0, "original_price": 52}]	450.00	450.00	wechat	2026-08-04		1	2026-08-04 05:29:46.845926	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1062	20260127000007	0		[{"num": 1, "price": 10, "goods_id": 847, "goods_sn": "SP0000188", "unit_name": "袋", "goods_name": "乌日莫/袋装"}]	10.00	10.00		2026-01-27		1	2026-04-04 04:20:51.631044	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1060	20260129000001	0		[{"num": 1.1, "price": 15, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}, {"num": 1, "price": 7.5, "goods_id": 901, "goods_sn": "SP0000134", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装"}]	24.00	19.00		2026-01-29		1	2026-04-04 04:20:50.661946	5.00	1	牧区纯坊门店	1	[]	1	管理员
 1059	20260129000002	0		[{"num": 3, "price": 35, "goods_id": 837, "goods_sn": "SP0000198", "unit_name": "袋", "goods_name": "甜味奶豆腐块儿/大"}]	105.00	95.00		2026-01-29		1	2026-04-04 04:20:50.169979	10.00	1	牧区纯坊门店	1	[]	1	管理员
 1058	20260129000003	0		[{"num": 1, "price": 15, "goods_id": 1014, "goods_sn": "SP0000020", "unit_name": "袋", "goods_name": "散装/甜味奶条"}]	15.00	15.00		2026-01-29		1	2026-04-04 04:20:49.684574	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1057	20260129000004	0		[{"num": 5, "price": 7.5, "goods_id": 901, "goods_sn": "SP0000134", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装"}]	37.50	35.00		2026-01-29		1	2026-04-04 04:20:48.950149	2.50	1	牧区纯坊门店	1	[]	1	管理员
 1056	20260129000005	0		[{"num": 0.5, "price": 20, "goods_id": 922, "goods_sn": "SP0000113", "unit_name": "斤", "goods_name": "酸奶炒米糖/散装"}]	10.00	10.00		2026-01-29		1	2026-04-04 04:20:48.457485	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1615	LS202608047656	0		[{"num": 1, "price": 12, "goods_id": 871, "goods_sn": "SP0000164", "unit_name": "个", "cost_price": 7.11, "goods_name": "小青砖茶砖", "line_amount": 12, "discount_share": 0, "original_price": 12}]	12.00	12.00	wechat	2026-08-04		1	2026-08-04 06:10:16.765873	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1082	20260123000003	0		[{"num": 2, "price": 48, "goods_id": 856, "goods_sn": "SP0000179", "unit_name": "张", "goods_name": "科尔沁/大奶豆腐"}]	96.00	96.00		2026-01-23		1	2026-04-04 04:21:01.951507	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1081	20260123000004	0		[{"num": 2, "price": 30, "goods_id": 927, "goods_sn": "SP0000108", "unit_name": "个", "goods_name": "小奶豆腐砖/1斤"}]	60.00	56.00		2026-01-23		1	2026-04-04 04:21:01.465576	4.00	1	牧区纯坊门店	1	[]	1	管理员
 1079	20260123000006	0		[{"num": 1, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}]	25.00	25.00		2026-01-23		1	2026-04-04 04:21:00.23784	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1078	20260123000007	0		[{"num": 2.4, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}, {"num": 4, "price": 0, "goods_id": 850, "goods_sn": "SP0000185", "unit_name": "张", "goods_name": "红糖袋/delicious"}, {"num": 2, "price": 30, "goods_id": 855, "goods_sn": "SP0000180", "unit_name": "散", "goods_name": "奶锅巴/扎旗吉十奶制品"}]	120.00	115.00		2026-01-23		1	2026-04-04 04:20:59.754593	5.00	1	牧区纯坊门店	1	[]	1	管理员
 1076	20260125000001	0		[{"num": 1, "price": 35, "goods_id": 870, "goods_sn": "SP0000165", "unit_name": "个", "goods_name": "大青砖茶砖"}]	35.00	35.00		2026-01-25		1	2026-04-04 04:20:58.694098	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1616	LS202608057311	0		[{"num": 2, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 70, "discount_share": 0, "original_price": 35}, {"num": 2, "price": 25, "goods_id": 857, "goods_sn": "SP0000178", "unit_name": "张", "cost_price": 19, "goods_name": "厚奶皮", "line_amount": 50, "discount_share": 0, "original_price": 25}, {"num": 1, "price": 30, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30, "discount_share": 0, "original_price": 30}]	150.00	150.00	wechat	2026-08-05		1	2026-08-05 05:30:18.55044	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1105	20260116000001	0		[{"num": 1, "price": 26.6, "goods_id": 935, "goods_sn": "SP0000100", "unit_name": "盒", "goods_name": "透明成品/奶皮卷/线下"}]	26.60	26.60		2026-01-16		1	2026-04-04 04:21:14.185277	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1104	20260116000002	0		[{"num": 1, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "goods_name": "大奶豆腐砖/1.2斤"}]	35.00	35.00		2026-01-16		1	2026-04-04 04:21:13.709416	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1103	20260116000003	0		[{"num": 1.5, "price": 15, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}]	22.50	21.00		2026-01-16		1	2026-04-04 04:21:13.227256	1.50	1	牧区纯坊门店	1	[]	1	管理员
+1617	LS202608085098	0		[{"num": 1, "price": 110, "goods_id": 908, "goods_sn": "SP0000127", "unit_name": "袋", "cost_price": 89, "goods_name": "哈斯乌拉牛肉干500g原味", "line_amount": 110, "discount_share": -12, "original_price": 98}]	98.00	110.00	wechat	2026-08-08		1	2026-08-08 03:11:16.183897	-12.00	1	牧区纯坊门店	1	[]	1	管理员
+1620	LS202608089905	0		[{"num": 2, "price": 7, "is_bulk": true, "goods_id": 901, "goods_sn": "", "unit_name": "斤", "cost_price": 5.17, "goods_name": "手工白花炒米/散装 1000.0g", "line_amount": 14, "discount_share": 0, "original_price": 7, "bulk_grams_per_base": 500}, {"num": 1, "price": 6.5, "goods_id": 931, "goods_sn": "SP0000104", "unit_name": "袋", "cost_price": 4.8, "goods_name": "炒米粉/aag", "line_amount": 6.5, "discount_share": 0, "original_price": 6.5}]	20.50	20.50	wechat	2026-08-08		1	2026-08-08 03:17:27.642901	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1623	LS202608087267	0		[{"num": 2, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 50, "discount_share": 0, "original_price": 25}]	50.00	50.00	wechat	2026-08-08		1	2026-08-08 03:18:32.010046	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1126	20260109000001	0		[{"num": 1, "price": 25, "goods_id": 885, "goods_sn": "SP0000150", "unit_name": "斤", "goods_name": "冻炒米/散装"}]	25.00	25.00		2026-01-09		1	2026-04-04 04:21:24.929332	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1125	20260109000002	0		[{"num": 1, "price": 9, "goods_id": 967, "goods_sn": "SP0000067", "unit_name": "桶", "goods_name": "查嘎/乳清"}]	9.00	9.00		2026-01-09		1	2026-04-04 04:21:24.465555	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1119	20260112000003	0		[{"num": 1, "price": 35, "goods_id": 899, "goods_sn": "SP0000136", "unit_name": "瓶", "goods_name": "纯净/黄油/斤"}]	35.00	35.00		2026-01-12		1	2026-04-04 04:21:21.255869	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1618	LS202608082769	0		[{"num": 4, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 2000.0g", "line_amount": 40, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	40.00	40.00	wechat	2026-08-08		1	2026-08-08 03:12:11.483767	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1619	LS202608083667	0		[{"num": 1, "price": 10, "goods_id": 811, "goods_sn": "SP0000225", "unit_name": "袋", "cost_price": 10, "goods_name": "蒙古果子/格日勒", "line_amount": 10, "discount_share": 0, "original_price": 10}]	10.00	10.00	wechat	2026-08-08		1	2026-08-08 03:14:54.646416	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1621	LS202608083685	0		[{"num": 1, "price": 30, "goods_id": 889, "goods_sn": "SP0000146", "unit_name": "盒", "cost_price": 15, "goods_name": "奶皮卷/科尔沁", "line_amount": 30, "discount_share": 0, "original_price": 30}]	30.00	30.00	wechat	2026-08-08		1	2026-08-08 03:17:43.594106	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1622	LS202608082511	0		[{"num": 1.2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 600.0g", "line_amount": 12, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	12.00	12.00	wechat	2026-08-08		1	2026-08-08 03:18:07.878941	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1624	LS202608087168	0		[{"num": 2, "price": 32.5, "goods_id": 856, "goods_sn": "SP0000179", "unit_name": "张", "cost_price": 33, "goods_name": "科尔沁/大奶豆腐", "line_amount": 65, "discount_share": 0, "original_price": 32.5}]	65.00	65.00	wechat	2026-08-08		1	2026-08-08 03:19:01.442439	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1149	20251231000002	0		[{"num": 1, "price": 26, "goods_id": 904, "goods_sn": "SP0000131", "unit_name": "袋", "goods_name": "盛宇燃奶豆腐/原味"}]	26.00	26.00		2025-12-31		1	2026-04-04 04:21:36.687694	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1148	20260101000001	0		[{"num": 3, "price": 15, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}]	45.00	45.00		2026-01-01		1	2026-04-04 04:21:36.212944	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1147	20260101000002	0		[{"num": 0.4, "price": 30, "goods_id": 902, "goods_sn": "SP0000133", "unit_name": "斤", "goods_name": "乌日莫糖/散装"}]	12.00	12.00		2026-01-01		1	2026-04-04 04:21:35.729702	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1625	LS202608087302	0		[{"num": 2, "price": 15, "goods_id": 849, "goods_sn": "SP0000186", "unit_name": "袋", "cost_price": 8.49, "goods_name": "15元组合糖", "line_amount": 30, "discount_share": 0, "original_price": 15}]	30.00	30.00	wechat	2026-08-08		1	2026-08-08 15:07:50.445725	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1169	20251226000006	0		[{"num": 1, "price": 20, "goods_id": 968, "goods_sn": "SP0000066", "unit_name": "张", "goods_name": "大/奶皮"}]	20.00	20.00		2025-12-26		1	2026-04-04 04:21:47.134094	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1165	20251227000003	0		[{"num": 2, "price": 7.5, "goods_id": 901, "goods_sn": "SP0000134", "unit_name": "麻袋", "goods_name": "手工白花炒米/散装"}]	15.00	14.00		2025-12-27		1	2026-04-04 04:21:44.800104	1.00	1	牧区纯坊门店	1	[]	1	管理员
+1626	LS202608098758	0		[{"num": 3, "price": 13.333333, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "cost_price": 10, "goods_name": "小/奶皮", "line_amount": 40, "discount_share": 5, "original_price": 15}]	45.00	40.00	wechat	2026-08-09		1	2026-08-09 13:00:01.692787	5.00	1	牧区纯坊门店	1	[]	1	管理员
+1627	LS202608096448	0		[{"num": 1.2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 600.0g", "line_amount": 12, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}]	12.00	12.00	wechat	2026-08-09		1	2026-08-09 13:00:22.332213	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1192	20251221000002	0		[{"num": 2, "price": 12, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}]	24.00	24.00		2025-12-21		1	2026-04-04 04:21:58.902449	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1628	LS202608105988	0		[{"num": 2, "price": 34.235, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 68.47, "discount_share": 1.53, "original_price": 35}, {"num": 2, "price": 19.56, "goods_id": 884, "goods_sn": "SP0000151", "unit_name": "个", "cost_price": 10, "goods_name": "实惠/奶豆腐", "line_amount": 39.12, "discount_share": 0.88, "original_price": 20}, {"num": 1, "price": 26.41, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 26.41, "discount_share": 0.59, "original_price": 27}]	137.00	134.00	wechat	2026-08-10		1	2026-08-10 07:28:45.944067	3.00	1	牧区纯坊门店	1	[]	1	管理员
 1215	20251215000002	0		[{"num": 3, "price": 16, "goods_id": 930, "goods_sn": "SP0000105", "unit_name": "袋", "goods_name": "加沙奶豆腐"}]	48.00	48.00		2025-12-15		1	2026-04-04 04:22:10.755778	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1214	20251215000003	0		[{"num": 1, "price": 12, "goods_id": 920, "goods_sn": "SP0000115", "unit_name": "斤", "goods_name": "手工乌日末液体"}]	12.00	12.00		2025-12-15		1	2026-04-04 04:22:10.195087	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1212	20251216000001	0		[{"num": 2, "price": 12.5, "goods_id": 916, "goods_sn": "SP0000119", "unit_name": "盒", "goods_name": "脆奶条/散装/科尔沁"}, {"num": 0.4, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}]	35.00	35.00		2025-12-16		1	2026-04-04 04:22:09.162282	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1629	LS202608108565	0		[{"num": 1, "price": 7.94, "goods_id": 817, "goods_sn": "SP0000219", "unit_name": "瓶", "cost_price": 6, "goods_name": "乌日汗小瓶酸奶", "line_amount": 7.94, "discount_share": 0.06, "original_price": 8}, {"num": 2, "price": 9.93, "goods_id": 826, "goods_sn": "SP0000210", "unit_name": "瓶", "cost_price": 6, "goods_name": "乌日汗酸奶/中", "line_amount": 19.86, "discount_share": 0.14, "original_price": 10}, {"num": 1, "price": 16.48, "goods_id": 3085, "goods_sn": "", "unit_name": "桶", "cost_price": 6, "goods_name": "小米锅巴110g", "line_amount": 16.48, "discount_share": 0.12, "original_price": 16.6}, {"num": 1, "price": 39.72, "goods_id": 822, "goods_sn": "SP0000214", "unit_name": "瓶", "cost_price": 21, "goods_name": "黄油/大瓶/科尔沁", "line_amount": 39.72, "discount_share": 0.28, "original_price": 40}]	84.60	84.00	wechat	2026-08-10		1	2026-08-10 12:13:45.342671	0.60	1	牧区纯坊门店	1	[]	1	管理员
 1242	20251210000002	0		[{"num": 1, "price": 15, "goods_id": 969, "goods_sn": "SP0000065", "unit_name": "张", "goods_name": "小/奶皮"}]	15.00	15.00		2025-12-10		1	2026-04-04 04:22:24.466344	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1630	LS202608104324	0		[{"num": 1, "price": 58, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 58, "discount_share": 0, "original_price": 58}]	58.00	58.00	wechat	2026-08-10		1	2026-08-10 14:18:07.118421	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1253	LS202604175712	0		[{"num": 0.12, "price": 3, "goods_id": 921, "goods_sn": "", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装 60.0g"}]	3.00	3.00		2026-04-17		1	2026-04-17 10:33:21.639661	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1254	LS202604184796	0		[{"num": 1, "price": 35, "goods_id": 887, "goods_name": "羊乳奶粉/奶茶专用"}]	35.00	35.00		2026-04-18		1	2026-04-18 13:44:55.278661	0.00	0		1	[]	1	管理员
 1279	LS202604232856	0		[{"num": 4, "price": 15, "goods_id": 1014, "goods_sn": "SP0000020", "unit_name": "斤", "goods_name": "散装/甜味奶条"}, {"num": 1, "price": 25, "goods_id": 921, "goods_sn": "SP0000114", "unit_name": "斤", "goods_name": "嚼口脆炒米糖/散装"}]	85.00	85.00		2026-04-23		1	2026-04-23 15:31:34.208834	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1270	LS20260421207	0		[{"num": 2, "price": 35, "goods_id": 1022, "goods_sn": "SP0000012", "unit_name": "张", "goods_name": "奶豆腐"}, {"num": 0.53, "price": 17, "goods_id": 949, "goods_sn": "SP0000086", "unit_name": "张", "goods_name": "乌日莫"}]	79.01	87.00		2026-04-21		1	2026-04-21 06:31:38.350579	0.00	0		1	[]	1	管理员
+1631	LS202608118902	0		[{"num": 0.5, "price": 36.6, "is_bulk": true, "goods_id": 981, "goods_sn": "", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮 250.0g", "line_amount": 18.3, "discount_share": -3.3, "original_price": 30, "bulk_grams_per_base": 500}, {"num": 0.5, "price": 36.6, "is_bulk": true, "goods_id": 3118, "goods_sn": "", "unit_name": "斤", "cost_price": 18, "goods_name": "烤奶花 250.0g", "line_amount": 18.3, "discount_share": -3.3, "original_price": 30, "bulk_grams_per_base": 500}]	30.00	36.60	wechat	2026-08-11		1	2026-08-11 02:29:35.182835	-6.60	1	牧区纯坊门店	1	[]	1	管理员
+1632	LS202608115818	0		[{"num": 1.11, "price": 22.522523, "is_bulk": true, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 15.63, "goods_name": "散装/甜味奶条 555.0g", "line_amount": 25, "discount_share": 8.3, "original_price": 30, "bulk_grams_per_base": 500}]	33.30	25.00	wechat	2026-08-11		1	2026-08-11 15:21:01.656544	8.30	1	牧区纯坊门店	1	[]	1	管理员
 1300	LS202604307703	0		[{"num": 3.36, "price": 10, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1680.0g"}]	33.60	33.60	wechat	2026-04-30		1	2026-04-30 06:17:38.063509	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1633	LS202608112725	0		[{"num": 1, "price": 56.41, "goods_id": 980, "goods_sn": "SP0000054", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "line_amount": 56.41, "discount_share": 1.59, "original_price": 58}, {"num": 1, "price": 56.41, "goods_id": 992, "goods_sn": "SP0000042", "unit_name": "盒", "cost_price": 14.61185, "goods_name": "牧区奶豆腐/盒装/成品", "line_amount": 56.41, "discount_share": 1.59, "original_price": 58}, {"num": 1, "price": 35.02, "goods_id": 994, "goods_sn": "SP0000040", "unit_name": "盒", "cost_price": 7.657, "goods_name": "冻炒米成品盒", "line_amount": 35.02, "discount_share": 0.98, "original_price": 36}, {"num": 1, "price": 7.78, "goods_id": 1018, "goods_sn": "SP0000016", "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "line_amount": 7.78, "discount_share": 0.22, "original_price": 8}, {"num": 1, "price": 29.18, "goods_id": 3119, "goods_sn": "", "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "line_amount": 29.18, "discount_share": 0.82, "original_price": 30}, {"num": 1, "price": 37.93, "goods_id": 989, "goods_sn": "SP0000045", "unit_name": "瓶", "cost_price": 8.111600000000001, "goods_name": "蒙古黄油/瓶装成品", "line_amount": 37.93, "discount_share": 1.07, "original_price": 39}, {"num": 1, "price": 50.58, "goods_id": 1008, "goods_sn": "SP0000026", "unit_name": "袋", "cost_price": 9.629999999999999, "goods_name": "甜味奶条成品", "line_amount": 50.58, "discount_share": 1.42, "original_price": 52}, {"num": 1, "price": 17.51, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 17.51, "discount_share": 0.49, "original_price": 18}, {"num": 1, "price": 29.18, "goods_id": 827, "goods_sn": "SP0000209", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "line_amount": 29.18, "discount_share": 0.82, "original_price": 30}]	329.00	320.00	wechat	2026-08-11		1	2026-08-11 15:26:21.150594	9.00	1	牧区纯坊门店	1	[]	1	管理员
+1634	LS202608122477	0		[{"num": 2, "price": 35, "goods_id": 926, "goods_sn": "SP0000109", "unit_name": "个", "cost_price": 25, "goods_name": "大奶豆腐砖/1.2斤", "line_amount": 70, "discount_share": 0, "original_price": 35}, {"num": 2, "price": 10, "is_bulk": true, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 1000.0g", "line_amount": 20, "discount_share": 0, "original_price": 10, "bulk_grams_per_base": 500}, {"num": 2, "price": 18, "goods_id": 3116, "goods_sn": "", "unit_name": "瓶", "cost_price": 12, "goods_name": "酸马奶/蒙医院", "line_amount": 36, "discount_share": 0, "original_price": 18}]	126.00	126.00	wechat	2026-08-12		1	2026-08-12 08:39:23.541358	0.00	1	牧区纯坊门店	1	[]	1	管理员
+1635	LS202608122374	0		[{"num": 1, "price": 25, "goods_id": 3107, "goods_sn": "", "unit_name": "块", "cost_price": 17, "goods_name": "科尔沁中奶豆腐", "line_amount": 25, "discount_share": 0, "original_price": 25}]	25.00	25.00	wechat	2026-08-12		1	2026-08-12 12:58:16.363138	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1347	LS202605174743	0		[{"num": 3.0576, "price": 7.499346, "goods_id": 923, "goods_sn": "", "unit_name": "斤", "cost_price": 4.83, "goods_name": "炒米/散装/硬口 1528.8g", "line_amount": 22.93, "discount_share": 0, "original_price": 7.5}, {"num": 0.87, "price": 10, "goods_id": 920, "goods_sn": "", "unit_name": "斤", "cost_price": 5, "goods_name": "手工乌日末液体 435.0g", "line_amount": 8.7, "discount_share": 0, "original_price": 10}]	31.63	31.63	wechat	2026-05-17		1	2026-05-17 09:50:35.345638	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1348	LS202605172156	0		[{"num": 2, "price": 15, "goods_id": 1014, "goods_sn": "", "unit_name": "斤", "cost_price": 8.5, "goods_name": "散装/甜味奶条 1000.0g", "line_amount": 30, "discount_share": 0, "original_price": 15}]	30.00	30.00	cash	2026-05-17		1	2026-05-17 09:50:55.028388	0.00	1	牧区纯坊门店	1	[]	1	管理员
 1365	LS202605213940	0		[{"num": 1, "price": 65, "goods_id": 3111, "goods_sn": "", "unit_name": "个", "cost_price": 45, "goods_name": "蒙古元素永生花", "line_amount": 65, "discount_share": 0, "original_price": 65}]	65.00	65.00	wechat	2026-05-19		1	2026-05-21 14:49:50.385041	0.00	1	牧区纯坊门店	1	[]	1	管理员
@@ -13009,7 +13984,7 @@ COPY public.roles (id, name, permissions, status, created_at, shop_id) FROM stdi
 12	财务		1	2026-04-17 04:58:43.016291	1
 13	监督人		1	2026-04-18 03:25:29.710766	1
 11	店长		1	2026-04-17 04:58:31.200257	1
-14	店员	__perm__:{"menus":["sale-contract","procure-order","retail-order"]}	1	2026-07-12 07:20:14.840247	1
+14	店员	__perm__:{"menus":["sale-contract","procure-order","retail-order","finance-other-expense"]}	1	2026-07-12 07:20:14.840247	1
 \.
 
 
@@ -13018,18 +13993,29 @@ COPY public.roles (id, name, permissions, status, created_at, shop_id) FROM stdi
 --
 
 COPY public.sale_contracts (id, order_no, order_sn, customer_id, customer_name, admin_name, order_date, total_amount, pay_amount, goods_info, remark, status, created_at, deleted_at, discount_type, discount_value, after_discount, freight_amount, freight_bearer, income_amount, receive_amount, receive_account, prepay_amount, expense_amount, installment, sign_date, expire_date, need_invoice, commission_rate, fee_items, level_id, admin_id, shop_id, exchange_deduct, exchange_groups) FROM stdin;
+422	XS202608038330	HT20260803001	21	阿斯娜	管理员	2026-08-03	1902.00	0.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "goods_type": 1, "price_no_tax": 13, "exchange_group_key": ""}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "price_no_tax": 10, "exchange_group_key": ""}, {"num": 20, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "cate_name": "定制类产品", "line_type": "normal", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "goods_type": 1, "price_no_tax": 8.5, "exchange_group_key": ""}, {"num": 20, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "line_type": "normal", "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "goods_type": 1, "price_no_tax": 11, "exchange_group_key": ""}, {"num": 10, "spec": "1", "price": 6, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "cate_name": "塑料袋", "line_type": "normal", "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "goods_type": 4, "price_no_tax": 6, "exchange_group_key": ""}, {"num": 20, "spec": "200克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9.6, "exchange_group_key": ""}]	[NO:HT20260803001]	1	2026-08-03 09:04:30.029586	\N	none	0.00	1902.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-03	\N	0	0.00	[]	\N	1	1	0.00	[]
+431	XS202608183600	HT20260818001	58	赤峰小徐	管理员	2026-08-18	200.00	0.00	[{"num": 10, "spec": "110克", "price": 20, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 5.5, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}]	[NO:HT20260818001]	1	2026-08-18 04:45:55.126334	\N	none	0.00	200.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-18	\N	0	0.00	[]	\N	1	1	0.00	[]
 101	XS202604021593	XS202604029357	0		管理员	\N	0.00	0.00	[]		0	2026-04-02 06:53:22.486048	2026-04-03 07:15:57.437706	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 161	XS202604038186	XS202604039453	21	阿斯娜	管理员	2025-11-16	1566.00	0.00	[{"num": 528, "spec": "400/箱/0.423/球", "price": 0.4225, "remark": "换货单", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "unit_name": "个", "goods_name": "奶油球", "price_no_tax": 0.4225}, {"num": 63, "spec": "1", "price": 0.87, "remark": "换货单", "goods_id": 1032, "goods_sn": "SP0000002", "tax_rate": 0, "unit_name": "张", "goods_name": "专盒/冻炒米", "price_no_tax": 0.87}, {"num": 30, "spec": "1", "price": 0.37, "remark": "换货单", "goods_id": 1031, "goods_sn": "SP0000003", "tax_rate": 0, "unit_name": "张", "goods_name": "专底盒/奶条", "price_no_tax": 0.37}, {"num": 30, "spec": "1", "price": 0.71, "remark": "换货单", "goods_id": 1033, "goods_sn": "SP0000001", "tax_rate": 0, "unit_name": "张", "goods_name": "专袋/奶条", "price_no_tax": 0.71}, {"num": 30, "spec": "1", "price": 0.05, "remark": "换货单", "goods_id": 1024, "goods_sn": "SP0000010", "tax_rate": 0, "unit_name": "张", "goods_name": "标签/不干胶/奶条/甜味", "price_no_tax": 0.05}, {"num": 43, "spec": "1", "price": 17, "remark": "", "goods_id": 976, "goods_sn": "SP0000058", "tax_rate": 0, "unit_name": "盒", "goods_name": "暂用/茶 新旧更替", "price_no_tax": 17}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "goods_name": "奶果子/盒装/成品", "price_no_tax": 20}, {"num": 15, "spec": "110克", "price": 7.5, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "goods_name": "冻炒米成品盒", "price_no_tax": 7.5}, {"num": 2, "spec": "斤/两盒", "price": 23, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "unit_name": "盒", "goods_name": "烤奶皮", "price_no_tax": 23}, {"num": 63, "spec": "1", "price": 0.1, "remark": "换货单", "goods_id": 993, "goods_sn": "SP0000041", "tax_rate": 0, "unit_name": "张", "goods_name": "冻炒米专用/塑膜袋", "price_no_tax": 0.1}, {"num": 8, "spec": "1", "price": 0.1, "remark": "换货单", "goods_id": 990, "goods_sn": "SP0000044", "tax_rate": 0, "unit_name": "袋", "goods_name": "奶果子/专用塑膜袋", "price_no_tax": 0.1}, {"num": 8, "spec": "1", "price": 0.03, "remark": "换货单", "goods_id": 1020, "goods_sn": "SP0000014", "tax_rate": 0, "unit_name": "张", "goods_name": "标签/不干胶/奶果子", "price_no_tax": 0.03}, {"num": 8, "spec": "1", "price": 0.65, "remark": "换货单", "goods_id": 1030, "goods_sn": "SP0000004", "tax_rate": 0, "unit_name": "张", "goods_name": "专外盒/奶果子", "price_no_tax": 0.65}, {"num": 33, "spec": "0", "price": 0, "remark": "", "goods_id": 995, "goods_sn": "SP0000039", "tax_rate": 0, "unit_name": "袋", "goods_name": "茶专用/热缩膜", "price_no_tax": 0}, {"num": 33, "spec": "0", "price": 0, "remark": "", "goods_id": 999, "goods_sn": "SP0000035", "tax_rate": 0, "unit_name": "张", "goods_name": "茶专用/不干胶/标签", "price_no_tax": 0}]	原单号:HT0007754 | 成本总价 105.47 *2=52.735	1	2026-04-03 09:27:09.921301	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 323	XS202606125671	XS202606121150	63	美团平台	管理员	2026-05-02	48.00	0.00	[{"num": 1, "spec": "", "price": 48, "remark": "", "goods_id": 3096, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "unit_name": "瓶", "cost_price": 0, "goods_name": "牧区黄油大瓶", "unit_ratio": 1, "price_no_tax": 48}]	美团闪购订单 502106391183143700 | 商品: 牧区纯坊 纯手工熬制黄油500克/瓶 x1 ¥48	1	2026-06-12 08:02:33.020741	\N	none	0.00	41.76	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-05-02	\N	0	0.00	[]	\N	1	1	0.00	[]
 215	XS202604043897	HT0010633	21	阿斯娜	管理员	2025-12-26	1244.10	1244.10	[]		0	2026-04-04 07:31:09.524886	2026-04-04 07:51:32.157564	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+423	XS202608034018	HT20260803002	58	赤峰小徐	管理员	2026-07-23	232.00	0.00	[{"num": 8, "spec": "16次泡", "price": 29, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 29, "exchange_group_key": ""}]	[NO:HT20260803002]	1	2026-08-03 09:12:31.133299	\N	none	0.00	232.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-07-23	\N	0	0.00	[]	\N	1	1	0.00	[]
+286	XS202605297667	HT20260529001	59	博盈商品	管理员	2026-05-29	348.00	0.00	[{"num": 11, "spec": "", "price": 31.6364, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 31.6364}]	[NO:HT20260529001]	0	2026-05-29 11:00:28.527516	2026-08-18 05:18:50.673391	none	0.00	382.80	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-05-29	\N	0	0.00	[]	\N	1	1	0.00	[]
 147	XS202604038370	XS202604032034	21	阿斯娜	管理员	2025-12-07	185.37	0.00	[{"num": 4, "spec": "140克", "price": 9.70297, "remark": "", "goods_id": 964, "goods_sn": "SP0000070", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/冻炒米/线下", "price_no_tax": 9.70297}, {"num": 5, "spec": "180克", "price": 16.43564, "remark": "", "goods_id": 937, "goods_sn": "SP0000098", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/鲜奶皮/线下", "price_no_tax": 16.43564}, {"num": 3, "spec": "180克", "price": 16.33663, "remark": "", "goods_id": 935, "goods_sn": "SP0000100", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/奶皮卷/线下", "price_no_tax": 16.33663}, {"num": 32, "spec": "400/箱/0.423/球", "price": 0.423, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "unit_name": "个", "goods_name": "奶油球", "price_no_tax": 0.423}, {"num": 2, "spec": "1", "price": 0, "remark": "", "goods_id": 978, "goods_sn": "SP0000056", "tax_rate": 0, "unit_name": "张", "goods_name": "新茶专用标签纸", "price_no_tax": 0}, {"num": 2, "spec": "0", "price": 0, "remark": "", "goods_id": 995, "goods_sn": "SP0000039", "tax_rate": 0, "unit_name": "袋", "goods_name": "茶专用/热缩膜", "price_no_tax": 0}]	原单号:HT0009451	1	2026-04-03 09:26:48.493061	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+424	XS202608093218	HT20260809001	21	阿斯娜	管理员	2026-08-01	118.00	0.00	[{"num": 8, "spec": "", "price": 12, "remark": "", "goods_id": 3119, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "line_type": "normal", "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 12, "exchange_group_key": ""}, {"num": 2, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "line_type": "normal", "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 11, "exchange_group_key": ""}]	[NO:HT20260809001]	1	2026-08-09 06:42:19.827175	\N	none	0.00	118.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-01	\N	0	0.00	[]	\N	1	1	0.00	[]
 116	XS202604032297	XS202604038407	21	阿斯娜	管理员	2026-01-12	400.00	0.00	[{"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "goods_name": "奶果子/盒装/成品", "price_no_tax": 20}]	原单号:HT0014609	1	2026-04-03 09:26:00.392831	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 115	XS202604037978	XS202604032195	21	阿斯娜	管理员	2026-01-13	15.50	0.00	[{"num": 1, "spec": "180克", "price": 15.5, "remark": "", "goods_id": 935, "goods_sn": "SP0000100", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/奶皮卷/线下", "price_no_tax": 15.5}]	原单号:HT0014610	1	2026-04-03 09:25:58.741468	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+425	XS202608091745	HT20260809002	21	阿斯娜	管理员	2026-07-15	1607.00	0.00	[{"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 10, "exchange_group_key": ""}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "cate_name": "定制类产品", "line_type": "normal", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5, "exchange_group_key": ""}, {"num": 20, "spec": "16次泡", "price": 10, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 10, "exchange_group_key": ""}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 13, "exchange_group_key": ""}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 20, "spec": "120克", "price": 9.6, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9.6, "exchange_group_key": ""}, {"num": 1, "spec": "一斤装/拆装/定制", "price": 30, "remark": "", "goods_id": 3127, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "斤", "cost_price": 32.2, "goods_name": "冻炒米成品/散装/小袋装", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 30, "exchange_group_key": ""}, {"num": 1, "spec": "散装一斤", "price": 27, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "cate_name": "半成品", "line_type": "normal", "unit_name": "斤", "cost_price": 25, "goods_name": "奶果子/散装", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 27, "exchange_group_key": ""}, {"num": 1, "spec": "", "price": 23, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "line_type": "normal", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 23, "exchange_group_key": ""}, {"num": 1, "spec": "", "price": 20, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "cate_name": "半成品", "line_type": "normal", "unit_name": "斤", "cost_price": 15.63, "goods_name": "散装/甜味奶条", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}]	[NO:HT20260809002]	1	2026-08-09 07:09:34.961923	\N	none	0.00	1607.00	0.00	buyer	0.00	0.00	公司支出账户	0.00	0.00	0	2026-07-15	\N	0	0.00	[]	\N	1	1	0.00	[]
 102	XS202604034875	XS202604031108	21	阿斯娜	管理员	2026-03-30	2375.50	0.00	[{"num": 16, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "goods_name": "甜味奶条成品", "price_no_tax": 13}, {"num": 20, "spec": "110克", "price": 8, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "goods_name": "冻炒米成品盒", "price_no_tax": 8}, {"num": 15, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "goods_name": "奶果子/盒装/成品", "price_no_tax": 20}, {"num": 15, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "goods_name": "憨野/奶锅巴/", "price_no_tax": 8.5}, {"num": 5, "spec": "140克", "price": 16.5, "remark": "", "goods_id": 941, "goods_sn": "SP0000094", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/鲜奶酪/原味/线下", "price_no_tax": 16.5}, {"num": 5, "spec": "140克", "price": 16.5, "remark": "", "goods_id": 938, "goods_sn": "SP0000097", "tax_rate": 0, "unit_name": "盒", "goods_name": "透明成品/鲜奶酪/甜味/线下", "price_no_tax": 16.5}, {"num": 10, "spec": "1", "price": 6, "remark": "", "goods_id": 1018, "goods_sn": "SP0000016", "tax_rate": 0, "unit_name": "张", "goods_name": "礼盒/蓝界", "price_no_tax": 6}, {"num": 120, "spec": "1", "price": 1, "remark": "", "goods_id": 1017, "goods_sn": "SP0000017", "tax_rate": 0, "unit_name": "张", "goods_name": "手提袋", "price_no_tax": 1}, {"num": 20, "spec": "1", "price": 6, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "unit_name": "个", "goods_name": "礼盒/2026", "price_no_tax": 6}, {"num": 10, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "goods_name": "蒙古黄油/瓶装成品", "price_no_tax": 11.5}, {"num": 50, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "goods_name": "新/青砖奶茶", "price_no_tax": 20}]	原单号:XSDD20260330001	1	2026-04-03 09:24:56.549061	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+426	XS202608093170	HT20260809003	21	阿斯娜	管理员	2026-08-07	1002.40	0.00	[{"num": 10, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 10, "exchange_group_key": ""}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 4, "spec": "120克", "price": 9.6, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9.6, "exchange_group_key": ""}, {"num": 10, "spec": "200克", "price": 8.5, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5, "exchange_group_key": ""}, {"num": 1, "spec": "1", "price": 16, "remark": "", "goods_id": 885, "goods_sn": "SP0000150", "tax_rate": 0, "cate_name": "散装", "line_type": "normal", "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 16, "exchange_group_key": ""}, {"num": 1, "spec": "半斤", "price": 20, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "cate_name": "散装", "line_type": "normal", "unit_name": "斤", "cost_price": 13, "goods_name": "脆奶条/散装/科尔沁", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 1, "spec": "", "price": 23, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "cate_name": "散装", "line_type": "normal", "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 23, "exchange_group_key": ""}, {"num": 1, "spec": "", "price": 20, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "cate_name": "其他品牌成品", "line_type": "normal", "unit_name": "斤", "cost_price": 18, "goods_name": "烤奶花", "goods_type": 5, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}]	[NO:HT20260809003]	1	2026-08-09 07:15:22.867858	\N	none	0.00	1002.40	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-07	\N	0	0.00	[]	\N	1	1	0.00	[]
 214	XS202604041500	HT0010634	21	阿斯娜	管理员	2025-12-27	397.90	397.90	[]		0	2026-04-04 07:31:08.49864	2026-04-04 07:51:33.130598	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+427	XS202608094179	HT20260809004	21	阿斯娜	管理员	2026-08-09	517.00	0.00	[{"num": 25, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 2, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "cate_name": "定制类产品", "line_type": "normal", "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5, "exchange_group_key": ""}]	[NO:HT20260809004]	1	2026-08-09 12:41:44.340511	\N	none	0.00	517.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-09	\N	0	0.00	[]	\N	1	1	0.00	[]
 111	XS202604039193	XS202604031879	21	阿斯娜	管理员	2026-01-15	153.00	0.00	[{"num": 18, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "goods_name": "憨野/奶锅巴/", "price_no_tax": 8.5}]	原单号:HT0014616	1	2026-04-03 09:25:52.824016	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 132	XS202604038710	XS202604031953	12	电商/拼多多	管理员	2026-01-05	308.84	0.00	[{"num": 7, "spec": "16次泡", "price": 44.12, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "goods_name": "新/青砖奶茶", "price_no_tax": 44.12}]	原单号:HT0011469	1	2026-04-03 09:26:25.264709	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+428	XS202608094936	HT20260809005	21	阿斯娜	管理员	2026-08-09	641.62	0.00	[{"num": 432, "spec": "", "price": 0.921, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "cate_name": "半成品", "line_type": "normal", "unit_name": "个", "cost_price": 0.45, "goods_name": "奶油球", "goods_type": 3, "unit_ratio": 1, "price_no_tax": 0.921, "exchange_group_key": ""}, {"num": 25, "spec": "1", "price": 0.054, "remark": "", "goods_id": 978, "goods_sn": "SP0000056", "tax_rate": 0, "cate_name": "青砖奶茶", "line_type": "normal", "unit_name": "张", "cost_price": 0.05, "goods_name": "新茶专用标签纸", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 0.054, "exchange_group_key": ""}, {"num": 25, "spec": "0", "price": 0.096, "remark": "", "goods_id": 995, "goods_sn": "SP0000039", "tax_rate": 0, "cate_name": "青砖奶茶", "line_type": "normal", "unit_name": "袋", "cost_price": 0.1, "goods_name": "茶专用/热缩膜", "goods_type": 4, "unit_ratio": 1, "price_no_tax": 0.096, "exchange_group_key": ""}, {"num": 12, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}]	[NO:HT20260809005]	1	2026-08-09 14:55:32.214506	\N	none	0.00	641.62	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-09	\N	0	0.00	[]	\N	1	1	0.00	[]
+429	XS202608096102	HT20260809006	21	阿斯娜	管理员	2026-08-06	477.00	0.00	[{"num": 10, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}, {"num": 4, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "line_type": "normal", "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 11, "exchange_group_key": ""}, {"num": 10, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 10, "exchange_group_key": ""}, {"num": 10, "spec": "200克", "price": 8.5, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 8.5, "exchange_group_key": ""}, {"num": 5, "spec": "200克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 9.6, "exchange_group_key": ""}]	[NO:HT20260809006]	1	2026-08-09 15:01:03.526655	\N	none	0.00	477.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-06	\N	0	0.00	[]	\N	1	1	0.00	[]
 142	XS202604036342	XS202604032645	12	电商/拼多多	管理员	2025-12-25	38.90	0.00	[{"num": 1, "spec": "16次泡", "price": 38.9, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "goods_name": "新/青砖奶茶", "price_no_tax": 38.9}]	原单号:HT0010328	1	2026-04-03 09:26:40.635766	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
+430	XS202608118153	HT20260811001	21	阿斯娜	管理员	2026-08-11	400.00	0.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "line_type": "normal", "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "goods_type": 1, "unit_ratio": 1, "price_no_tax": 20, "exchange_group_key": ""}]	[NO:HT20260811001]	1	2026-08-11 15:23:23.909564	\N	none	0.00	400.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-08-11	\N	0	0.00	[]	\N	1	1	0.00	[]
 213	XS202604045684	HT0010640	13	五洲四海	管理员	2025-12-28	30.00	30.00	[]		0	2026-04-04 07:31:07.486414	2026-04-04 07:51:34.163698	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 212	XS202604047536	HT0011468	13	五洲四海	管理员	2026-01-05	390.00	390.00	[]		0	2026-04-04 07:31:06.482007	2026-04-04 07:51:35.17806	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
 211	XS202604044355	HT0011469	12	电商/拼多多	管理员	2026-01-05	308.84	0.00	[]		0	2026-04-04 07:31:05.50307	2026-04-04 07:51:36.145953	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[]	\N	1	1	0.00	[]
@@ -13274,7 +14260,6 @@ COPY public.sale_contracts (id, order_no, order_sn, customer_id, customer_name, 
 175	XS202604037162	XS202604037856	13	五洲四海	管理员	2025-10-20	330.00	0.00	[{"num": 11, "spec": "16次泡", "price": 30, "remark": "", "goods_id": 996, "goods_sn": "SP0000038", "tax_rate": 0, "unit_name": "盒", "goods_name": "青砖奶茶成品", "price_no_tax": 30}]	原单号:HT0006747	1	2026-04-03 09:27:31.617	\N	none	0.00	0.00	0.00	seller	0.00	0.00		0.00	0.00	0	\N	\N	0	0.00	[{"name":"快递费","amount":3,"bearer":"seller","supplier_name":"圆通快递","receipt_no":"HT0011468","order_date":"2026-01-05"},{"name":"快递费","amount":5,"bearer":"seller","supplier_name":"圆通快递","receipt_no":"HT0010640","order_date":"2025-12-28"},{"name":"快递费","amount":5,"bearer":"seller","supplier_name":"圆通快递","receipt_no":"HT0009367","order_date":"2025-12-16"},{"name":"快递费","amount":8,"bearer":"seller","supplier_name":"圆通快递","receipt_no":"HT0006747","order_date":"2025-10-20"},{"name":"物流费","amount":55,"bearer":"seller","supplier_name":"泰成物流","receipt_no":"HT0007426","order_date":"2025-11-10"},{"name":"物流费","amount":50,"bearer":"seller","supplier_name":"泰成物流","receipt_no":"HT0008459","order_date":"2025-12-03"},{"name":"物流费","amount":3,"bearer":"seller","supplier_name":"泰成物流","receipt_no":"CG0002955","order_date":"2025-12-10"},{"name":"物流费","amount":3,"bearer":"seller","supplier_name":"泰成物流","receipt_no":"CG0002955","order_date":"2025-12-10"}]	\N	1	1	0.00	[]
 275	XS202605242864	HT20260524007	21	阿斯娜	管理员	2026-03-01	1000.00	0.00	[{"num": 50, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 0, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}]	[NO:HT20260524007]	1	2026-05-24 07:08:31.117874	\N	none	0.00	1000.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-03-01	\N	0	0.00	[]	\N	1	1	0.00	[]
 287	XS202605303833	HT20260530001	13	五洲四海	管理员	2026-05-22	1038.00	0.00	[{"num": 20, "spec": "", "price": 30, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 30}, {"num": 6, "spec": "", "price": 73, "remark": "", "goods_id": 874, "goods_sn": "SP0000161", "tax_rate": 0, "cate_name": "成品", "unit_name": "袋", "cost_price": 48.95, "goods_name": "黄金纬度/牛肉干/成品袋", "unit_ratio": 1, "price_no_tax": 73}]	[NO:HT20260530001] [FI:JTVCJTdCJTIybmFtZSUyMiUzQSUyMiVFOCVCNyU5MSVFOCU4NSVCRiVFOCVCNCVCOSUyMiUyQyUyMmFtb3VudCUyMiUzQTklMkMlMjJiZWFyZXIlMjIlM0ElMjJidXllciUyMiUyQyUyMnN1cHBsaWVyX25hbWUlMjIlM0ElMjIlRTclQkUlOEUlRTUlOUIlQTIlMjIlN0QlNUQ=]	1	2026-05-30 11:37:12.064943	\N	none	0.00	1038.00	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-05-22	\N	0	0.00	[{"name":"跑腿费","amount":9,"bearer":"buyer","supplier_name":"美团"}]	\N	1	1	0.00	[]
-286	XS202605297667	HT20260529001	59	博盈商品	管理员	2026-05-29	348.00	0.00	[{"num": 11, "spec": "", "price": 31.6364, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 31.6364}]	[NO:HT20260529001]	1	2026-05-29 11:00:28.527516	\N	none	0.00	382.80	0.00	buyer	0.00	0.00	公司收入账号	0.00	0.00	0	2026-05-29	\N	0	0.00	[]	\N	1	1	0.00	[]
 367	XS202606125996	XS202606126197	63	美团平台	管理员	2026-03-30	12.90	0.00	[{"num": 1, "spec": "", "price": 12.9, "remark": "", "goods_id": 845, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "unit_name": "个", "cost_price": 0, "goods_name": "乳清饮料", "unit_ratio": 1, "price_no_tax": 12.9}]	美团闪购订单 702058791619952800 | 商品: 牧区纯乳清冷饮450克/杯 x1 ¥12.9 | (收入为估算值，实际以美团结算为准)	1	2026-06-12 08:03:31.016	\N	none	0.00	11.22	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-03-30	\N	0	0.00	[]	\N	1	1	0.00	[]
 371	XS202606126089	XS202606121749	63	美团平台	管理员	2026-03-30	44.60	0.00	[{"num": 1, "spec": "", "price": 26.6, "remark": "", "goods_id": 935, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶皮卷/线下", "unit_ratio": 1, "price_no_tax": 26.6}, {"num": 1, "spec": "", "price": 18, "remark": "", "goods_id": 3116, "goods_sn": "", "tax_rate": 0, "cate_name": "散货", "unit_name": "瓶", "cost_price": 0, "goods_name": "酸马奶/蒙医院", "unit_ratio": 1, "price_no_tax": 18}]	美团闪购订单 602058373583802800 | 商品: 牧区纯坊 奶皮子有点卷草莓味180克/一盒 x1 ¥26.6; 牧区纯坊 酸马奶（策格） 原味300克/瓶 x1 ¥18 | (收入为估算值，实际以美团结算为准)	1	2026-06-12 08:03:36.16	\N	none	0.00	38.80	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-03-30	\N	0	0.00	[]	\N	1	1	0.00	[]
 338	XS202606126646	XS202606127286	63	美团平台	管理员	2026-04-16	100.00	0.00	[{"num": 2, "spec": "", "price": 22, "remark": "", "goods_id": 877, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "unit_name": "盒", "cost_price": 0, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 22}, {"num": 2, "spec": "", "price": 28, "remark": "", "goods_id": 3107, "goods_sn": "", "tax_rate": 0, "cate_name": "成品", "unit_name": "块", "cost_price": 0, "goods_name": "科尔沁中奶豆腐", "unit_ratio": 1, "price_no_tax": 28}]	美团闪购订单 502082822635208260 | 商品: 牧区纯坊 香酥奶皮子锅巴120克/一盒 x2 ¥22; 牧区纯坊 纯手工奶豆腐1000g原味350克/块 x2 ¥28 | (收入为估算值，实际以美团结算为准)	1	2026-06-12 08:02:55.258	\N	none	0.00	87.00	0.00	buyer	0.00	0.00		0.00	0.00	0	2026-04-16	\N	0	0.00	[]	\N	1	1	0.00	[]
@@ -13346,39 +14331,41 @@ COPY public.sale_contracts (id, order_no, order_sn, customer_id, customer_name, 
 -- Data for Name: sale_customers; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.sale_customers (id, name, nickname, code, mobile, tel, email, address, contact, level_name, source_name, level_id, source_id, follow_admin_id, follow_admin, balance, is_sea, remark, status, create_time, update_time, deleted_at, shop_id) FROM stdin;
-2	放牛娃/呼伦贝尔	放牛娃/呼伦贝尔							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:07.697787	2026-03-29 08:15:07.697787	\N	1
-4	乌海城市文化传媒有限公司	乌海城市文化传媒有限公司							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:08.637813	2026-03-29 08:15:08.637813	\N	1
-5	蒙优农品	蒙优农品							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:09.086682	2026-03-29 08:15:09.086682	\N	1
-6	一件代发客户	一件代发客户							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:09.566793	2026-03-29 08:15:09.566793	\N	1
-7	电商/抖音专用	电商/抖音专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:10.018866	2026-03-29 08:15:10.018866	\N	1
-8	电商/淘宝专用	电商/淘宝专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:10.545409	2026-03-29 08:15:10.545409	\N	1
-9	线下/美团专用	线下/美团专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.016352	2026-03-29 08:15:11.016352	\N	1
-10	电商/微信小店	电商/微信小店							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.475144	2026-03-29 08:15:11.475144	\N	1
-11	电商/小红书	电商/小红书							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.96259	2026-03-29 08:15:11.96259	\N	1
-12	电商/拼多多	电商/拼多多							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:12.393471	2026-03-29 08:15:12.393471	\N	1
-13	五洲四海	五洲四海							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:12.876992	2026-03-29 08:15:12.876992	\N	1
-14	零售/散单/点这个	零售/散单/点这个							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:13.300079	2026-03-29 08:15:13.300079	\N	1
-15	线下店铺/零售专用	线下店铺/零售专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:13.85502	2026-03-29 08:15:13.85502	\N	1
-17	呼市扎那家	呼市扎那家							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:14.80841	2026-03-29 08:15:14.80841	\N	1
-18	鄂尔多斯游牧大市集	鄂尔多斯游牧大市集							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:15.296539	2026-03-29 08:15:15.296539	\N	1
-19	呼市武小满咖啡研究所	呼市武小满咖啡研究所							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:15.740771	2026-03-29 08:15:15.740771	\N	1
-20	呼市蒙古商城唐斯格乳制品	呼市蒙古商城唐斯格乳制品							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:16.299177	2026-03-29 08:15:16.299177	\N	1
-55	奈日青城咖啡/玉泉区								普通客户		0	0	0		0.00	0		1	2026-04-03 08:34:47.955203	2026-04-03 08:34:47.955203	\N	1
-56	放牛娃/呼伦贝尔								普通客户		0	0	0		0.00	0		1	2026-04-03 09:28:38.612039	2026-04-03 09:28:38.612039	\N	1
-1	奈日青城咖啡/玉泉区	奈日青城咖啡/玉泉区							普通客户		0	0	0		0.00	0	乌日莫/奥特尔 530克	1	2026-03-29 08:15:07.248506	2026-04-21 05:46:01.933755	\N	1
-57	赤峰文旅集团								普通客户		0	0	0		0.00	0		1	2026-04-29 05:59:39.20317	2026-04-29 05:59:39.20317	\N	1
-58	赤峰小徐								普通客户		0	0	0		0.00	0		1	2026-05-16 07:22:31.323759	2026-05-23 07:05:50.351448	\N	1
-21	阿斯娜	阿斯娜							普通客户		0	0	0		153.45	0		1	2026-03-29 08:15:16.741966	2026-05-29 07:35:24.125234	\N	1
-59	博盈商品								普通客户		0	0	0		0.00	0		1	2026-05-29 10:57:59.297819	2026-05-29 10:57:59.297819	\N	1
-61	阿旗乌兰牧骑								普通客户		0	0	0		0.00	0		1	2026-06-04 13:38:00.579679	2026-06-04 13:38:43.094224	\N	1
-60	古城主题邮局文创店								普通客户		0	0	0		0.00	0		1	2026-06-03 08:06:18.094042	2026-06-07 15:08:21.373255	\N	1
-62	四子王旗于洋								普通客户		0	0	0		0.00	0		1	2026-06-08 03:46:17.945397	2026-06-08 03:46:17.945397	\N	1
-63	美团平台	美团闪购							普通客户		0	0	0		0.00	0	美团闪购线上平台客户	1	2026-06-12 06:58:12.374167	2026-06-12 06:58:12.374167	\N	1
-16	样品专用客户	样品专用客户							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:14.339846	2026-03-29 08:15:14.339846	2026-06-13 07:31:15.239437	1
-3	阿润诺尔	阿润诺尔							普通客户		0	0	0		380.00	0		1	2026-03-29 08:15:08.158673	2026-06-19 06:08:31.749265	\N	1
-64	混沌未来								普通客户		0	0	0		0.00	0		1	2026-06-22 06:53:02.996446	2026-06-22 06:53:02.996446	\N	1
-65	然			17747344571					分销商	小程序分销	0	0	0		0.00	0	分销码:D0001	1	2026-07-24 08:12:46.443231	2026-07-24 08:12:46.443231	\N	1
+COPY public.sale_customers (id, name, nickname, code, mobile, tel, email, address, contact, level_name, source_name, level_id, source_id, follow_admin_id, follow_admin, balance, is_sea, remark, status, create_time, update_time, deleted_at, shop_id, linked_supplier_id) FROM stdin;
+2	放牛娃/呼伦贝尔	放牛娃/呼伦贝尔							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:07.697787	2026-03-29 08:15:07.697787	\N	1	0
+4	乌海城市文化传媒有限公司	乌海城市文化传媒有限公司							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:08.637813	2026-03-29 08:15:08.637813	\N	1	0
+5	蒙优农品	蒙优农品							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:09.086682	2026-03-29 08:15:09.086682	\N	1	0
+6	一件代发客户	一件代发客户							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:09.566793	2026-03-29 08:15:09.566793	\N	1	0
+7	电商/抖音专用	电商/抖音专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:10.018866	2026-03-29 08:15:10.018866	\N	1	0
+8	电商/淘宝专用	电商/淘宝专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:10.545409	2026-03-29 08:15:10.545409	\N	1	0
+9	线下/美团专用	线下/美团专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.016352	2026-03-29 08:15:11.016352	\N	1	0
+10	电商/微信小店	电商/微信小店							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.475144	2026-03-29 08:15:11.475144	\N	1	0
+11	电商/小红书	电商/小红书							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:11.96259	2026-03-29 08:15:11.96259	\N	1	0
+12	电商/拼多多	电商/拼多多							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:12.393471	2026-03-29 08:15:12.393471	\N	1	0
+13	五洲四海	五洲四海							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:12.876992	2026-03-29 08:15:12.876992	\N	1	0
+14	零售/散单/点这个	零售/散单/点这个							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:13.300079	2026-03-29 08:15:13.300079	\N	1	0
+15	线下店铺/零售专用	线下店铺/零售专用							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:13.85502	2026-03-29 08:15:13.85502	\N	1	0
+17	呼市扎那家	呼市扎那家							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:14.80841	2026-03-29 08:15:14.80841	\N	1	0
+18	鄂尔多斯游牧大市集	鄂尔多斯游牧大市集							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:15.296539	2026-03-29 08:15:15.296539	\N	1	0
+19	呼市武小满咖啡研究所	呼市武小满咖啡研究所							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:15.740771	2026-03-29 08:15:15.740771	\N	1	0
+20	呼市蒙古商城唐斯格乳制品	呼市蒙古商城唐斯格乳制品							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:16.299177	2026-03-29 08:15:16.299177	\N	1	0
+55	奈日青城咖啡/玉泉区								普通客户		0	0	0		0.00	0		1	2026-04-03 08:34:47.955203	2026-04-03 08:34:47.955203	\N	1	0
+56	放牛娃/呼伦贝尔								普通客户		0	0	0		0.00	0		1	2026-04-03 09:28:38.612039	2026-04-03 09:28:38.612039	\N	1	0
+1	奈日青城咖啡/玉泉区	奈日青城咖啡/玉泉区							普通客户		0	0	0		0.00	0	乌日莫/奥特尔 530克	1	2026-03-29 08:15:07.248506	2026-04-21 05:46:01.933755	\N	1	0
+57	赤峰文旅集团								普通客户		0	0	0		0.00	0		1	2026-04-29 05:59:39.20317	2026-04-29 05:59:39.20317	\N	1	0
+58	赤峰小徐								普通客户		0	0	0		0.00	0		1	2026-05-16 07:22:31.323759	2026-05-23 07:05:50.351448	\N	1	0
+61	阿旗乌兰牧骑								普通客户		0	0	0		0.00	0		1	2026-06-04 13:38:00.579679	2026-06-04 13:38:43.094224	\N	1	0
+60	古城主题邮局文创店								普通客户		0	0	0		0.00	0		1	2026-06-03 08:06:18.094042	2026-06-07 15:08:21.373255	\N	1	0
+62	四子王旗于洋								普通客户		0	0	0		0.00	0		1	2026-06-08 03:46:17.945397	2026-06-08 03:46:17.945397	\N	1	0
+63	美团平台	美团闪购							普通客户		0	0	0		0.00	0	美团闪购线上平台客户	1	2026-06-12 06:58:12.374167	2026-06-12 06:58:12.374167	\N	1	0
+16	样品专用客户	样品专用客户							普通客户		0	0	0		0.00	0		1	2026-03-29 08:15:14.339846	2026-03-29 08:15:14.339846	2026-06-13 07:31:15.239437	1	0
+3	阿润诺尔	阿润诺尔							普通客户		0	0	0		380.00	0		1	2026-03-29 08:15:08.158673	2026-06-19 06:08:31.749265	\N	1	0
+64	混沌未来								普通客户		0	0	0		0.00	0		1	2026-06-22 06:53:02.996446	2026-06-22 06:53:02.996446	\N	1	0
+65	然			17747344571					分销商	小程序分销	0	0	0		0.00	0	分销码:D0001	1	2026-07-24 08:12:46.443231	2026-07-24 08:12:46.443231	\N	1	0
+66	王刚			18586265352					分销商	小程序分销	0	0	0		0.00	0	分销码:D0002	1	2026-07-26 12:40:30.883516	2026-07-26 12:40:30.883516	\N	1	0
+67	阿斯娜			18747637511					分销商	小程序分销	0	0	0		0.00	0	分销码:D0003	1	2026-07-26 12:40:38.039769	2026-07-26 12:40:38.039769	2026-07-26 15:30:04.331881	1	0
+21	阿斯娜	阿斯娜		18747637511					阿斯娜批发价		0	0	0		153.45	0		1	2026-03-29 08:15:16.741966	2026-08-04 06:42:26.554971	\N	1	139
+59	博盈商品								普通客户		0	0	0		0.00	0		1	2026-05-29 10:57:59.297819	2026-08-04 06:42:27.544599	\N	1	140
 \.
 
 
@@ -13516,7 +14503,7 @@ COPY public.sale_out_order (id, order_no, order_sn, customer_id, customer_name, 
 207	XC202605248310	XC202605243441	21	阿斯娜	管理员	2026-05-05	20.00	[{"num": 1, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "奶果子/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260505001	1	1	默认仓库	2026-05-24 10:35:51.747668	\N	1
 208	XC202605289625	XC202605289493	20	呼市蒙古商城唐斯格乳制品	管理员	2026-05-22	375.00	[{"num": 15, "spec": "16次泡", "price": 25, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 25}]	来自销售订单 HT20260524016	1	1	默认仓库	2026-05-28 16:27:17.630818	\N	1
 210	XC202605294748	XC202605293591	21	阿斯娜	管理员	2026-05-28	190.50	[{"num": 2, "spec": "", "price": 16.5, "remark": "", "goods_id": 941, "goods_sn": "SP0000094", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/原味/线下", "unit_ratio": 1, "price_no_tax": 16.5}, {"num": 5, "spec": "", "price": 16.5, "remark": "", "goods_id": 938, "goods_sn": "SP0000097", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/甜味/线下", "unit_ratio": 1, "price_no_tax": 16.5}, {"num": 10, "spec": "", "price": 7.5, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "unit_ratio": 1, "price_no_tax": 7.5}]	来自销售订单 HT20260528001	0	1	默认仓库	2026-05-29 10:02:47.943448	2026-06-14 04:10:19.139939	1
-212	XC202605309804	XC202605302535	59	博盈商品	管理员	2026-05-29	348.00	[{"num": 11, "spec": "", "price": 31.6364, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 31.6364}]	来自销售订单 HT20260529001	1	1	默认仓库	2026-05-30 11:07:58.673274	\N	1
+212	XC202605309804	XC202605302535	59	博盈商品	管理员	2026-05-29	348.00	[{"num": 11, "spec": "", "price": 31.6364, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 31.6364}]	来自销售订单 HT20260529001	0	1	默认仓库	2026-05-30 11:07:58.673274	\N	1
 213	XC202605306825	XC202605305911	13	五洲四海	管理员	2026-05-22	1038.00	[{"num": 20, "spec": "", "price": 30, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 30}, {"num": 6, "spec": "", "price": 73, "remark": "", "goods_id": 874, "goods_sn": "SP0000161", "tax_rate": 0, "unit_name": "袋", "cost_price": 48.95, "goods_name": "黄金纬度/牛肉干/成品袋", "unit_ratio": 1, "price_no_tax": 73}]	来自销售订单 HT20260530001	1	1	默认仓库	2026-05-30 11:37:16.009726	\N	1
 211	XC202605299713	XC202605292715	59	博盈商品	管理员	2026-05-29	348.00	[{"num": 11, "spec": "", "price": 34.8, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 17.46319, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 34.8}]	来自销售订单 HT20260529001	0	1	默认仓库	2026-05-29 11:00:31.709406	2026-06-09 14:47:20.49862	1
 214	XC202606035877	XC202606039989	60	呼伦贝尔2	管理员	2026-06-03	3838.00	[{"num": 10, "spec": "", "price": 40.6, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 40.6}, {"num": 20, "spec": "", "price": 36.4, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 36.4}, {"num": 30, "spec": "", "price": 25.2, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 25.2}, {"num": 30, "spec": "", "price": 40.6, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 40.6}, {"num": 25, "spec": "", "price": 22, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "unit_ratio": 1, "price_no_tax": 22}, {"num": 15, "spec": "", "price": 12, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 12}]	来自销售订单 HT20260603001	0	1	默认仓库	2026-06-03 08:16:58.004689	2026-06-03 14:56:55.622701	1
@@ -13555,7 +14542,9 @@ COPY public.sale_out_order (id, order_no, order_sn, customer_id, customer_name, 
 255	XC202607199100	XC202607192751	64	混沌未来	管理员	2026-06-22	7656.00	[{"num": 30, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 30, "spec": "240克", "price": 37.7, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 30, "spec": "110克", "price": 23.4, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 23.4}, {"num": 30, "spec": "100克", "price": 27.3, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 27.3}, {"num": 50, "spec": "150", "price": 22, "remark": "原甜", "goods_id": 988, "goods_sn": "SP0000046", "tax_rate": 0, "unit_name": "袋", "cost_price": 12.78, "goods_name": "品牌传统奶豆腐/袋装成品", "unit_ratio": 1, "price_no_tax": 22}, {"num": 20, "spec": "120克", "price": 12, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "unit_ratio": 1, "price_no_tax": 12}, {"num": 30, "spec": "200克", "price": 16, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "unit_ratio": 1, "price_no_tax": 16}, {"num": 115, "spec": "", "price": 9, "remark": "四个口味", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "unit_ratio": 1, "price_no_tax": 9}, {"num": 2, "spec": "", "price": 2, "remark": "", "goods_id": 3180, "goods_sn": "", "tax_rate": 0, "unit_name": "个", "cost_price": 0, "goods_name": "透明奶茶杯", "unit_ratio": 1, "price_no_tax": 2}, {"num": 30, "spec": "250克", "price": 33.8, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 33.8}, {"num": 0.64, "spec": "散装", "price": 0, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "unit_name": "斤", "cost_price": 25, "goods_name": "奶果子/散装", "unit_ratio": 1, "price_no_tax": 0}]	来自销售订单 HT20260622001	1	1	默认仓库	2026-07-19 14:29:26.533727	\N	1
 256	XC202607194469	XC202607194241	64	混沌未来	管理员	2026-07-19	1016.20	[{"num": 26, "spec": "16次泡", "price": 37.7, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 37.7}, {"num": 4, "spec": "", "price": 9, "remark": "", "goods_id": 3085, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 6.5, "goods_name": "小米锅巴110g", "unit_ratio": 1, "price_no_tax": 9}, {"num": 3, "spec": "110克", "price": 0, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 0}, {"num": 2, "spec": "250克", "price": 0, "remark": "", "goods_id": 845, "goods_sn": "SP0000190", "tax_rate": 0, "unit_name": "瓶", "cost_price": 4.53, "goods_name": "乳清饮料", "unit_ratio": 1, "price_no_tax": 0}, {"num": 1, "spec": "16次泡", "price": 0, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 0}]	来自销售订单 HT20260719001	1	1	默认仓库	2026-07-19 14:32:49.841015	\N	1
 247	XC202606148111	XC202606141831	21	阿斯娜	管理员	2026-06-08	1816.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 43, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 5, "spec": "120g", "price": 6.4, "remark": "", "goods_id": 876, "goods_sn": "SP0000159", "tax_rate": 0, "unit_name": "盒", "cost_price": 4.08, "goods_name": "憨野/奶条", "unit_ratio": 1, "price_no_tax": 6.4}, {"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 11.5}]	来自销售订单 HT20260614003	1	1	默认仓库	2026-06-14 08:29:32.594459	\N	1
+263	XC202608095732	XC202608099958	21	阿斯娜	管理员	2026-07-15	1607.00	[{"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 30, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 20, "spec": "16次泡", "price": 10, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 10}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "120克", "price": 9.6, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 1, "spec": "一斤装/拆装/定制", "price": 30, "remark": "", "goods_id": 3127, "goods_sn": "", "tax_rate": 0, "unit_name": "斤", "cost_price": 32.2, "goods_name": "冻炒米成品/散装/小袋装", "unit_ratio": 1, "price_no_tax": 30}, {"num": 1, "spec": "散装一斤", "price": 27, "remark": "", "goods_id": 991, "goods_sn": "SP0000043", "tax_rate": 0, "unit_name": "斤", "cost_price": 25, "goods_name": "奶果子/散装", "unit_ratio": 1, "price_no_tax": 27}, {"num": 1, "spec": "", "price": 23, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮", "unit_ratio": 1, "price_no_tax": 23}, {"num": 1, "spec": "", "price": 20, "remark": "", "goods_id": 1014, "goods_sn": "SP0000020", "tax_rate": 0, "unit_name": "斤", "cost_price": 15.63, "goods_name": "散装/甜味奶条", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260809002	1	1	默认仓库	2026-08-09 07:09:43.429217	\N	1
 249	XC202606149619	XC202606148587	21	阿斯娜	管理员	2026-06-13	600.00	[{"num": 30, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260614008	1	1	默认仓库	2026-06-14 08:37:28.103318	\N	1
+264	XC202608098729	XC202608098859	21	阿斯娜	管理员	2026-08-07	1002.40	[{"num": 10, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 4, "spec": "120克", "price": 9.6, "remark": "", "goods_id": 3179, "goods_sn": "", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶条/甜味/线下/方盒", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 10, "spec": "200克", "price": 8.5, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 1, "spec": "1", "price": 16, "remark": "", "goods_id": 885, "goods_sn": "SP0000150", "tax_rate": 0, "unit_name": "斤", "cost_price": 16, "goods_name": "冻炒米/散装", "unit_ratio": 1, "price_no_tax": 16}, {"num": 1, "spec": "半斤", "price": 20, "remark": "", "goods_id": 916, "goods_sn": "SP0000119", "tax_rate": 0, "unit_name": "斤", "cost_price": 13, "goods_name": "脆奶条/散装/科尔沁", "unit_ratio": 1, "price_no_tax": 20}, {"num": 1, "spec": "", "price": 23, "remark": "", "goods_id": 981, "goods_sn": "SP0000053", "tax_rate": 0, "unit_name": "斤", "cost_price": 22, "goods_name": "烤奶皮", "unit_ratio": 1, "price_no_tax": 23}, {"num": 1, "spec": "", "price": 20, "remark": "", "goods_id": 3118, "goods_sn": "", "tax_rate": 0, "unit_name": "斤", "cost_price": 18, "goods_name": "烤奶花", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260809003	1	1	默认仓库	2026-08-09 07:15:30.87632	\N	1
 248	XC202606146661	XC202606149576	21	阿斯娜	管理员	2026-06-10	759.00	[{"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 7, "spec": "1", "price": 8, "remark": "", "goods_id": 1018, "goods_sn": "SP0000016", "tax_rate": 0, "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "unit_ratio": 1, "price_no_tax": 8}, {"num": 30, "spec": "1", "price": 0.5, "remark": "", "goods_id": 864, "goods_sn": "SP0000171", "tax_rate": 0, "unit_name": "张", "cost_price": 0.37, "goods_name": "礼盒/腰封", "unit_ratio": 1, "price_no_tax": 0.5}]	来自销售订单 HT20260614007	0	1	默认仓库	2026-06-14 08:36:31.945924	2026-06-14 08:49:31.699866	1
 250	XC202606146438	XC202606141729	21	阿斯娜	管理员	2026-06-10	750.00	[{"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 30, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 4, "spec": "1", "price": 8, "remark": "", "goods_id": 1018, "goods_sn": "SP0000016", "tax_rate": 0, "unit_name": "张", "cost_price": 4.55, "goods_name": "礼盒/蓝界", "unit_ratio": 1, "price_no_tax": 8}, {"num": 30, "spec": "1", "price": 1, "remark": "", "goods_id": 864, "goods_sn": "SP0000171", "tax_rate": 0, "unit_name": "张", "cost_price": 0.37, "goods_name": "礼盒/腰封", "unit_ratio": 1, "price_no_tax": 1}]	来自销售订单 HT20260614007	1	1	默认仓库	2026-06-14 08:49:33.966888	\N	1
 252	XC202606171929	XC202606177512	3	阿润诺尔		2026-06-17	722.00	[{"num": 30, "spec": "180克", "price": 19, "remark": "", "goods_id": 935, "goods_sn": "SP0000100", "tax_rate": 0, "unit_name": "盒", "cost_price": 15.12237, "goods_name": "透明成品/奶皮卷/线下", "unit_ratio": 1, "price_no_tax": 19}, {"num": 5, "spec": "140克", "price": 19, "remark": "", "goods_id": 938, "goods_sn": "SP0000097", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/甜味/线下", "unit_ratio": 1, "price_no_tax": 19}, {"num": 3, "spec": "140克", "price": 19, "remark": "", "goods_id": 941, "goods_sn": "SP0000094", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.17237, "goods_name": "透明成品/鲜奶酪/原味/线下", "unit_ratio": 1, "price_no_tax": 19}]	来自销售订单 HT20260617001	1	1	默认仓库	2026-06-17 08:05:53.77031	\N	1
@@ -13563,6 +14552,16 @@ COPY public.sale_out_order (id, order_no, order_sn, customer_id, customer_name, 
 253	XC202606195957	XC202606197868	21	阿斯娜	管理员	2026-06-19	69.00	[{"num": 6, "spec": "100克", "price": 11.5, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 11.5}]	来自销售订单 HT20260619001	1	1	默认仓库	2026-06-19 08:31:01.888062	\N	1
 254	XC202607123639	XC202607127227	21	阿斯娜	管理员	2026-07-12	225.00	[{"num": 5, "spec": "", "price": 8, "remark": "", "goods_id": 3104, "goods_sn": "", "tax_rate": 0, "unit_name": "瓶", "cost_price": 6, "goods_name": "牧区酸奶/大", "unit_ratio": 1, "price_no_tax": 8}, {"num": 10, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 10, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}]	来自销售订单 HT20260712001	1	1	默认仓库	2026-07-12 06:01:21.322417	\N	1
 257	XC202607218375	XC202607216842	57	赤峰文旅集团	管理员	2026-07-21	603.40	[{"num": 5, "spec": "16次泡", "price": 40.6, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 40.6}, {"num": 2, "spec": "110克", "price": 25.2, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 25.2}, {"num": 5, "spec": "100克", "price": 29.4, "remark": "", "goods_id": 989, "goods_sn": "SP0000045", "tax_rate": 0, "unit_name": "瓶", "cost_price": 8.05, "goods_name": "蒙古黄油/瓶装成品", "unit_ratio": 1, "price_no_tax": 29.4}, {"num": 5, "spec": "240克", "price": 40.6, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 40.6}]	来自销售订单 HT20260721001	1	1	默认仓库	2026-07-21 02:55:51.652262	\N	1
+259	XC202608034347	XC202608039339	58	赤峰小徐	管理员	2026-07-23	232.00	[{"num": 8, "spec": "16次泡", "price": 29, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 29}]	来自销售订单 HT20260803002	1	1	默认仓库	2026-08-03 09:12:36.956454	\N	1
+260	XC202608031871	XC202608034578	21	阿斯娜	管理员	2026-08-03	1902.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 20, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 20, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 20, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "unit_ratio": 1, "price_no_tax": 11}, {"num": 10, "spec": "1", "price": 6, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "unit_ratio": 1, "price_no_tax": 6}]	来自销售订单 HT20260803001	0	1	默认仓库	2026-08-03 09:21:54.865482	2026-08-03 09:55:23.471845	1
+258	XC202608037381	XC202608036709	21	阿斯娜	管理员	2026-08-03	1962.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 20, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 20, "spec": "180克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}, {"num": 20, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "unit_ratio": 1, "price_no_tax": 11}, {"num": 20, "spec": "1", "price": 6, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "unit_ratio": 1, "price_no_tax": 6}]	来自销售订单 HT20260803001	0	1	默认仓库	2026-08-03 09:04:37.727578	2026-08-03 09:21:49.71527	1
+262	XC202608094209	XC202608099451	21	阿斯娜	管理员	2026-08-01	118.00	[{"num": 8, "spec": "", "price": 12, "remark": "", "goods_id": 3119, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 5.4, "goods_name": "烤奶花/大桶装", "unit_ratio": 1, "price_no_tax": 12}, {"num": 2, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "unit_ratio": 1, "price_no_tax": 11}]	来自销售订单 HT20260809001	1	1	默认仓库	2026-08-09 06:42:24.702991	\N	1
+261	XC202608033620	XC202608039302	21	阿斯娜	管理员	2026-08-03	1902.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 20, "spec": "250克", "price": 13, "remark": "", "goods_id": 1008, "goods_sn": "SP0000026", "tax_rate": 0, "unit_name": "袋", "cost_price": 10.61, "goods_name": "甜味奶条成品", "unit_ratio": 1, "price_no_tax": 13}, {"num": 20, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 20, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 20, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "unit_ratio": 1, "price_no_tax": 11}, {"num": 10, "spec": "1", "price": 6, "remark": "", "goods_id": 836, "goods_sn": "SP0000199", "tax_rate": 0, "unit_name": "个", "cost_price": 5.16, "goods_name": "礼盒/2026", "unit_ratio": 1, "price_no_tax": 6}, {"num": 20, "spec": "200克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}]	来自销售订单 HT20260803001	1	1	默认仓库	2026-08-03 09:55:28.306832	\N	1
+265	XC202608094256	XC202608095260	21	阿斯娜	管理员	2026-08-09	517.00	[{"num": 25, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}, {"num": 2, "spec": "120g/憨野", "price": 8.5, "remark": "", "goods_id": 877, "goods_sn": "SP0000158", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.28, "goods_name": "憨野/奶锅巴/", "unit_ratio": 1, "price_no_tax": 8.5}]	来自销售订单 HT20260809004	1	1	默认仓库	2026-08-09 12:41:48.634907	\N	1
+266	XC202608091517	XC202608094283	21	阿斯娜	管理员	2026-08-09	641.62	[{"num": 432, "spec": "", "price": 0.921, "remark": "", "goods_id": 1010, "goods_sn": "SP0000024", "tax_rate": 0, "unit_name": "个", "cost_price": 0.45, "goods_name": "奶油球", "unit_ratio": 1, "price_no_tax": 0.921}, {"num": 25, "spec": "1", "price": 0.054, "remark": "", "goods_id": 978, "goods_sn": "SP0000056", "tax_rate": 0, "unit_name": "张", "cost_price": 0.05, "goods_name": "新茶专用标签纸", "unit_ratio": 1, "price_no_tax": 0.054}, {"num": 25, "spec": "0", "price": 0.096, "remark": "", "goods_id": 995, "goods_sn": "SP0000039", "tax_rate": 0, "unit_name": "袋", "cost_price": 0.1, "goods_name": "茶专用/热缩膜", "unit_ratio": 1, "price_no_tax": 0.096}, {"num": 12, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260809005	1	1	默认仓库	2026-08-09 14:55:36.606706	\N	1
+267	XC202608093491	XC202608092508	21	阿斯娜	管理员	2026-08-06	477.00	[{"num": 10, "spec": "240克", "price": 20, "remark": "", "goods_id": 992, "goods_sn": "SP0000042", "tax_rate": 0, "unit_name": "盒", "cost_price": 13.21, "goods_name": "牧区奶豆腐/盒装/成品", "unit_ratio": 1, "price_no_tax": 20}, {"num": 4, "spec": "", "price": 11, "remark": "", "goods_id": 3093, "goods_sn": "", "tax_rate": 0, "unit_name": "桶", "cost_price": 4.68, "goods_name": "烤奶花（小桶）", "unit_ratio": 1, "price_no_tax": 11}, {"num": 10, "spec": "110克", "price": 10, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 6, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 10}, {"num": 10, "spec": "200克", "price": 8.5, "remark": "", "goods_id": 827, "goods_sn": "SP0000209", "tax_rate": 0, "unit_name": "盒", "cost_price": 0, "goods_name": "透明成品/奶锅巴/线下", "unit_ratio": 1, "price_no_tax": 8.5}, {"num": 5, "spec": "200克", "price": 9.6, "remark": "", "goods_id": 936, "goods_sn": "SP0000099", "tax_rate": 0, "unit_name": "盒", "cost_price": 7.45137, "goods_name": "透明成品/奶条/甜味/线下", "unit_ratio": 1, "price_no_tax": 9.6}]	来自销售订单 HT20260809006	1	1	默认仓库	2026-08-09 15:01:09.282644	\N	1
+268	XC202608117720	XC202608112590	21	阿斯娜	管理员	2026-08-11	400.00	[{"num": 20, "spec": "16次泡", "price": 20, "remark": "", "goods_id": 980, "goods_sn": "SP0000054", "tax_rate": 0, "unit_name": "盒", "cost_price": 14.29018, "goods_name": "新/青砖奶茶", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260811001	1	1	默认仓库	2026-08-11 15:23:26.918916	\N	1
+269	XC202608187183	XC202608187776	58	赤峰小徐	管理员	2026-08-18	200.00	[{"num": 10, "spec": "110克", "price": 20, "remark": "", "goods_id": 994, "goods_sn": "SP0000040", "tax_rate": 0, "unit_name": "盒", "cost_price": 5.5, "goods_name": "冻炒米成品盒", "unit_ratio": 1, "price_no_tax": 20}]	来自销售订单 HT20260818001	1	1	默认仓库	2026-08-18 04:45:58.59731	\N	1
 \.
 
 
@@ -17228,6 +18227,207 @@ COPY public.stock_flow (id, goods_id, goods_name, warehouse_id, warehouse_name, 
 4076	3095	牧区黄油小瓶	1		other_out	-1	960	959	CK202607241409	其他出库审核	2026-07-24 09:20:17.756027	1
 4077	3085	小米锅巴110g	1	默认仓库	mini_order	-1	811	810	MP202607248095	小程序下单扣减	2026-07-24 09:24:54.23376	1
 4078	3085	小米锅巴110g	1	默认仓库	mini_refund	1	810	811	MP202607248095	退款回滚	2026-07-24 09:49:55.317473	1
+4079	883	阿润月饼/奶豆腐馅	1		other_out	-1	957	956	CK202607259047	其他出库审核	2026-07-25 04:50:45.8686	1
+4080	3107	科尔沁中奶豆腐	1		other_out	-2	957	955	CK202607253892	其他出库审核	2026-07-25 04:51:39.566089	1
+4081	926	大奶豆腐砖/1.2斤	1		other_out	-2	973	971	CK202607253892	其他出库审核	2026-07-25 04:51:39.574705	1
+4082	980	新/青砖奶茶	1		other_out	-2	926	924	CK202607253892	其他出库审核	2026-07-25 04:51:39.583102	1
+4083	3107	科尔沁中奶豆腐	189	牧区纯坊门店	procure_in	20	30	50	CGRK202607259576	采购入库审核	2026-07-25 08:56:39.476556	1
+4084	811	蒙古果子/格日勒	189	牧区纯坊门店	procure_in	5	17	22	CGRK202607251504	采购入库审核	2026-07-25 08:57:14.592618	1
+4085	3120	科尔沁袋装/——奶豆腐条/片/	1		other_out	-1	975	974	CK202607266618	其他出库审核	2026-07-26 12:40:02.195913	1
+4086	811	蒙古果子/格日勒	1		other_out	-1	959	958	CK202607269778	其他出库审核	2026-07-26 13:56:57.992897	1
+4087	3085	小米锅巴110g	1		other_out	-1	811	810	CK202607269778	其他出库审核	2026-07-26 13:56:58.013223	1
+4088	3178	佳赫蛋糕	1		other_out	-1	979	978	CK202607269778	其他出库审核	2026-07-26 13:56:58.020561	1
+4089	868	16g青砖袋泡茶	1		other_out	-2	961	959	CK202607269778	其他出库审核	2026-07-26 13:56:58.031402	1
+4090	811	蒙古果子/格日勒	1		other_out	-1	958	957	CK202607276652	其他出库审核	2026-07-27 03:34:32.697043	1
+4091	980	新/青砖奶茶	1		other_out	-6	924	918	CK202607274326	其他出库审核	2026-07-27 03:37:50.921462	1
+4092	3097	明信片/风景版	1		other_out	-12	973	961	CK202607274326	其他出库审核	2026-07-27 03:37:50.928867	1
+4093	1008	甜味奶条成品	1		other_out	-6	939	933	CK202607274326	其他出库审核	2026-07-27 03:37:50.934686	1
+4094	827	透明成品/奶锅巴/线下	1		other_out	-6	943	937	CK202607274326	其他出库审核	2026-07-27 03:37:50.942088	1
+4095	901	手工白花炒米/散装	189	牧区纯坊门店	procure_in	1	38	39	CGRK202607279823	采购入库审核	2026-07-27 14:43:25.30606	1
+4096	3187	玉米棒蛋糕/面包	189	牧区纯坊门店	procure_in	6	0	6	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.078459	1
+4097	3188	奶制品月饼	189	牧区纯坊门店	procure_in	6	0	6	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.08614	1
+4098	3189	蒙古细果条	189	牧区纯坊门店	procure_in	5	0	5	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.093269	1
+4099	3190	软方饼	189	牧区纯坊门店	procure_in	4	0	4	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.099829	1
+4100	3192	蒙古大果条	189	牧区纯坊门店	procure_in	4	0	4	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.10621	1
+4101	3191	酥饼	189	牧区纯坊门店	procure_in	3	0	3	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.113269	1
+4102	3195	河北黄庄月饼	189	牧区纯坊门店	procure_in	6	0	6	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.12028	1
+4103	3194	吐司面包	189	牧区纯坊门店	procure_in	3	0	3	CGRK202607277337	采购入库审核	2026-07-27 15:00:16.126923	1
+4104	3085	小米锅巴110g	1		other_out	-1	810	809	CK202607284694	其他出库审核	2026-07-28 01:07:19.984022	1
+4105	929	白砂糖	189	牧区纯坊门店	procure_in	10	14	24	CGRK202607289919	采购入库审核	2026-07-28 05:53:05.112364	1
+4106	929	白砂糖	1		other_out	-1	954	953	CK202607317053	其他出库审核	2026-07-31 04:25:36.788789	1
+4107	879	干肉奶茶	1		other_out	-4	975	971	CK202607313164	其他出库审核	2026-07-31 04:26:04.021709	1
+4108	3119	烤奶花/大桶装	1		other_out	-1	957	956	CK202607312048	其他出库审核	2026-07-31 04:26:55.630595	1
+4109	992	牧区奶豆腐/盒装/成品	1		other_out	-1	1768	1767	CK202607312048	其他出库审核	2026-07-31 04:26:55.636626	1
+4110	810	乌日莫/奥特尔	189	牧区纯坊门店	procure_in	10	0	10	CGRK202607311695	采购入库审核	2026-07-31 05:41:56.557247	1
+4111	926	大奶豆腐砖/1.2斤	1		other_out	-2	971	969	CK202608013263	其他出库审核	2026-08-01 03:58:12.121179	1
+4112	1008	甜味奶条成品	1		other_out	-1	933	932	CK202608013263	其他出库审核	2026-08-01 03:58:12.134752	1
+4113	877	憨野/奶锅巴/	1		other_out	-3	944	941	CK202608015159	其他出库审核	2026-08-01 03:59:32.072955	1
+4114	3177	蒙古国饮料	1		other_out	-4	974	970	CK202608012810	其他出库审核	2026-08-01 04:00:13.990534	1
+4115	3107	科尔沁中奶豆腐	1		other_out	-2	955	953	CK202608016146	其他出库审核	2026-08-01 11:54:42.598516	1
+4116	3123	 蒙古国糖果	1		other_out	-1	961	960	CK202608033417	其他出库审核	2026-08-03 08:56:52.417874	1
+4117	980	新/青砖奶茶	1	默认仓库	sale_out	-20	918	898	XC202608037381	销售出库审核	2026-08-03 09:04:38.72205	1
+4118	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-20	1767	1747	XC202608037381	销售出库审核	2026-08-03 09:04:38.748363	1
+4119	1008	甜味奶条成品	1	默认仓库	sale_out	-20	932	912	XC202608037381	销售出库审核	2026-08-03 09:04:38.757523	1
+4120	994	冻炒米成品盒	1	默认仓库	sale_out	-20	1010	990	XC202608037381	销售出库审核	2026-08-03 09:04:38.765471	1
+4121	877	憨野/奶锅巴/	1	默认仓库	sale_out	-20	941	921	XC202608037381	销售出库审核	2026-08-03 09:04:38.773002	1
+4122	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out	-20	58	38	XC202608037381	销售出库审核	2026-08-03 09:04:38.780888	1
+4123	3093	烤奶花（小桶）	1	默认仓库	sale_out	-20	983	963	XC202608037381	销售出库审核	2026-08-03 09:04:38.789448	1
+4124	980	新/青砖奶茶	1	默认仓库	sale_out	-8	898	890	XC202608034347	销售出库审核	2026-08-03 09:12:37.491776	1
+4125	3085	小米锅巴110g	189	牧区纯坊门店	procure_in_reverse	-200	200	0	CGRK202606223689	采购入库反审核	2026-08-03 09:16:39.669208	1
+4126	3085	小米锅巴110g	189	牧区纯坊门店	procure_in	200	0	200	CGRK202606223689	采购入库审核	2026-08-03 09:16:53.031383	1
+4127	980	新/青砖奶茶	1	默认仓库	sale_out_reverse	20	890	910	XC202608037381	销售出库反审核	2026-08-03 09:19:22.036899	1
+4128	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out_reverse	20	1747	1767	XC202608037381	销售出库反审核	2026-08-03 09:19:22.047428	1
+4129	1008	甜味奶条成品	1	默认仓库	sale_out_reverse	20	912	932	XC202608037381	销售出库反审核	2026-08-03 09:19:22.056707	1
+4130	994	冻炒米成品盒	1	默认仓库	sale_out_reverse	20	990	1010	XC202608037381	销售出库反审核	2026-08-03 09:19:22.065864	1
+4131	877	憨野/奶锅巴/	1	默认仓库	sale_out_reverse	20	921	941	XC202608037381	销售出库反审核	2026-08-03 09:19:22.07569	1
+4132	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out_reverse	20	38	58	XC202608037381	销售出库反审核	2026-08-03 09:19:22.086997	1
+4133	3093	烤奶花（小桶）	1	默认仓库	sale_out_reverse	20	963	983	XC202608037381	销售出库反审核	2026-08-03 09:19:22.097396	1
+4134	980	新/青砖奶茶	1	默认仓库	sale_out	-20	910	890	XC202608031871	销售出库审核	2026-08-03 09:21:55.378007	1
+4135	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-20	1767	1747	XC202608031871	销售出库审核	2026-08-03 09:21:55.388497	1
+4136	1008	甜味奶条成品	1	默认仓库	sale_out	-20	932	912	XC202608031871	销售出库审核	2026-08-03 09:21:55.398163	1
+4137	994	冻炒米成品盒	1	默认仓库	sale_out	-20	1010	990	XC202608031871	销售出库审核	2026-08-03 09:21:55.408912	1
+4138	877	憨野/奶锅巴/	1	默认仓库	sale_out	-20	941	921	XC202608031871	销售出库审核	2026-08-03 09:21:55.418859	1
+4139	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out	-20	58	38	XC202608031871	销售出库审核	2026-08-03 09:21:55.428884	1
+4140	3093	烤奶花（小桶）	1	默认仓库	sale_out	-20	983	963	XC202608031871	销售出库审核	2026-08-03 09:21:55.438745	1
+4142	811	蒙古果子/格日勒	1		other_out	-1	957	956	CK202608037541	其他出库审核	2026-08-03 09:46:06.391223	1
+4143	980	新/青砖奶茶	1	默认仓库	sale_out_reverse	20	890	910	XC202608031871	销售出库反审核	2026-08-03 09:53:42.616278	1
+4144	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out_reverse	20	1747	1767	XC202608031871	销售出库反审核	2026-08-03 09:53:42.626824	1
+4145	1008	甜味奶条成品	1	默认仓库	sale_out_reverse	20	912	932	XC202608031871	销售出库反审核	2026-08-03 09:53:42.637239	1
+4146	994	冻炒米成品盒	1	默认仓库	sale_out_reverse	20	990	1010	XC202608031871	销售出库反审核	2026-08-03 09:53:42.647753	1
+4147	877	憨野/奶锅巴/	1	默认仓库	sale_out_reverse	20	921	941	XC202608031871	销售出库反审核	2026-08-03 09:53:42.659543	1
+4148	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out_reverse	20	38	58	XC202608031871	销售出库反审核	2026-08-03 09:53:42.670427	1
+4149	3093	烤奶花（小桶）	1	默认仓库	sale_out_reverse	20	963	983	XC202608031871	销售出库反审核	2026-08-03 09:53:42.681653	1
+4150	980	新/青砖奶茶	1	默认仓库	sale_out	-20	910	890	XC202608033620	销售出库审核	2026-08-03 09:55:29.241727	1
+4151	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-20	1767	1747	XC202608033620	销售出库审核	2026-08-03 09:55:29.250041	1
+4152	1008	甜味奶条成品	1	默认仓库	sale_out	-20	932	912	XC202608033620	销售出库审核	2026-08-03 09:55:29.257449	1
+4153	994	冻炒米成品盒	1	默认仓库	sale_out	-20	1010	990	XC202608033620	销售出库审核	2026-08-03 09:55:29.265794	1
+4154	877	憨野/奶锅巴/	1	默认仓库	sale_out	-20	941	921	XC202608033620	销售出库审核	2026-08-03 09:55:29.273504	1
+4155	3093	烤奶花（小桶）	1	默认仓库	sale_out	-20	983	963	XC202608033620	销售出库审核	2026-08-03 09:55:29.281217	1
+4156	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out	-20	58	38	XC202608033620	销售出库审核	2026-08-03 09:55:29.289869	1
+4157	1014	散装/甜味奶条	189	牧区纯坊门店	procure_in	13	277	290	CGRK202608046518	采购入库审核	2026-08-04 02:46:25.990977	1
+4158	980	新/青砖奶茶	1		other_out	-1	890	889	CK202608041799	其他出库审核	2026-08-04 05:29:51.568736	1
+4159	992	牧区奶豆腐/盒装/成品	1		other_out	-2	1747	1745	CK202608041799	其他出库审核	2026-08-04 05:29:51.576774	1
+4160	994	冻炒米成品盒	1		other_out	-1	990	989	CK202608041799	其他出库审核	2026-08-04 05:29:51.584517	1
+4161	827	透明成品/奶锅巴/线下	1		other_out	-1	937	936	CK202608041799	其他出库审核	2026-08-04 05:29:51.592286	1
+4162	3097	明信片/风景版	1		other_out	-2	961	959	CK202608041799	其他出库审核	2026-08-04 05:29:51.600246	1
+4163	3098	大奶豆腐/科尔沁	1		other_out	-2	986	984	CK202608041799	其他出库审核	2026-08-04 05:29:51.607991	1
+4164	871	小青砖茶砖	1		other_out	-1	997	996	CK202608041021	其他出库审核	2026-08-04 06:10:19.716688	1
+4165	1027	真空袋	189	牧区纯坊门店	procure_in	100	556	656	CGRK202608041644	采购入库审核	2026-08-04 06:20:20.690827	1
+4166	3118	烤奶花	189	牧区纯坊门店	procure_in	10	32	42	CGRK202608056588	采购入库审核	2026-08-05 04:56:37.596239	1
+4167	916	脆奶条/散装/科尔沁	189	牧区纯坊门店	procure_in	10	176	186	CGRK202608051486	采购入库审核	2026-08-05 04:57:52.475731	1
+4168	981	烤奶皮	189	牧区纯坊门店	procure_in	10	194	204	CGRK202608051486	采购入库审核	2026-08-05 04:57:52.482286	1
+4169	926	大奶豆腐砖/1.2斤	1		other_out	-2	969	967	CK202608051803	其他出库审核	2026-08-05 05:30:21.261558	1
+4170	908	哈斯乌拉牛肉干500g原味	1		other_out	-1	994	993	CK202608081558	其他出库审核	2026-08-08 03:11:18.874547	1
+4171	811	蒙古果子/格日勒	1		other_out	-1	956	955	CK202608083432	其他出库审核	2026-08-08 03:14:58.480139	1
+4172	931	炒米粉/aag	1		other_out	-1	957	956	CK202608089150	其他出库审核	2026-08-08 03:17:30.495545	1
+4173	3107	科尔沁中奶豆腐	1		other_out	-2	953	951	CK202608085163	其他出库审核	2026-08-08 03:18:35.14831	1
+4174	856	科尔沁/大奶豆腐	1		other_out	-2	993	991	CK202608084985	其他出库审核	2026-08-08 03:19:04.645049	1
+4175	811	蒙古果子/格日勒	189	牧区纯坊门店	procure_in	10	22	32	CGRK202608089602	采购入库审核	2026-08-08 03:20:42.659709	1
+4176	3125	细奶条/原味/乌日汗	189	牧区纯坊门店	procure_in	10	5	15	CGRK202608089703	采购入库审核	2026-08-08 03:24:08.089079	1
+4177	816	乌日汗大瓶酸奶	189	牧区纯坊门店	procure_in	4	0	4	CGRK202608089703	采购入库审核	2026-08-08 03:24:08.095603	1
+4178	826	乌日汗酸奶/中	189	牧区纯坊门店	procure_in	2	5	7	CGRK202608089703	采购入库审核	2026-08-08 03:24:08.101772	1
+4179	3118	烤奶花	189	牧区纯坊门店	procure_in	8	42	50	CGRK202608082925	采购入库审核	2026-08-08 03:24:54.31309	1
+4180	3197	新茶包/盐底纸	189	牧区纯坊门店	procure_in	2000	0	2000	CGRK202608085875	采购入库审核	2026-08-08 04:13:12.42379	1
+4181	1010	奶油球	189	牧区纯坊门店	procure_in	10	875	885	CGRK202608088993	采购入库审核	2026-08-08 04:28:29.913503	1
+4182	849	15元组合糖	1		other_out	-2	974	972	CK202608088137	其他出库审核	2026-08-08 15:07:52.173064	1
+4183	3184	阿旗冰箱贴	189	牧区纯坊门店	procure_in	18	0	18	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.955079	1
+4184	3199	佑系帆布包	189	牧区纯坊门店	procure_in	1	0	1	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.962644	1
+4185	3200	包你百顺帆布包	189	牧区纯坊门店	procure_in	1	0	1	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.971671	1
+4186	3198	宝山备马帆布包	189	牧区纯坊门店	procure_in	2	0	2	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.980243	1
+4187	3117	车载香片	189	牧区纯坊门店	procure_in	30	0	30	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.988025	1
+4188	3201	阳光种植/桶装	189	牧区纯坊门店	procure_in	2	0	2	CGRK202608099259	采购入库审核	2026-08-09 06:24:31.994565	1
+4189	3111	蒙古元素永生花	189	牧区纯坊门店	procure_in	2	0	2	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.001225	1
+4190	3202	种个惊喜	189	牧区纯坊门店	procure_in	4	0	4	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.007363	1
+4191	3203	小草娃娃	189	牧区纯坊门店	procure_in	7	0	7	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.013222	1
+4192	3204	蒙草明信片套装	189	牧区纯坊门店	procure_in	2	0	2	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.021364	1
+4193	3205	书签/可种植	189	牧区纯坊门店	procure_in	8	0	8	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.028521	1
+4194	3183	阿旗礼袋蒙文	189	牧区纯坊门店	procure_in	100	0	100	CGRK202608099259	采购入库审核	2026-08-09 06:24:32.034934	1
+4195	3119	烤奶花/大桶装	1	默认仓库	sale_out	-8	956	948	XC202608094209	销售出库审核	2026-08-09 06:42:25.252496	1
+4196	3093	烤奶花（小桶）	1	默认仓库	sale_out	-2	963	961	XC202608094209	销售出库审核	2026-08-09 06:42:25.258571	1
+4197	994	冻炒米成品盒	1	默认仓库	sale_out	-20	989	969	XC202608095732	销售出库审核	2026-08-09 07:09:43.882738	1
+4198	877	憨野/奶锅巴/	1	默认仓库	sale_out	-30	921	891	XC202608095732	销售出库审核	2026-08-09 07:09:43.889238	1
+4199	980	新/青砖奶茶	1	默认仓库	sale_out	-20	889	869	XC202608095732	销售出库审核	2026-08-09 07:09:43.89518	1
+4200	1008	甜味奶条成品	1	默认仓库	sale_out	-20	912	892	XC202608095732	销售出库审核	2026-08-09 07:09:43.90166	1
+4201	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-20	1745	1725	XC202608095732	销售出库审核	2026-08-09 07:09:43.907961	1
+4202	3127	冻炒米成品/散装/小袋装	1	默认仓库	sale_out	-1	965	964	XC202608095732	销售出库审核	2026-08-09 07:09:43.915461	1
+4203	980	新/青砖奶茶	1	默认仓库	sale_out	-10	869	859	XC202608098729	销售出库审核	2026-08-09 07:15:31.34514	1
+4204	994	冻炒米成品盒	1	默认仓库	sale_out	-20	969	949	XC202608098729	销售出库审核	2026-08-09 07:15:31.354485	1
+4205	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-20	1725	1705	XC202608098729	销售出库审核	2026-08-09 07:15:31.36378	1
+4206	827	透明成品/奶锅巴/线下	1	默认仓库	sale_out	-10	936	926	XC202608098729	销售出库审核	2026-08-09 07:15:31.374905	1
+4207	885	冻炒米/散装	1	默认仓库	sale_out	-1	979	978	XC202608098729	销售出库审核	2026-08-09 07:15:31.384873	1
+4208	3118	烤奶花	1	默认仓库	sale_out	-1	995	994	XC202608098729	销售出库审核	2026-08-09 07:15:31.398094	1
+4209	980	新/青砖奶茶	1	默认仓库	sale_out	-25	859	834	XC202608094256	销售出库审核	2026-08-09 12:41:49.094161	1
+4210	877	憨野/奶锅巴/	1	默认仓库	sale_out	-2	891	889	XC202608094256	销售出库审核	2026-08-09 12:41:49.101874	1
+4211	969	小/奶皮	1		other_out	-3	952	949	CK202608098504	其他出库审核	2026-08-09 13:00:04.140516	1
+4212	1010	奶油球	1	默认仓库	sale_out	-432	0	0	XC202608091517	销售出库审核	2026-08-09 14:55:37.078806	1
+4213	980	新/青砖奶茶	1	默认仓库	sale_out	-12	834	822	XC202608091517	销售出库审核	2026-08-09 14:55:37.092613	1
+4214	992	牧区奶豆腐/盒装/成品	1	默认仓库	sale_out	-10	1705	1695	XC202608093491	销售出库审核	2026-08-09 15:01:10.189347	1
+4215	3093	烤奶花（小桶）	1	默认仓库	sale_out	-4	961	957	XC202608093491	销售出库审核	2026-08-09 15:01:10.200104	1
+4216	994	冻炒米成品盒	1	默认仓库	sale_out	-10	949	939	XC202608093491	销售出库审核	2026-08-09 15:01:10.21114	1
+4217	827	透明成品/奶锅巴/线下	1	默认仓库	sale_out	-10	926	916	XC202608093491	销售出库审核	2026-08-09 15:01:10.22132	1
+4218	936	透明成品/奶条/甜味/线下	1	默认仓库	sale_out	-5	38	33	XC202608093491	销售出库审核	2026-08-09 15:01:10.232581	1
+4219	926	大奶豆腐砖/1.2斤	1		other_out	-2	967	965	CK202608109070	其他出库审核	2026-08-10 07:28:47.591714	1
+4220	884	实惠/奶豆腐	1		other_out	-2	974	972	CK202608109070	其他出库审核	2026-08-10 07:28:47.597209	1
+4221	827	透明成品/奶锅巴/线下	1		other_out	-1	916	915	CK202608109070	其他出库审核	2026-08-10 07:28:47.602995	1
+4222	829	奶豆腐/原味/中/科尔沁	189	牧区纯坊门店	procure_in	10	40	50	CGRK202608102345	采购入库审核	2026-08-10 08:08:37.251349	1
+4223	817	乌日汗小瓶酸奶	1		other_out	-1	998	997	CK202608104342	其他出库审核	2026-08-10 12:13:49.270109	1
+4224	826	乌日汗酸奶/中	1		other_out	-2	987	985	CK202608104342	其他出库审核	2026-08-10 12:13:49.27597	1
+4225	3085	小米锅巴110g	1		other_out	-1	809	808	CK202608104342	其他出库审核	2026-08-10 12:13:49.281527	1
+4226	822	黄油/大瓶/科尔沁	1		other_out	-1	985	984	CK202608104342	其他出库审核	2026-08-10 12:13:49.286872	1
+4227	980	新/青砖奶茶	1		other_out	-1	822	821	CK202608103206	其他出库审核	2026-08-10 14:18:10.782549	1
+4228	980	新/青砖奶茶	1	默认仓库	sale_out	-20	821	801	XC202608117720	销售出库审核	2026-08-11 15:23:27.7402	1
+4229	980	新/青砖奶茶	1		other_out	-1	801	800	CK202608113136	其他出库审核	2026-08-11 15:26:24.737712	1
+4230	992	牧区奶豆腐/盒装/成品	1		other_out	-1	1695	1694	CK202608113136	其他出库审核	2026-08-11 15:26:24.74513	1
+4231	994	冻炒米成品盒	1		other_out	-1	939	938	CK202608113136	其他出库审核	2026-08-11 15:26:24.75257	1
+4232	3119	烤奶花/大桶装	1		other_out	-1	948	947	CK202608113136	其他出库审核	2026-08-11 15:26:24.762152	1
+4233	989	蒙古黄油/瓶装成品	1		other_out	-1	10	9	CK202608113136	其他出库审核	2026-08-11 15:26:24.769795	1
+4234	1008	甜味奶条成品	1		other_out	-1	892	891	CK202608113136	其他出库审核	2026-08-11 15:26:24.777048	1
+4235	827	透明成品/奶锅巴/线下	1		other_out	-1	915	914	CK202608113136	其他出库审核	2026-08-11 15:26:24.78652	1
+4236	926	大奶豆腐砖/1.2斤	189	牧区纯坊门店	procure_in	20	0	20	CGRK202608113357	采购入库审核	2026-08-11 15:27:48.092462	1
+4237	926	大奶豆腐砖/1.2斤	1		other_out	-2	965	963	CK202608127118	其他出库审核	2026-08-12 08:39:25.918816	1
+4238	883	阿润月饼/奶豆腐馅	189	牧区纯坊门店	procure_in	3	7	10	CGRK202608127432	采购入库审核	2026-08-12 09:08:07.275668	1
+4239	882	阿润月饼/黄油渣馅	189	牧区纯坊门店	procure_in	3	12	15	CGRK202608127432	采购入库审核	2026-08-12 09:08:07.285356	1
+4240	881	阿润月饼/奶皮子馅	189	牧区纯坊门店	procure_in	3	7	10	CGRK202608127432	采购入库审核	2026-08-12 09:08:07.294633	1
+4241	880	阿润月饼/五仁馅	189	牧区纯坊门店	procure_in	3	17	20	CGRK202608127432	采购入库审核	2026-08-12 09:08:07.304275	1
+4242	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	257	267	CGRK202608129432	采购入库审核	2026-08-12 09:08:42.988724	1
+4243	3107	科尔沁中奶豆腐	1		other_out	-1	951	950	CK202608126284	其他出库审核	2026-08-12 12:58:18.872515	1
+4244	3107	科尔沁中奶豆腐	1		other_out	-2	950	948	CK202608137474	其他出库审核	2026-08-13 02:19:12.72165	1
+4245	3107	科尔沁中奶豆腐	1		other_out	-1	948	947	CK202608134278	其他出库审核	2026-08-13 02:34:00.067298	1
+4246	981	烤奶皮	189	牧区纯坊门店	procure_in	10	204	214	CGRK202608171585	采购入库审核	2026-08-17 05:04:41.031349	1
+4247	3118	烤奶花	189	牧区纯坊门店	procure_in	10	50	60	CGRK202608172951	采购入库审核	2026-08-17 05:05:08.721781	1
+4248	994	冻炒米成品盒	189	牧区纯坊门店	procure_in	100	0	100	CGRK202608179425	采购入库审核	2026-08-17 05:08:18.358493	1
+4249	1011	茶包	189	牧区纯坊门店	procure_in	5	18	23	CGRK202608172005	采购入库审核	2026-08-17 05:11:04.40548	1
+4250	3118	烤奶花	189	牧区纯坊门店	procure_in	10	60	70	CGRK202608172346	采购入库审核	2026-08-17 05:11:41.458788	1
+4251	3095	牧区黄油小瓶	1		other_out	-1	959	958	CK202608171857	其他出库审核	2026-08-17 13:28:46.860762	1
+4252	969	小/奶皮	1		other_out	-1	949	948	CK202608177453	其他出库审核	2026-08-17 14:05:13.206452	1
+4253	884	实惠/奶豆腐	1		other_out	-1	972	971	CK202608177453	其他出库审核	2026-08-17 14:05:13.212644	1
+4254	908	哈斯乌拉牛肉干500g原味	1		other_out	-2	993	991	CK202608184964	其他出库审核	2026-08-18 03:57:34.373963	1
+4255	980	新/青砖奶茶	1		other_out	-1	800	799	CK202608184964	其他出库审核	2026-08-18 03:57:34.379873	1
+4256	935	透明成品/奶皮卷/线下	1		other_out	-1	63	62	CK202608188304	其他出库审核	2026-08-18 03:57:48.04159	1
+4257	994	冻炒米成品盒	1	默认仓库	sale_out	-10	938	928	XC202608187183	销售出库审核	2026-08-18 04:45:59.157199	1
+4258	980	新/青砖奶茶	1	默认仓库	sale_out_reverse	11	799	810	XC202605309804	销售出库反审核	2026-08-18 05:18:44.27145	1
+4259	929	白砂糖	1		other_out	-1	953	952	CK202608185249	其他出库审核	2026-08-18 13:59:38.28028	1
+4260	980	新/青砖奶茶	1		other_out	-1	810	809	CK202608214709	其他出库审核	2026-08-21 12:28:42.784212	1
+4261	3104	牧区酸奶/大	1		other_out	-1	946	945	CK202608214709	其他出库审核	2026-08-21 12:28:42.815407	1
+4262	829	奶豆腐/原味/中/科尔沁	1	默认仓库	procure_in	5	981	986	CGRK202608222586	采购入库审核	2026-08-22 02:47:40.410141	1
+4263	920	手工乌日末液体	189	牧区纯坊门店	procure_in	10	267	277	CGRK202608227397	采购入库审核	2026-08-22 03:53:41.647841	1
+4264	1014	散装/甜味奶条	189	牧区纯坊门店	procure_in	10	290	300	CGRK202608223437	采购入库审核	2026-08-22 03:55:30.517538	1
+4265	926	大奶豆腐砖/1.2斤	189	牧区纯坊门店	procure_in_reverse	-20	20	0	CGRK202608113357	采购入库反审核	2026-08-22 03:55:47.776226	1
+4266	980	新/青砖奶茶	1		other_out	-1	809	808	CK202608229754	其他出库审核	2026-08-22 03:59:07.345857	1
+4267	3085	小米锅巴110g	1		other_out	-1	808	807	CK202608229754	其他出库审核	2026-08-22 03:59:07.352228	1
+4268	827	透明成品/奶锅巴/线下	1		other_out	-1	914	913	CK202608229754	其他出库审核	2026-08-22 03:59:07.357928	1
+4269	3119	烤奶花/大桶装	1		other_out	-1	947	946	CK202608229754	其他出库审核	2026-08-22 03:59:07.363133	1
+4270	980	新/青砖奶茶	1		other_out	-1	808	807	CK202608231909	其他出库审核	2026-08-23 03:16:29.745767	1
+4271	992	牧区奶豆腐/盒装/成品	1		other_out	-1	1694	1693	CK202608231909	其他出库审核	2026-08-23 03:16:29.762275	1
+4272	1008	甜味奶条成品	1		other_out	-1	891	890	CK202608231909	其他出库审核	2026-08-23 03:16:29.768221	1
+4273	989	蒙古黄油/瓶装成品	1		other_out	-1	9	8	CK202608231909	其他出库审核	2026-08-23 03:16:29.775599	1
+4274	3119	烤奶花/大桶装	1		other_out	-1	946	945	CK202608231909	其他出库审核	2026-08-23 03:16:29.781735	1
+4275	3097	明信片/风景版	1		other_out	-2	959	957	CK202608231909	其他出库审核	2026-08-23 03:16:29.787445	1
+4276	849	15元组合糖	1		other_out	-1	972	971	CK202608231909	其他出库审核	2026-08-23 03:16:29.793536	1
+4277	827	透明成品/奶锅巴/线下	1		other_out	-1	913	912	CK202608231909	其他出库审核	2026-08-23 03:16:29.800829	1
+4278	994	冻炒米成品盒	1		other_out	-1	928	927	CK202608231909	其他出库审核	2026-08-23 03:16:29.808179	1
+4279	935	透明成品/奶皮卷/线下	1		other_out	-1	62	61	CK202608235255	其他出库审核	2026-08-23 11:37:19.761205	1
+4280	3103	牧区酸奶小	1		other_out	-1	992	991	CK202608235255	其他出库审核	2026-08-23 11:37:19.77598	1
 \.
 
 
@@ -17256,6 +18456,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 80	860	普通瓜子	SP0000175	散	0		0	0.00	2026-04-03 07:15:53.587087	1
 121	919	黄油/斤	SP0000116	瓶	0		0	0.00	2026-04-03 07:17:43.646733	1
 122	870	大青砖茶砖	SP0000165	件	0		0	0.00	2026-04-03 07:16:10.61559	1
+252	1010	奶油球	SP0000024	箱	189	牧区纯坊门店	885	0.00	2026-08-08 04:28:29.908289	1
 73	822	黄油/大瓶/科尔沁	SP0000214	瓶	0		0	0.00	2026-04-03 07:15:09.20197	1
 119	863	冻炒米/小包散/精品	SP0000172	个	0		0	0.00	2026-04-03 07:16:07.859795	1
 128	884	实惠/奶豆腐	SP0000151	个	0		9	0.00	2026-05-30 09:17:56.247407	1
@@ -17274,7 +18475,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 83	831	果条/阿润	SP0000205	袋	0		0	0.00	2026-04-03 07:15:24.63229	1
 129	881	阿润月饼/奶皮子馅	SP0000154	袋	0		0	0.00	2026-04-03 07:16:26.915656	1
 71	823	黄油/中瓶	SP0000213	瓶	0		0	0.00	2026-04-03 07:15:09.192995	1
-252	1010	奶油球	SP0000024	箱	189	牧区纯坊门店	875	0.00	2026-07-12 06:06:49.969257	1
 53	1032	专盒/冻炒米	SP0000002	捆	0		0	0.00	2026-04-04 14:39:49.844227	1
 107	1011	茶包	SP0000023	件	0		0	0.00	2026-04-03 07:19:01.223423	1
 62	811	蒙古果子/格日勒	SP0000225	袋	0		0	0.00	2026-04-03 07:15:03.513302	1
@@ -17415,15 +18615,15 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 289	958	小/长方/亚克力/乳清奶条/奶锅巴通用	SP0000077	盒	189	牧区纯坊门店	915	0.00	2026-06-07 10:24:11.269391	1
 102	993	冻炒米专用/塑膜袋	SP0000041	张	0		500	0.00	2026-04-12 03:24:08.487868	1
 214	988	品牌传统奶豆腐/袋装成品	SP0000046	袋	0		7	0.00	2026-06-13 05:42:33.210545	1
-302	901	手工白花炒米/散装	SP0000134	麻袋	189	牧区纯坊门店	38	0.00	2026-06-30 02:18:33.890816	1
-265	3085	小米锅巴110g		桶	1	默认仓库	811	0.00	2026-07-24 09:49:55.317473	1
+265	3085	小米锅巴110g			1	默认仓库	807	0.00	2026-08-22 03:59:07.349638	1
+302	901	手工白花炒米/散装	SP0000134	麻袋	189	牧区纯坊门店	39	0.00	2026-07-27 14:43:25.301299	1
 210	975	黄油脖签	SP0000059	张	0		0	0.00	2026-04-18 06:38:51.446291	1
 261	995	茶专用/热缩膜	SP0000039	袋	189	牧区纯坊门店	2600	0.00	2026-04-18 11:36:21.980405	1
 250	1013	冻炒米/给组装半成品/那牧尔	SP0000021	盒	189	牧区纯坊门店	683	0.00	2026-06-22 06:19:28.105042	1
 314	945	半成品/透明/奶皮卷	SP0000090	盒	189	牧区纯坊门店	85	0.00	2026-04-25 15:00:27.429607	1
 272	975	黄油脖签	SP0000059	张	189	牧区纯坊门店	500	0.00	2026-04-25 03:07:47.388811	1
 273	978	新茶专用标签纸	SP0000056	张	189	牧区纯坊门店	3000	0.00	2026-04-25 03:07:47.39845	1
-292	929	白砂糖	SP0000106	袋	189	牧区纯坊门店	14	0.00	2026-05-30 10:26:51.884032	1
+297	829	奶豆腐/原味/中/科尔沁	SP0000207	张	189	牧区纯坊门店	50	0.00	2026-08-10 08:08:37.247698	1
 331	968	大/奶皮	SP0000066	张	189	牧区纯坊门店	30	0.00	2026-04-25 15:00:27.466957	1
 161	951	透专标签/冻炒米	SP0000084	张	0		0	0.00	2026-04-25 05:27:10.775519	1
 162	952	透专标签/奶酪/原味	SP0000083	张	0		0	0.00	2026-04-25 05:27:10.783746	1
@@ -17444,8 +18644,8 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 343	869	青砖碎茶	SP0000166	件	189	牧区纯坊门店	1	0.00	2026-04-26 15:29:45.353465	1
 344	867	5g/青砖袋泡茶	SP0000168	件	189	牧区纯坊门店	1	0.00	2026-04-26 15:29:45.364118	1
 347	866	酸奶/纯净	SP0000169	瓶	189	牧区纯坊门店	10	0.00	2026-04-26 15:30:55.362444	1
-297	829	奶豆腐/原味/中/科尔沁	SP0000207	张	189	牧区纯坊门店	40	0.00	2026-07-21 04:03:17.589146	1
-309	920	手工乌日末液体	SP0000115	斤	189	牧区纯坊门店	257	0.00	2026-07-20 13:35:00.026163	1
+309	920	手工乌日末液体	SP0000115	斤	189	牧区纯坊门店	277	0.00	2026-08-22 03:53:41.642762	1
+292	929	白砂糖	SP0000106	袋	189	牧区纯坊门店	24	0.00	2026-07-28 05:53:05.107319	1
 326	884	实惠/奶豆腐	SP0000151	个	189	牧区纯坊门店	10	0.00	2026-05-30 10:16:22.835102	1
 307	924	冻炒米/袋装	SP0000111	袋	189	牧区纯坊门店	19	0.00	2026-05-30 10:44:18.681994	1
 325	885	冻炒米/散装	SP0000150	斤	189	牧区纯坊门店	43	0.00	2026-05-30 10:51:00.78651	1
@@ -17458,8 +18658,8 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 260	987	采购样品专用/乳制品	SP0000047	斤	189	牧区纯坊门店	14	0.00	2026-04-12 04:37:51.501058	1
 306	873	专袋/牛肉干包装	SP0000162	袋	189	牧区纯坊门店	3000	0.00	2026-04-25 11:00:07.125404	1
 300	921	嚼口脆炒米糖/散装	SP0000114	斤	189	牧区纯坊门店	45	0.00	2026-05-02 09:11:23.470249	1
-291	981	烤奶皮	SP0000053	斤	189	牧区纯坊门店	194	0.00	2026-06-22 03:38:40.15974	1
-248	1014	散装/甜味奶条	SP0000020	斤	189	牧区纯坊门店	277	0.00	2026-06-22 07:58:18.27397	1
+303	1010	奶油球	SP0000024	个	1	默认仓库	0	0.00	2026-08-09 14:55:37.073894	1
+234	1027	真空袋	SP0000007	张	189	牧区纯坊门店	656	0.00	2026-08-04 06:20:20.685535	1
 275	950	透专标签/奶皮卷	SP0000085	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.000861	1
 276	951	透专标签/冻炒米	SP0000084	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.023074	1
 277	952	透专标签/奶酪/原味	SP0000083	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.031349	1
@@ -17467,7 +18667,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 96	855	奶锅巴/扎旗吉十奶制品	SP0000180	散	0		0	0.00	2026-04-03 07:15:34.433569	1
 279	956	透专标签/鲜奶皮	SP0000079	张	189	牧区纯坊门店	500	0.00	2026-04-25 05:35:27.047906	1
 226	1023	标签/不干胶/奶条/原味	SP0000011	张	0		0	0.00	2026-04-04 14:39:49.853365	1
-234	1027	真空袋	SP0000007	张	189	牧区纯坊门店	556	0.00	2026-04-25 10:14:39.186395	1
+248	1014	散装/甜味奶条	SP0000020	斤	189	牧区纯坊门店	300	0.00	2026-08-22 03:55:30.511855	1
 138	983	甜味/标签/不干胶/传统奶豆腐	SP0000051	张	0		0	0.00	2026-04-03 07:18:36.703432	1
 221	1029	专内盒/奶果子	SP0000005	张	0		8	0.00	2026-04-09 16:08:58.585698	1
 220	1031	专底盒/奶条	SP0000003	捆	0		0	0.00	2026-04-04 14:39:50.507838	1
@@ -17503,28 +18703,27 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 320	897	早餐包/那牧尔	SP0000138	袋	189	牧区纯坊门店	10	0.00	2026-04-25 11:28:09.78781	1
 321	894	酸奶月饼	SP0000141	小包	189	牧区纯坊门店	10	0.00	2026-04-25 11:28:09.795489	1
 249	1015	散装/原味奶条	SP0000019	斤	189	牧区纯坊门店	83	0.00	2026-04-25 14:40:57.312661	1
-336	883	阿润月饼/奶豆腐馅	SP0000152	袋	189	牧区纯坊门店	7	0.00	2026-07-19 14:05:44.195388	1
+335	882	阿润月饼/黄油渣馅	SP0000153	袋	189	牧区纯坊门店	15	0.00	2026-08-12 09:08:07.280612	1
 327	898	透专标签/奶皮千层	SP0000137	张	189	牧区纯坊门店	500	0.00	2026-04-25 14:59:17.273933	1
 255	997	茶专用/盐包	SP0000037	件	189	牧区纯坊门店	227	0.00	2026-07-22 14:25:14.662858	1
 339	939	半成品/透明/原味/鲜奶酪	SP0000096	盒	189	牧区纯坊门店	20	0.00	2026-04-26 15:27:45.463534	1
 340	940	半成品/透明/甜味/鲜奶酪	SP0000095	盒	189	牧区纯坊门店	52	0.00	2026-04-26 15:27:45.473372	1
 346	865	牛肉干/和希格图	SP0000170	袋	189	牧区纯坊门店	20	0.00	2026-04-26 15:30:15.411901	1
 333	879	干肉奶茶	SP0000156	盒	189	牧区纯坊门店	14	0.00	2026-04-26 16:03:47.553873	1
-334	881	阿润月饼/奶皮子馅	SP0000154	袋	189	牧区纯坊门店	7	0.00	2026-07-19 14:05:44.210326	1
+291	981	烤奶皮	SP0000053	斤	189	牧区纯坊门店	214	0.00	2026-08-17 05:04:41.027658	1
 301	856	科尔沁/大奶豆腐	SP0000179	张	189	牧区纯坊门店	13	0.00	2026-05-28 15:40:52.233318	1
 317	892	那牧尔酸奶	SP0000143	瓶	189	牧区纯坊门店	25	0.00	2026-05-28 15:20:06.03601	1
-335	882	阿润月饼/黄油渣馅	SP0000153	袋	189	牧区纯坊门店	12	0.00	2026-07-19 14:05:44.20291	1
+334	881	阿润月饼/奶皮子馅	SP0000154	袋	189	牧区纯坊门店	10	0.00	2026-08-12 09:08:07.28982	1
 257	998	茶专用/硫酸纸	SP0000036	张	189	牧区纯坊门店	3000	0.00	2026-04-28 05:19:20.566179	1
 299	922	酸奶炒米糖/散装	SP0000113	斤	189	牧区纯坊门店	20	0.00	2026-05-02 01:41:09.787406	1
 312	923	海丰炒米/散装/硬口/	SP0000112	斤	189	牧区纯坊门店	84	0.00	2026-06-09 02:17:59.437667	1
 296	932	炒米海丰袋装	SP0000103		1	默认仓库	996	0.00	2026-07-20 13:34:01.4987	1
-303	1010	奶油球	SP0000024	个	1	默认仓库	0	0.00	2026-06-07 11:11:20.454314	1
+336	883	阿润月饼/奶豆腐馅	SP0000152	袋	189	牧区纯坊门店	10	0.00	2026-08-12 09:08:07.270984	1
 274	900	透专标签/脆香奶条/微甜	SP0000135	张	189	牧区纯坊门店	1000	0.00	2026-06-07 07:32:57.996672	1
 324	890	红枣	SP0000145	斤	189	牧区纯坊门店	12	0.00	2026-05-30 11:58:31.791833	1
 310	918	黄油/半斤	SP0000117	瓶	189	牧区纯坊门店	7	0.00	2026-04-26 15:38:21.677833	1
 311	919	黄油/斤	SP0000116	瓶	189	牧区纯坊门店	9	0.00	2026-04-26 15:38:21.689819	1
 349	861	五香瓜子	SP0000174	散	189	牧区纯坊门店	10	0.00	2026-04-26 15:49:56.033326	1
-251	1011	茶包	SP0000023	件	189	牧区纯坊门店	18	0.00	2026-04-26 15:56:23.032121	1
 350	858	糖葫芦	SP0000177	盒	189	牧区纯坊门店	40	0.00	2026-04-26 16:03:01.747761	1
 353	872	半成品/黄金纬度牛肉干/那牧尔	SP0000163	袋	189	牧区纯坊门店	130	0.00	2026-04-26 16:06:28.553392	1
 354	850	红糖袋/delicious	SP0000185	张	189	牧区纯坊门店	100	0.00	2026-04-26 16:10:33.056331	1
@@ -17545,7 +18744,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 371	847	乌日莫/袋装	SP0000188	袋	189	牧区纯坊门店	5	0.00	2026-04-26 16:17:01.638808	1
 373	831	果条/阿润	SP0000205	袋	189	牧区纯坊门店	5	0.00	2026-04-26 16:19:15.502468	1
 348	860	普通瓜子	SP0000175	散	189	牧区纯坊门店	15	0.00	2026-04-26 16:20:31.231267	1
-386	811	蒙古果子/格日勒	SP0000225	袋	189	牧区纯坊门店	17	0.00	2026-05-10 03:10:21.539033	1
+372	916	脆奶条/散装/科尔沁	SP0000119	斤	189	牧区纯坊门店	186	0.00	2026-08-05 04:57:52.472283	1
 380	823	黄油/中瓶	SP0000213	瓶	189	牧区纯坊门店	15	0.00	2026-05-29 11:29:11.402339	1
 404	3121	科尔沁奶豆腐/条/片/原/甜		斤	189	牧区纯坊门店	35	0.00	2026-05-28 15:13:17.638407	1
 393	889	奶皮卷/科尔沁	SP0000146	盒	189	牧区纯坊门店	37	0.00	2026-05-30 10:44:18.66208	1
@@ -17553,7 +18752,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 406	915	黄油渣/盒	SP0000120	盒	189	牧区纯坊门店	20	0.00	2026-05-30 11:33:09.71647	1
 378	932	炒米海丰袋装	SP0000103	袋	189	牧区纯坊门店	40	0.00	2026-05-30 10:23:30.7091	1
 383	809	10斤装/小米/绿色纸盒	SP0000227	盒	189	牧区纯坊门店	18	0.00	2026-06-07 13:47:14.403161	1
-385	826	乌日汗酸奶	SP0000210	盒	189	牧区纯坊门店	5	0.00	2026-04-26 16:25:19.690221	1
 387	804	德吉酸奶/2斤装	SP0000232	瓶	189	牧区纯坊门店	10	0.00	2026-04-26 16:25:57.581038	1
 388	805	德吉酸奶/一斤装	SP0000231	瓶	189	牧区纯坊门店	10	0.00	2026-04-26 16:25:57.588599	1
 389	806	德吉酸奶/半斤	SP0000230	瓶	189	牧区纯坊门店	10	0.00	2026-04-26 16:25:57.597019	1
@@ -17565,7 +18763,7 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 401	3113	明信片/带种子			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.354877	1
 402	3112	阿旗book			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.363805	1
 360	836	礼盒/2026	SP0000199	个	189	牧区纯坊门店	560	0.00	2026-06-13 07:59:08.4104	1
-403	3117	车载香片	SP2605252385	张	189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.371015	1
+398	3111	蒙古元素永生花			189	牧区纯坊门店	2	0.00	2026-08-09 06:24:31.997937	1
 394	877	憨野/奶锅巴/	SP0000158	盒	189	牧区纯坊门店	-1	0.00	2026-05-17 09:15:05.804772	1
 382	830	小米/10斤/小袋/红嘴/阿旗	SP0000206	袋	189	牧区纯坊门店	17	0.00	2026-06-07 13:47:14.385181	1
 374	903	盛宇燃奶豆腐/甜味	SP0000132	袋	189	牧区纯坊门店	13	0.00	2026-05-29 11:29:11.389967	1
@@ -17575,41 +18773,41 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 376	908	哈斯乌拉牛肉干500g原味	SP0000127	袋	189	牧区纯坊门店	30	0.00	2026-06-22 03:42:26.449642	1
 405	930	加沙奶豆腐	SP0000105	袋	189	牧区纯坊门店	10	0.00	2026-05-28 16:13:52.430684	1
 407	979	新茶包/纸	SP0000055	张	189	牧区纯坊门店	20000	0.00	2026-05-28 17:22:11.414966	1
-398	3111	蒙古元素永生花			189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.330141	1
+251	1011	茶包	SP0000023	件	189	牧区纯坊门店	23	0.00	2026-08-17 05:11:04.400582	1
 399	3114	宋锦耳坠		对	189	牧区纯坊门店	0	0.00	2026-05-25 14:08:09.339814	1
-372	916	脆奶条/散装/科尔沁	SP0000119	斤	189	牧区纯坊门店	176	0.00	2026-06-22 03:38:40.14159	1
+386	811	蒙古果子/格日勒	SP0000225	袋	189	牧区纯坊门店	32	0.00	2026-08-08 03:20:42.65639	1
 409	905	真空奶豆腐砖/甜味	SP0000130	袋	189	牧区纯坊门店	4	0.00	2026-05-29 05:25:35.170198	1
 375	904	盛宇燃奶豆腐/原味	SP0000131	袋	189	牧区纯坊门店	14	0.00	2026-05-29 11:29:11.396209	1
 413	3100	楚楚给			189	牧区纯坊门店	0	0.00	2026-05-29 07:34:51.707381	1
 412	927	小奶豆腐砖/1斤	SP0000108		189	牧区纯坊门店	2	0.00	2026-05-29 07:35:23.186269	1
-332	880	阿润月饼/五仁馅	SP0000155	袋	189	牧区纯坊门店	17	0.00	2026-07-19 14:05:44.21761	1
 414	3123	 蒙古国糖果		瓶	189	牧区纯坊门店	10	0.00	2026-05-29 10:57:18.819581	1
 411	935	透明成品/奶皮卷/线下	SP0000100		189	牧区纯坊门店	12	0.00	2026-05-29 07:35:23.178515	1
 415	3122	jebu 蒙古国饮料		瓶	189	牧区纯坊门店	48	0.00	2026-05-29 10:57:18.859973	1
 384	825	故乡宝酸马奶	SP0000211	盒	189	牧区纯坊门店	23	0.00	2026-05-30 11:33:09.725092	1
-391	3107	科尔沁中奶豆腐		块	189	牧区纯坊门店	30	0.00	2026-06-22 07:27:53.44322	1
+385	826	乌日汗酸奶/中	SP0000210	瓶	189	牧区纯坊门店	7	0.00	2026-08-08 03:24:08.098698	1
 408	3094	科尔沁糖（酸奶/嚼口/乌日末		斤	189	牧区纯坊门店	25	0.00	2026-06-22 03:42:26.456322	1
 392	3106	甜味奶豆腐		张	189	牧区纯坊门店	7	0.00	2026-06-07 14:28:51.432904	1
 369	845	乳清饮料	SP0000190	瓶	189	牧区纯坊门店	75	0.00	2026-07-12 06:09:24.068593	1
-295	931	炒米粉/aag	SP0000104		1	默认仓库	957	0.00	2026-07-06 13:49:58.996354	1
+391	3107	科尔沁中奶豆腐		块	189	牧区纯坊门店	50	0.00	2026-07-25 08:56:39.471174	1
+403	3117	车载香片	SP2605252385	张	189	牧区纯坊门店	30	0.00	2026-08-09 06:24:31.984242	1
+424	3125	细奶条/原味/乌日汗		袋	189	牧区纯坊门店	15	0.00	2026-08-08 03:24:08.085618	1
 417	888	河套奶粉	SP0000147	盒	189	牧区纯坊门店	4	0.00	2026-05-30 10:44:18.668848	1
 418	887	羊乳奶粉/奶茶专用	SP0000148	盒	189	牧区纯坊门店	4	0.00	2026-05-30 10:44:18.675567	1
 419	3092	干噎酸奶		斤	189	牧区纯坊门店	3	0.00	2026-05-30 11:19:58.899802	1
 420	967	查嘎/乳清	SP0000067	桶	189	牧区纯坊门店	5	0.00	2026-05-30 11:22:36.894611	1
 421	3124	彩色奶圈圈/袋装/果味奶渣		袋	189	牧区纯坊门店	5	0.00	2026-05-30 11:33:09.69073	1
 423	813	奶豆腐/超大/乌日汗	SP0000223	张	189	牧区纯坊门店	9	0.00	2026-05-30 11:33:09.708021	1
-424	3125	细奶条/原味/乌日汗		袋	189	牧区纯坊门店	5	0.00	2026-05-30 11:33:09.733362	1
 425	3129	专标签/亚克力/奶锅巴		张	189	牧区纯坊门店	500	0.00	2026-06-07 07:32:57.973333	1
 431	933	透明成品/奶条/原味/线下		盒	1		77	0.00	2026-06-13 08:34:16.036572	1
-438	989	蒙古黄油/瓶装成品		瓶	1		10	0.00	2026-07-21 02:55:52.241132	1
+438	989	蒙古黄油/瓶装成品			1		8	0.00	2026-08-23 03:16:29.772791	1
 422	808	彩色奶圈圈/透明桶装	SP0000228	盒	189	牧区纯坊门店	15	0.00	2026-06-07 14:06:34.929081	1
 443	828	中等/奶豆腐/	SP0000208	张	189	牧区纯坊门店	5	0.00	2026-06-07 14:28:51.449462	1
-464	877	憨野/奶锅巴/			1	默认仓库	944	0.00	2026-07-19 14:43:51.244334	1
+456	3177	蒙古国饮料			1	默认仓库	970	0.00	2026-08-01 04:00:13.988101	1
 441	996	青砖奶茶成品	SP0000038	盒	1		2388	0.00	2026-06-09 14:59:10.395154	1
 269	3089	有机黄小米2㎏		箱	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
 429	934	透明成品/奶皮千层/线下		盒	1		973	0.00	2026-06-20 06:09:27.475223	1
 444	3128	专袋/冻炒米/真空袋		张	189	牧区纯坊门店	48000	0.00	2026-06-08 04:30:03.124345	1
-439	1008	甜味奶条成品		袋	1		939	0.00	2026-07-19 14:29:27.498928	1
+390	992	牧区奶豆腐/盒装/成品			1		1693	0.00	2026-08-23 03:16:29.759646	1
 294	930	加沙奶豆腐	SP0000105		1	默认仓库	951	0.00	2026-06-20 06:09:27.475223	1
 266	3086	布袋小米2.5㎏		袋	1	默认仓库	963	0.00	2026-06-20 06:09:27.475223	1
 442	976	暂用/茶 新旧更替	SP0000058	盒	1		952	0.00	2026-06-20 06:09:27.475223	1
@@ -17630,20 +18828,17 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 455	839	奶皮子粉		袋	1	默认仓库	969	0.00	2026-06-20 06:09:27.475223	1
 447	983	甜味/标签/不干胶/传统奶豆腐		张	1		525	0.00	2026-06-09 08:25:39.298489	1
 446	1021	标签/不干胶/品牌传统奶豆腐		张	1		487	0.00	2026-06-09 08:25:41.220553	1
-456	3177	蒙古国饮料		瓶	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
-427	849	15元组合糖			1		974	0.00	2026-06-22 12:55:06.848805	1
+427	849	15元组合糖			1		971	0.00	2026-08-23 03:16:29.791359	1
 457	887	羊乳奶粉/奶茶专用		盒	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
 459	837	甜味奶豆腐块儿/大		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
 471	967	查嘎/乳清			1	默认仓库	983	0.00	2026-07-16 11:19:27.312464	1
-432	936	透明成品/奶条/甜味/线下			1		58	0.00	2026-06-14 10:03:31.85478	1
 460	858	糖葫芦		盒	1	默认仓库	984	0.00	2026-06-20 06:09:27.475223	1
 461	819	红日桶装酒		桶	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
 426	835	奶果子/小包装/成品 1500.0g			1		133	0.00	2026-06-14 10:18:28.466335	1
-462	817	乌日汗小瓶酸奶		瓶	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 440	1007	原味奶条成品		袋	1		86	0.00	2026-06-14 13:17:14.999106	1
-463	826	乌日汗酸奶		盒	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
-416	3118	烤奶花		斤	189	牧区纯坊门店	32	0.00	2026-06-22 03:43:27.54436	1
-474	929	白砂糖			1	默认仓库	954	0.00	2026-07-20 05:11:18.848113	1
+445	994	冻炒米成品盒	SP0000040		1		927	0.00	2026-08-23 03:16:29.806039	1
+295	931	炒米粉/aag	SP0000104		1	默认仓库	956	0.00	2026-08-08 03:17:30.493446	1
+432	936	透明成品/奶条/甜味/线下		盒	1		33	0.00	2026-08-09 15:01:10.2274	1
 434	938	透明成品/鲜奶酪/甜味/线下		盒	1		102	0.00	2026-06-17 08:05:54.267327	1
 435	941	透明成品/鲜奶酪/原味/线下		盒	1		69	0.00	2026-06-17 08:05:54.278325	1
 465	911	蓝旗绿乳糖果仁酥		袋	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
@@ -17657,9 +18852,13 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 470	971	甜味/散称/奶豆腐块儿		斤	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 472	870	大青砖茶砖		个	1	默认仓库	952	0.00	2026-06-20 06:09:27.475223	1
 473	3160	牧区纯坊 无糖饼干500克/盒		盒	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
-390	992	牧区奶豆腐/盒装/成品		盒	1		1768	0.00	2026-07-21 02:55:52.24691	1
-430	935	透明成品/奶皮卷/线下			1		63	0.00	2026-07-22 14:19:53.512586	1
-445	994	冻炒米成品盒	SP0000040	盒	1		1010	0.00	2026-07-21 02:55:52.235165	1
+474	929	白砂糖			1	默认仓库	952	0.00	2026-08-18 13:59:38.273499	1
+430	935	透明成品/奶皮卷/线下			1		61	0.00	2026-08-23 11:37:19.755265	1
+464	877	憨野/奶锅巴/		盒	1	默认仓库	889	0.00	2026-08-09 12:41:49.097901	1
+462	817	乌日汗小瓶酸奶			1	默认仓库	997	0.00	2026-08-10 12:13:49.267623	1
+416	3118	烤奶花		斤	189	牧区纯坊门店	70	0.00	2026-08-17 05:11:41.453865	1
+463	826	乌日汗酸奶/中			1	默认仓库	985	0.00	2026-08-10 12:13:49.27385	1
+439	1008	甜味奶条成品			1		890	0.00	2026-08-23 03:16:29.765962	1
 475	910	蓝旗绿乳糖奶香酥		袋	1	默认仓库	970	0.00	2026-06-20 06:09:27.475223	1
 476	919	黄油/斤		瓶	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
 477	3170	赛汗塔拉手工制作奶豆腐原味约400g/块		块	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
@@ -17672,7 +18871,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 486	876	憨野/奶条		盒	1	默认仓库	951	0.00	2026-06-20 06:09:27.475223	1
 487	3162	牧区纯坊 纯手工奶豆腐1000g原味350克/块		块	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 488	3146	牧区纯坊 纯手工熬制黄油250克/瓶		瓶	1	默认仓库	952	0.00	2026-06-20 06:09:27.475223	1
-489	3097	明信片/风景版		盒	1	默认仓库	973	0.00	2026-06-20 06:09:27.475223	1
 490	3149	牧区纯坊 青砖茶 380克/块		个	1	默认仓库	978	0.00	2026-06-20 06:09:27.475223	1
 491	815	酸马奶		瓶	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
 492	3175	牧区纯坊 纯手工饺子 豆角羊肉馅儿500克/袋		袋	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
@@ -17684,11 +18882,8 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 498	842	努德勒沁调和茶		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
 499	3140	牧区纯坊 纯手工月饼 奶豆腐馅儿350克/一袋		袋	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
 500	3081	奶豆腐块		块	1	默认仓库	973	0.00	2026-06-20 06:09:27.475223	1
-501	3127	冻炒米成品/散装/小袋装		斤	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
 502	824	黄油/散装/纯净		斤	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
 503	3137	牧区纯坊 纯手工奶豆微甜500克/块		块	1	默认仓库	971	0.00	2026-06-20 06:09:27.475223	1
-504	3093	烤奶花（小桶）		桶	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
-505	3123	 蒙古国糖果		瓶	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 506	3147	牧区纯坊 小米原浆 40度 清香型 500ml/瓶		瓶	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 507	3109	奶派/坚果/芒果/樱桃		斤	1	默认仓库	953	0.00	2026-06-20 06:09:27.475223	1
 508	913	蓝旗绿乳糖黄油球		袋	1	默认仓库	986	0.00	2026-06-20 06:09:27.475223	1
@@ -17707,12 +18902,9 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 524	866	酸奶/纯净		瓶	1	默认仓库	986	0.00	2026-06-20 06:09:27.475223	1
 525	3139	蒙古青砖奶茶豪华套餐450克/杯		个	1	默认仓库	982	0.00	2026-06-20 06:09:27.475223	1
 526	823	黄油/中瓶		瓶	1	默认仓库	962	0.00	2026-06-20 06:09:27.475223	1
-527	822	黄油/大瓶/科尔沁		瓶	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 528	1025	定制款/专内袋/扎那家奶果子		张	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 529	3144	牧区纯坊 泰象苏打水352ml/瓶		瓶	1	默认仓库	977	0.00	2026-06-20 06:09:27.475223	1
 530	3153	牧区纯乳清冷饮450克/杯		个	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
-531	3119	烤奶花/大桶装		桶	1	默认仓库	957	0.00	2026-06-20 06:09:27.475223	1
-532	884	实惠/奶豆腐		个	1	默认仓库	974	0.00	2026-06-20 06:09:27.475223	1
 534	3163	牧区纯坊 牧区奶糖 酸奶味 250克		袋	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
 535	3164	牧区纯坊 纯手工月饼 黄油渣馅350g/一袋		袋	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 537	909	蓝旗绿乳糖惠虹糖		袋	1	默认仓库	975	0.00	2026-06-20 06:09:27.475223	1
@@ -17720,15 +18912,21 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 540	3090	手工棒棒糖		斤	1	默认仓库	989	0.00	2026-06-20 06:09:27.475223	1
 541	808	彩色奶圈圈/透明桶装		盒	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 542	892	那牧尔酸奶		瓶	1	默认仓库	978	0.00	2026-06-20 06:09:27.475223	1
-543	856	科尔沁/大奶豆腐		张	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 616	834	新年福字袋/小		袋	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
-520	829	奶豆腐/原味/中/科尔沁		张	1	默认仓库	981	0.00	2026-07-08 08:41:01.130831	1
-479	879	干肉奶茶			1	默认仓库	975	0.00	2026-06-30 15:52:39.418103	1
+531	3119	烤奶花/大桶装			1	默认仓库	945	0.00	2026-08-23 03:16:29.779454	1
+489	3097	明信片/风景版			1	默认仓库	957	0.00	2026-08-23 03:16:29.785468	1
 478	888	河套奶粉			1	默认仓库	964	0.00	2026-07-01 08:07:56.626461	1
-533	3098	大奶豆腐/科尔沁			1	默认仓库	986	0.00	2026-07-23 13:14:39.992387	1
+543	856	科尔沁/大奶豆腐			1	默认仓库	991	0.00	2026-08-08 03:19:04.642847	1
 536	906	真空奶豆腐砖/原味			1	默认仓库	990	0.00	2026-07-08 08:39:33.385647	1
 517	3126	120克透明/奶条			1	默认仓库	990	0.00	2026-07-19 14:43:51.229419	1
-519	980	新/青砖奶茶		盒	1	默认仓库	926	0.00	2026-07-21 02:55:52.219149	1
+533	3098	大奶豆腐/科尔沁			1	默认仓库	984	0.00	2026-08-04 05:29:51.605197	1
+479	879	干肉奶茶			1	默认仓库	971	0.00	2026-07-31 04:26:04.019291	1
+505	3123	 蒙古国糖果			1	默认仓库	960	0.00	2026-08-03 08:56:52.414998	1
+501	3127	冻炒米成品/散装/小袋装		斤	1	默认仓库	964	0.00	2026-08-09 07:09:43.912243	1
+532	884	实惠/奶豆腐			1	默认仓库	971	0.00	2026-08-17 14:05:13.210413	1
+519	980	新/青砖奶茶			1	默认仓库	807	0.00	2026-08-23 03:16:29.743032	1
+527	822	黄油/大瓶/科尔沁			1	默认仓库	984	0.00	2026-08-10 12:13:49.28491	1
+520	829	奶豆腐/原味/中/科尔沁		张	1	默认仓库	986	0.00	2026-08-22 02:47:40.406125	1
 544	3171	牧区纯坊 奶皮子有点卷青果味180克/一盒		盒	1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 546	1011	茶包		小包	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
 547	1006	顺丰快递费		盒	1	默认仓库	950	0.00	2026-06-20 06:09:27.475223	1
@@ -17747,7 +18945,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 563	985	甜味传统奶豆腐/袋装成品		袋	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
 564	810	乌日莫/奥特尔		散	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 565	977	新茶包人工费		盒	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
-567	811	蒙古果子/格日勒		袋	1	默认仓库	959	0.00	2026-06-20 06:09:27.475223	1
 569	814	奥都/真空奶豆腐		袋	1	默认仓库	969	0.00	2026-06-20 06:09:27.475223	1
 571	1002	封口机/真空		台	1	默认仓库	965	0.00	2026-06-20 06:09:27.475223	1
 573	3138	牧区纯坊 香酥奶皮子锅巴120克/一盒		盒	1	默认仓库	979	0.00	2026-06-20 06:09:27.475223	1
@@ -17773,7 +18970,6 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 594	847	乌日莫/袋装		袋	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
 595	903	盛宇燃奶豆腐/甜味		袋	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 597	897	早餐包/那牧尔		袋	1	默认仓库	998	0.00	2026-06-20 06:09:27.475223	1
-598	3118	烤奶花		斤	1	默认仓库	995	0.00	2026-06-20 06:09:27.475223	1
 599	973	精品/奶豆腐块儿/甜味/		袋	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 600	3113	明信片/带种子			1	默认仓库	990	0.00	2026-06-20 06:09:27.475223	1
 601	812	花形奶锅巴		散	1	默认仓库	972	0.00	2026-06-20 06:09:27.475223	1
@@ -17790,22 +18986,23 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 615	806	德吉酸奶/半斤		瓶	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 561	865	牛肉干/和希格图			1	默认仓库	984	0.00	2026-06-30 15:52:39.42783	1
 568	809	10斤装/小米/绿色纸盒			1	默认仓库	970	0.00	2026-06-22 11:59:17.136005	1
-572	926	大奶豆腐砖/1.2斤			1	默认仓库	973	0.00	2026-07-08 08:39:33.402574	1
-557	3104	牧区酸奶/大		瓶	1	默认仓库	946	0.00	2026-07-12 06:01:21.809048	1
+572	926	大奶豆腐砖/1.2斤			1	默认仓库	963	0.00	2026-08-12 08:39:25.915988	1
+570	908	哈斯乌拉牛肉干500g原味			1	默认仓库	991	0.00	2026-08-18 03:57:34.371435	1
 545	896	奶皮月饼			1	默认仓库	954	0.00	2026-07-05 02:39:45.997583	1
-549	827	透明成品/奶锅巴/线下		盒	1	默认仓库	943	0.00	2026-07-19 14:29:27.477223	1
+557	3104	牧区酸奶/大			1	默认仓库	945	0.00	2026-08-21 12:28:42.799692	1
 596	905	真空奶豆腐砖/甜味			1	默认仓库	989	0.00	2026-07-20 07:10:52.288104	1
 566	3125	细奶条/原味/乌日汗			1	默认仓库	970	0.00	2026-07-22 14:21:18.459184	1
 608	3117	车载香片			1	默认仓库	965	0.00	2026-07-21 04:41:08.783525	1
-602	3107	科尔沁中奶豆腐			1	默认仓库	957	0.00	2026-07-22 06:07:46.261741	1
-570	908	哈斯乌拉牛肉干500g原味			1	默认仓库	994	0.00	2026-07-22 14:21:59.671789	1
+602	3107	科尔沁中奶豆腐			1	默认仓库	947	0.00	2026-08-13 02:34:00.064914	1
+567	811	蒙古果子/格日勒			1	默认仓库	955	0.00	2026-08-08 03:14:58.477072	1
 612	907	风干牛肉500g大片			1	默认仓库	988	0.00	2026-07-22 14:21:59.6795	1
+598	3118	烤奶花		斤	1	默认仓库	994	0.00	2026-08-09 07:15:31.393366	1
+549	827	透明成品/奶锅巴/线下			1	默认仓库	912	0.00	2026-08-23 03:16:29.798527	1
 617	831	果条/阿润		袋	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
 619	813	奶豆腐/超大/乌日汗		张	1	默认仓库	966	0.00	2026-06-20 06:09:27.475223	1
 620	3080	_TEST_IMPORT_DELETE_ME			1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 621	3166	红糖枸杞红枣奶茶450克/杯		个	1	默认仓库	958	0.00	2026-06-20 06:09:27.475223	1
 622	820	天山原浆/小		瓶	1	默认仓库	988	0.00	2026-06-20 06:09:27.475223	1
-624	868	16g青砖袋泡茶		袋	1	默认仓库	961	0.00	2026-06-20 06:09:27.475223	1
 625	3099	饺子		斤	1	默认仓库	955	0.00	2026-06-20 06:09:27.475223	1
 626	947	展示用卡牌		张	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
 627	3155	牧区纯坊 纯手工奶豆腐微甜350克/块		块	1	默认仓库	964	0.00	2026-06-20 06:09:27.475223	1
@@ -17824,39 +19021,65 @@ COPY public.stock_inventory (id, goods_id, goods_name, goods_code, unit_name, wa
 642	3169	牧区纯坊 散装原味香瓜子500克/袋		袋	1	默认仓库	958	0.00	2026-06-20 06:09:27.475223	1
 644	851	晴王糖葫芦		盒	1	默认仓库	981	0.00	2026-06-20 06:09:27.475223	1
 646	893	奶豆腐月饼		小包	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
-647	871	小青砖茶砖		个	1	默认仓库	997	0.00	2026-06-20 06:09:27.475223	1
 652	805	德吉酸奶/一斤装		瓶	1	默认仓库	985	0.00	2026-06-20 06:09:27.475223	1
 653	3094	科尔沁糖（酸奶/嚼口/乌日末		斤	1	默认仓库	983	0.00	2026-06-20 06:09:27.475223	1
 654	3159	牧区纯坊 纯手工月饼 五仁馅350克/一袋		袋	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 655	3172	牧区纯手工乌日莫（奶嚼口）原味500克		袋	1	默认仓库	991	0.00	2026-06-20 06:09:27.475223	1
 657	925	小/无印花/奶豆腐砖/1斤		个	1	默认仓库	993	0.00	2026-06-20 06:09:27.475223	1
 658	869	青砖碎茶		袋	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
-659	3103	牧区酸奶小		瓶	1	默认仓库	992	0.00	2026-06-20 06:09:27.475223	1
 661	864	礼盒/腰封		张	1	默认仓库	967	0.00	2026-06-20 06:09:27.475223	1
 663	899	纯净/黄油/斤		瓶	1	默认仓库	968	0.00	2026-06-20 06:09:27.475223	1
 664	3091	牛肉干/散称		斤	1	默认仓库	989	0.00	2026-06-20 06:09:27.475223	1
 665	3145	牧区纯坊 奶皮子有点卷草莓味180克/一盒		盒	1	默认仓库	951	0.00	2026-06-20 06:09:27.475223	1
 667	3108	品牌套装礼盒		套	1	默认仓库	954	0.00	2026-06-20 06:09:27.475223	1
 669	912	蓝旗绿乳糖水果		袋	1	默认仓库	987	0.00	2026-06-20 06:09:27.475223	1
-670	3085	小米锅巴110g		桶	189	牧区纯坊门店	200	0.00	2026-06-22 07:32:29.527268	1
+650	3120	科尔沁袋装/——奶豆腐条/片/			1	默认仓库	974	0.00	2026-07-26 12:40:02.192915	1
 586	830	小米/10斤/小袋/红嘴/阿旗			1	默认仓库	969	0.00	2026-06-22 10:17:37.904333	1
 662	825	故乡宝酸马奶			1	默认仓库	952	0.00	2026-06-22 10:42:24.501256	1
 656	880	阿润月饼/五仁馅			1	默认仓库	972	0.00	2026-07-19 14:01:28.188015	1
 539	924	冻炒米/袋装			1	默认仓库	957	0.00	2026-06-22 12:27:14.132537	1
+618	3178	佳赫蛋糕			1	默认仓库	978	0.00	2026-07-26 13:56:58.017849	1
 643	915	黄油渣/盒			1	默认仓库	967	0.00	2026-06-26 12:44:34.027042	1
 632	882	阿润月饼/黄油渣馅			1	默认仓库	970	0.00	2026-07-19 14:03:21.547779	1
 660	966	查嘎粉/小包装袋			1	默认仓库	970	0.00	2026-07-01 04:11:46.142992	1
 649	881	阿润月饼/奶皮子馅			1	默认仓库	968	0.00	2026-07-19 14:03:21.557099	1
-666	885	冻炒米/散装 500.0g			1	默认仓库	979	0.00	2026-07-03 02:17:01.110963	1
+659	3103	牧区酸奶小			1	默认仓库	991	0.00	2026-08-23 11:37:19.773394	1
 629	895	黄油渣月饼			1	默认仓库	981	0.00	2026-07-05 02:39:46.015253	1
-651	883	阿润月饼/奶豆腐馅			1	默认仓库	957	0.00	2026-07-19 14:03:21.565594	1
-668	969	小/奶皮			1	默认仓库	952	0.00	2026-07-10 12:23:24.372286	1
+624	868	16g青砖袋泡茶			1	默认仓库	959	0.00	2026-07-26 13:56:58.028872	1
+645	3095	牧区黄油小瓶			1	默认仓库	958	0.00	2026-08-17 13:28:46.858189	1
 623	894	酸奶月饼			1	默认仓库	989	0.00	2026-07-12 12:01:44.854561	1
 648	3096	牧区黄油大瓶			1	默认仓库	992	0.00	2026-07-15 02:06:55.007235	1
-650	3120	科尔沁袋装/——奶豆腐条/片/			1	默认仓库	975	0.00	2026-07-19 04:13:36.925607	1
-618	3178	佳赫蛋糕			1	默认仓库	979	0.00	2026-07-19 14:03:21.573769	1
+677	3191	酥饼		袋	189	牧区纯坊门店	3	0.00	2026-07-27 15:00:16.109724	1
+672	3187	玉米棒蛋糕/面包		袋	189	牧区纯坊门店	6	0.00	2026-07-27 15:00:16.070459	1
+678	3195	河北黄庄月饼		袋	189	牧区纯坊门店	6	0.00	2026-07-27 15:00:16.116916	1
 671	3185	憨野 黄油/50克		瓶	189	牧区纯坊门店	1224	0.00	2026-07-19 14:36:56.615719	1
-645	3095	牧区黄油小瓶			1	默认仓库	959	0.00	2026-07-24 09:20:17.752909	1
+668	969	小/奶皮			1	默认仓库	948	0.00	2026-08-17 14:05:13.20429	1
+651	883	阿润月饼/奶豆腐馅			1	默认仓库	956	0.00	2026-07-25 04:50:45.865243	1
+673	3188	奶制品月饼		袋	189	牧区纯坊门店	6	0.00	2026-07-27 15:00:16.082664	1
+674	3189	蒙古细果条		袋	189	牧区纯坊门店	5	0.00	2026-07-27 15:00:16.089726	1
+675	3190	软方饼		袋	189	牧区纯坊门店	4	0.00	2026-07-27 15:00:16.096643	1
+676	3192	蒙古大果条		袋	189	牧区纯坊门店	4	0.00	2026-07-27 15:00:16.103057	1
+679	3194	吐司面包		袋	189	牧区纯坊门店	3	0.00	2026-07-27 15:00:16.123518	1
+680	810	乌日莫/奥特尔	SP0000226	散	189	牧区纯坊门店	10	0.00	2026-07-31 05:41:56.552337	1
+647	871	小青砖茶砖			1	默认仓库	996	0.00	2026-08-04 06:10:19.714224	1
+670	3085	小米锅巴110g		桶	189	牧区纯坊门店	200	0.00	2026-08-03 09:16:53.026516	1
+666	885	冻炒米/散装		斤	1	默认仓库	978	0.00	2026-08-09 07:15:31.379382	1
+681	816	乌日汗大瓶酸奶	SP0000220	瓶	189	牧区纯坊门店	4	0.00	2026-08-08 03:24:08.092508	1
+682	3197	新茶包/盐底纸		张	189	牧区纯坊门店	2000	0.00	2026-08-08 04:13:12.420146	1
+683	3184	阿旗冰箱贴		个	189	牧区纯坊门店	18	0.00	2026-08-09 06:24:31.951291	1
+684	3199	佑系帆布包		个	189	牧区纯坊门店	1	0.00	2026-08-09 06:24:31.959037	1
+685	3200	包你百顺帆布包		个	189	牧区纯坊门店	1	0.00	2026-08-09 06:24:31.966094	1
+686	3198	宝山备马帆布包		个	189	牧区纯坊门店	2	0.00	2026-08-09 06:24:31.976068	1
+687	3201	阳光种植/桶装		个	189	牧区纯坊门店	2	0.00	2026-08-09 06:24:31.991427	1
+688	3202	种个惊喜		个	189	牧区纯坊门店	4	0.00	2026-08-09 06:24:32.004309	1
+689	3203	小草娃娃		个	189	牧区纯坊门店	7	0.00	2026-08-09 06:24:32.010288	1
+690	3204	蒙草明信片套装		个	189	牧区纯坊门店	2	0.00	2026-08-09 06:24:32.017866	1
+691	3205	书签/可种植		个	189	牧区纯坊门店	8	0.00	2026-08-09 06:24:32.024691	1
+692	3183	阿旗礼袋蒙文		张	189	牧区纯坊门店	100	0.00	2026-08-09 06:24:32.031939	1
+504	3093	烤奶花（小桶）		桶	1	默认仓库	957	0.00	2026-08-09 15:01:10.194939	1
+332	880	阿润月饼/五仁馅	SP0000155	袋	189	牧区纯坊门店	20	0.00	2026-08-12 09:08:07.299689	1
+694	994	冻炒米成品盒	SP0000040	盒	189	牧区纯坊门店	100	0.00	2026-08-17 05:08:18.351825	1
+693	926	大奶豆腐砖/1.2斤	SP0000109	个	189	牧区纯坊门店	0	0.00	2026-08-22 03:55:47.769359	1
 \.
 
 
@@ -18899,6 +20122,73 @@ COPY public.stock_other_out (id, order_no, warehouse_id, warehouse_name, goods_i
 1145	CK202607238949	1		[{"num": 1, "goods_id": 3098, "goods_name": "大奶豆腐/科尔沁"}]	零售出库#1584	1	2026-07-23 13:14:39.483302	1
 1146	CK202607245260	1		[{"num": 1.2568, "goods_id": 885, "goods_name": "冻炒米/散装 628.4g"}, {"num": 0.6494, "goods_id": 1014, "goods_name": "散装/甜味奶条 324.7g"}, {"num": 0.1674, "goods_id": 3088, "goods_name": "黑芝麻丸5㎏ 83.7g"}, {"num": 3, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 1, "goods_id": 905, "goods_name": "真空奶豆腐砖/甜味"}, {"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}]	零售出库#1585	0	2026-07-24 02:35:10.233319	1
 1147	CK202607241409	1		[{"num": 5.2143, "goods_id": 901, "goods_name": "手工白花炒米/散装 2607.1g"}, {"num": 1, "goods_id": 3095, "goods_name": "牧区黄油小瓶"}]	零售出库#1586	1	2026-07-24 09:20:16.98728	1
+1148	CK202607259047	1		[{"num": 1, "goods_id": 883, "goods_name": "阿润月饼/奶豆腐馅"}, {"num": 0.3333, "goods_id": 1014, "goods_name": "散装/甜味奶条 166.7g"}, {"num": 0.0667, "goods_id": 3090, "goods_name": "手工棒棒糖 33.3g"}]	零售出库#1587	0	2026-07-25 04:50:45.370425	1
+1149	CK202607253892	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}, {"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 3183, "goods_name": "阿旗礼袋蒙文"}]	零售出库#1588	1	2026-07-25 04:51:39.075138	1
+1150	CK202607266109	1		[{"num": 1.144, "goods_id": 885, "goods_name": "冻炒米/散装 572.0g"}, {"num": 0.68, "goods_id": 921, "goods_name": "嚼口脆炒米糖/散装 340.0g"}, {"num": 0.5667, "goods_id": 1014, "goods_name": "散装/甜味奶条 283.3g"}, {"num": 1, "goods_id": 857, "goods_name": "厚奶皮"}]	零售出库#1589	0	2026-07-26 12:39:24.529603	1
+1151	CK202607266618	1		[{"num": 1, "goods_id": 3120, "goods_name": "科尔沁袋装/——奶豆腐条/片/"}, {"num": 1, "goods_id": 901, "goods_name": "手工白花炒米/散装 500.0g"}]	零售出库#1590	1	2026-07-26 12:40:01.381879	1
+1152	CK202607269778	1		[{"num": 1, "goods_id": 811, "goods_name": "蒙古果子/格日勒"}, {"num": 1, "goods_id": 3085, "goods_name": "小米锅巴110g"}, {"num": 1, "goods_id": 3178, "goods_name": "佳赫蛋糕"}, {"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}, {"num": 0.5, "goods_id": 1014, "goods_name": "散装/甜味奶条 250.0g"}, {"num": 2, "goods_id": 868, "goods_name": "16g青砖袋泡茶"}]	零售出库#1591	1	2026-07-26 13:56:57.468119	1
+1153	CK202607276080	1		[{"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1592	1	2026-07-27 03:33:24.731076	1
+1154	CK202607276652	1		[{"num": 5, "goods_id": 901, "goods_name": "手工白花炒米/散装 2500.0g"}, {"num": 1, "goods_id": 811, "goods_name": "蒙古果子/格日勒"}]	零售出库#1593	1	2026-07-27 03:34:31.838789	1
+1155	CK202607274326	1		[{"num": 6, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 6.001, "goods_id": 3184, "goods_name": "阿旗冰箱贴"}, {"num": 12, "goods_id": 3097, "goods_name": "明信片/风景版"}, {"num": 6, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 6, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}, {"num": 6, "goods_id": 3183, "goods_name": "阿旗礼袋蒙文"}]	零售出库#1594	1	2026-07-27 03:37:49.118961	1
+1156	CK202607277670	1		[{"num": 1.2, "goods_id": 920, "goods_name": "手工乌日末液体 600.0g"}, {"num": 1, "goods_id": 1014, "goods_name": "散装/甜味奶条 500.0g"}]	零售出库#1595	1	2026-07-27 14:41:31.255193	1
+1157	CK202607284694	1		[{"num": 1, "goods_id": 3187, "goods_name": "玉米棒蛋糕/面包"}, {"num": 1, "goods_id": 3194, "goods_name": "吐司面包"}, {"num": 1, "goods_id": 3085, "goods_name": "小米锅巴110g"}]	零售出库#1596	1	2026-07-28 01:07:19.515145	1
+1158	CK202607317053	1		[{"num": 1, "goods_id": 929, "goods_name": "白砂糖"}]	零售出库#1597	1	2026-07-31 04:25:36.601379	1
+1159	CK202607313164	1		[{"num": 4, "goods_id": 879, "goods_name": "干肉奶茶"}]	零售出库#1598	1	2026-07-31 04:26:03.870424	1
+1160	CK202607312048	1		[{"num": 1, "goods_id": 968, "goods_name": "大/奶皮"}, {"num": 1, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}, {"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}]	零售出库#1599	1	2026-07-31 04:26:55.46276	1
+1161	CK202608013263	1		[{"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}]	零售出库#1600	1	2026-08-01 03:58:11.547462	1
+1162	CK202608015159	1		[{"num": 3, "goods_id": 877, "goods_name": "憨野/奶锅巴/"}]	零售出库#1601	1	2026-08-01 03:59:31.466332	1
+1163	CK202608012810	1		[{"num": 4, "goods_id": 3177, "goods_name": "蒙古国饮料"}]	零售出库#1602	1	2026-08-01 04:00:13.317235	1
+1164	CK202608018103	1		[{"num": 1.3333, "goods_id": 923, "goods_name": "海丰炒米/散装/硬口/ 666.7g"}, {"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1603	1	2026-08-01 09:53:29.08299	1
+1165	CK202608019471	1		[{"num": 0.86, "goods_id": 981, "goods_name": "烤奶皮 430.0g"}]	零售出库#1604	1	2026-08-01 11:54:32.67801	1
+1166	CK202608016146	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1605	1	2026-08-01 11:54:42.331123	1
+1167	CK202608023977	1		[{"num": 2.8933, "goods_id": 923, "goods_name": "海丰炒米/散装/硬口/ 1446.7g"}]	零售出库#1606	1	2026-08-02 04:39:48.992011	1
+1168	CK202608028880	1		[{"num": 0.8571, "goods_id": 901, "goods_name": "手工白花炒米/散装 428.6g"}, {"num": 0.8, "goods_id": 920, "goods_name": "手工乌日末液体 400.0g"}]	零售出库#1607	1	2026-08-02 12:19:10.227443	1
+1169	CK202608033417	1		[{"num": 1, "goods_id": 3194, "goods_name": "吐司面包"}, {"num": 1, "goods_id": 3123, "goods_name": " 蒙古国糖果"}, {"num": 0.1714, "goods_id": 3110, "goods_name": "樱桃味/干噎酸奶/散 85.7g"}]	零售出库#1610	0	2026-08-03 08:56:51.409285	1
+1175	CK202608038723	1		[{"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}]	零售出库#1613	1	2026-08-03 10:40:08.044486	1
+1171	CK202608037541	1		[{"num": 1, "goods_id": 811, "goods_name": "蒙古果子/格日勒"}]	Retail Sale Out#1611	1	2026-08-03 09:46:05.870389	1
+1172	CK202608039547	1		[{"num": 10, "goods_id": 1027, "goods_name": "真空袋"}]	Retail Sale Out#1609	1	2026-08-03 09:46:23.541301	1
+1173	CK202608037048	1		[{"num": 1, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}]	Retail Sale Out#1608	1	2026-08-03 09:46:32.80293	1
+1174	CK202608034951	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}]	零售出库#1612	1	2026-08-03 09:52:34.138954	1
+1176	CK202608041799	1		[{"num": 1, "goods_id": 1018, "goods_name": "礼盒/蓝界"}, {"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 2, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 1, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 1, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}, {"num": 2, "goods_id": 3097, "goods_name": "明信片/风景版"}, {"num": 2, "goods_id": 3098, "goods_name": "大奶豆腐/科尔沁"}, {"num": 0.8, "goods_id": 3094, "goods_name": "科尔沁糖（酸奶/嚼口/乌日末 400.0g"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}]	零售出库#1614	0	2026-08-04 05:29:50.652207	1
+1177	CK202608041021	1		[{"num": 1, "goods_id": 871, "goods_name": "小青砖茶砖"}]	零售出库#1615	1	2026-08-04 06:10:19.253204	1
+1178	CK202608051803	1		[{"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 857, "goods_name": "厚奶皮"}, {"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}]	零售出库#1616	1	2026-08-05 05:30:20.772705	1
+1179	CK202608081558	1		[{"num": 1, "goods_id": 908, "goods_name": "哈斯乌拉牛肉干500g原味"}]	零售出库#1617	1	2026-08-08 03:11:18.37584	1
+1180	CK202608081414	1		[{"num": 4, "goods_id": 920, "goods_name": "手工乌日末液体 2000.0g"}]	零售出库#1618	1	2026-08-08 03:12:16.474653	1
+1181	CK202608083432	1		[{"num": 1, "goods_id": 811, "goods_name": "蒙古果子/格日勒"}]	零售出库#1619	1	2026-08-08 03:14:57.927137	1
+1182	CK202608089150	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1, "goods_id": 931, "goods_name": "炒米粉/aag"}]	零售出库#1620	1	2026-08-08 03:17:29.975575	1
+1183	CK202608084875	1		[{"num": 1, "goods_id": 889, "goods_name": "奶皮卷/科尔沁"}]	零售出库#1621	1	2026-08-08 03:17:45.868882	1
+1184	CK202608083589	1		[{"num": 1.2, "goods_id": 920, "goods_name": "手工乌日末液体 600.0g"}]	零售出库#1622	1	2026-08-08 03:18:10.11793	1
+1185	CK202608085163	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1623	1	2026-08-08 03:18:34.647751	1
+1186	CK202608084985	1		[{"num": 2, "goods_id": 856, "goods_name": "科尔沁/大奶豆腐"}]	零售出库#1624	1	2026-08-08 03:19:04.151718	1
+1187	CK202608088137	1		[{"num": 2, "goods_id": 849, "goods_name": "15元组合糖"}]	零售出库#1625	1	2026-08-08 15:07:51.973984	1
+1188	CK202608098504	1		[{"num": 3, "goods_id": 969, "goods_name": "小/奶皮"}]	零售出库#1626	1	2026-08-09 13:00:03.668152	1
+1189	CK202608097270	1		[{"num": 1.2, "goods_id": 920, "goods_name": "手工乌日末液体 600.0g"}]	零售出库#1627	1	2026-08-09 13:00:24.559725	1
+1190	CK202608109070	1		[{"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 884, "goods_name": "实惠/奶豆腐"}, {"num": 1, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}]	零售出库#1628	1	2026-08-10 07:28:47.384046	1
+1191	CK202608104342	1		[{"num": 1, "goods_id": 817, "goods_name": "乌日汗小瓶酸奶"}, {"num": 2, "goods_id": 826, "goods_name": "乌日汗酸奶/中"}, {"num": 1, "goods_id": 3085, "goods_name": "小米锅巴110g"}, {"num": 1, "goods_id": 822, "goods_name": "黄油/大瓶/科尔沁"}]	零售出库#1629	1	2026-08-10 12:13:48.863345	1
+1192	CK202608103206	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}]	零售出库#1630	1	2026-08-10 14:18:10.388977	1
+1193	CK202608113694	1		[{"num": 0.5, "goods_id": 981, "goods_name": "烤奶皮 250.0g"}, {"num": 0.5, "goods_id": 3118, "goods_name": "烤奶花 250.0g"}]	零售出库#1631	0	2026-08-11 02:29:38.125731	1
+1194	CK202608115852	1		[{"num": 1.11, "goods_id": 1014, "goods_name": "散装/甜味奶条 555.0g"}]	零售出库#1632	1	2026-08-11 15:21:04.310701	1
+1195	CK202608113136	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 1, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 1, "goods_id": 1018, "goods_name": "礼盒/蓝界"}, {"num": 1, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}, {"num": 1, "goods_id": 989, "goods_name": "蒙古黄油/瓶装成品"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 1, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}, {"num": 1, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}]	零售出库#1633	1	2026-08-11 15:26:24.30498	1
+1196	CK202608127118	1		[{"num": 2, "goods_id": 926, "goods_name": "大奶豆腐砖/1.2斤"}, {"num": 2, "goods_id": 920, "goods_name": "手工乌日末液体 1000.0g"}, {"num": 2, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}]	零售出库#1634	1	2026-08-12 08:39:25.659597	1
+1197	CK202608126284	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1635	1	2026-08-12 12:58:18.416984	1
+1198	CK202608137474	1		[{"num": 2, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1636	1	2026-08-13 02:19:12.311687	1
+1199	CK202608136043	1		[{"num": 0.472, "goods_id": 885, "goods_name": "冻炒米/散装 236.0g"}, {"num": 0.6733, "goods_id": 981, "goods_name": "烤奶皮 336.7g"}]	零售出库#1637	0	2026-08-13 02:20:16.059172	1
+1200	CK202608134278	1		[{"num": 1, "goods_id": 3107, "goods_name": "科尔沁中奶豆腐"}]	零售出库#1638	1	2026-08-13 02:33:59.336392	1
+1201	CK202608158633	1		[{"num": 1, "goods_id": 3206, "goods_name": "锡盟松格都格策格酸马奶"}]	零售出库#1639	1	2026-08-15 05:06:25.082867	1
+1202	CK202608177529	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}]	零售出库#1640	1	2026-08-17 04:36:06.778873	1
+1203	CK202608173381	1		[{"num": 0.7667, "goods_id": 1014, "goods_name": "散装/甜味奶条 383.3g"}]	零售出库#1641	1	2026-08-17 07:24:14.857141	1
+1204	CK202608171857	1		[{"num": 1, "goods_id": 3095, "goods_name": "牧区黄油小瓶"}]	零售出库#1642	1	2026-08-17 13:28:46.371188	1
+1205	CK202608177453	1		[{"num": 1, "goods_id": 969, "goods_name": "小/奶皮"}, {"num": 1, "goods_id": 884, "goods_name": "实惠/奶豆腐"}, {"num": 1, "goods_id": 3181, "goods_name": "牛奶浓"}]	零售出库#1643	1	2026-08-17 14:05:12.697479	1
+1206	CK202608181590	1		[{"num": 0.5078, "goods_id": 3091, "goods_name": "牛肉干/散称 253.9g"}, {"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 2, "goods_id": 985, "goods_name": "甜味传统奶豆腐/袋装成品"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 1, "goods_id": 3118, "goods_name": "烤奶花 500.0g"}, {"num": 1, "goods_id": 989, "goods_name": "蒙古黄油/瓶装成品"}, {"num": 1, "goods_id": 994, "goods_name": "冻炒米成品盒"}, {"num": 2, "goods_id": 3116, "goods_name": "酸马奶/蒙医院"}, {"num": 2, "goods_id": 811, "goods_name": "蒙古果子/格日勒"}]	零售出库#1644	0	2026-08-18 02:28:16.998652	1
+1207	CK202608183639	1		[{"num": 1, "goods_id": 1018, "goods_name": "礼盒/蓝界"}]	零售出库#1645	1	2026-08-18 02:28:34.601592	1
+1208	CK202608184964	1		[{"num": 2, "goods_id": 908, "goods_name": "哈斯乌拉牛肉干500g原味"}, {"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}]	零售出库#1646	1	2026-08-18 03:57:33.862108	1
+1209	CK202608188304	1		[{"num": 1, "goods_id": 935, "goods_name": "透明成品/奶皮卷/线下"}]	零售出库#1647	1	2026-08-18 03:57:47.568482	1
+1210	CK202608185249	1		[{"num": 1, "goods_id": 929, "goods_name": "白砂糖"}, {"num": 0.65, "goods_id": 920, "goods_name": "手工乌日末液体 325.0g"}]	零售出库#1648	1	2026-08-18 13:59:37.748304	1
+1211	CK202608214709	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 3104, "goods_name": "牧区酸奶/大"}]	零售出库#1649	1	2026-08-21 12:28:42.096615	1
+1212	CK202608229754	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 3085, "goods_name": "小米锅巴110g"}, {"num": 1, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}, {"num": 1, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}, {"num": 1, "goods_id": 3184, "goods_name": "阿旗冰箱贴"}]	零售出库#1650	1	2026-08-22 03:59:07.118742	1
+1213	CK202608231909	1		[{"num": 1, "goods_id": 980, "goods_name": "新/青砖奶茶"}, {"num": 1, "goods_id": 992, "goods_name": "牧区奶豆腐/盒装/成品"}, {"num": 1, "goods_id": 1008, "goods_name": "甜味奶条成品"}, {"num": 1, "goods_id": 989, "goods_name": "蒙古黄油/瓶装成品"}, {"num": 1, "goods_id": 3119, "goods_name": "烤奶花/大桶装"}, {"num": 2, "goods_id": 3097, "goods_name": "明信片/风景版"}, {"num": 1, "goods_id": 849, "goods_name": "15元组合糖"}, {"num": 1, "goods_id": 827, "goods_name": "透明成品/奶锅巴/线下"}, {"num": 1, "goods_id": 836, "goods_name": "礼盒/2026"}, {"num": 1, "goods_id": 994, "goods_name": "冻炒米成品盒"}]	零售出库#1651	1	2026-08-23 03:16:29.234139	1
+1214	CK202608235255	1		[{"num": 2, "goods_id": 901, "goods_name": "手工白花炒米/散装 1000.0g"}, {"num": 1, "goods_id": 920, "goods_name": "手工乌日末液体 500.0g"}, {"num": 1, "goods_id": 935, "goods_name": "透明成品/奶皮卷/线下"}, {"num": 1, "goods_id": 3103, "goods_name": "牧区酸奶小"}, {"num": 2, "goods_id": 3181, "goods_name": "牛奶浓"}]	零售出库#1652	1	2026-08-23 11:37:19.118555	1
+1215	CK202608236420	1		[{"num": 1, "goods_id": 901, "goods_name": "手工白花炒米/散装 500.0g"}]	零售出库#1653	1	2026-08-23 14:02:20.707567	1
 \.
 
 
@@ -18965,6 +20255,9 @@ COPY public.supplier (id, name, contact, mobile, email, address, bank, bank_acco
 139	阿斯娜								1	2026-05-25 11:49:47.888489	2026-05-25 11:49:47.888489	\N	1
 140	博盈商品								1	2026-05-29 10:56:03.793551	2026-05-29 10:56:03.793551	\N	1
 141	小米原浆厂								1	2026-06-07 14:07:57.833942	2026-06-07 14:07:57.833942	\N	1
+142	佳赫糕点								1	2026-07-27 14:44:22.224678	2026-07-27 14:44:22.224678	\N	1
+143	锡盟艾润萨利								1	2026-08-05 04:54:03.179353	2026-08-05 04:54:03.179353	\N	1
+144	旧苏木蒙古果子								1	2026-08-08 03:20:12.117564	2026-08-08 03:20:12.117564	\N	1
 \.
 
 
@@ -18982,6 +20275,8 @@ COPY public.sys_params (id, key, value, remark, shop_id) FROM stdin;
 
 COPY public.user_lottery (id, user_id, prize_name, prize_type, prize_value, sector_index, spin_date, created_at, use_points, points_spent) FROM stdin;
 1	3	5积分	points	5	1	2026-07-24	2026-07-24 07:19:06.136001	f	0
+2	4	¥5优惠券	coupon	5	2	2026-07-26	2026-07-26 12:53:29.996407	f	0
+3	8	谢谢参与	none	0	0	2026-07-29	2026-07-29 10:50:20.159682	f	0
 \.
 
 
@@ -18991,6 +20286,13 @@ COPY public.user_lottery (id, user_id, prize_name, prize_type, prize_value, sect
 
 COPY public.user_signin (id, user_id, signin_date, points_earned, streak, created_at) FROM stdin;
 1	3	2026-07-24	5	1	2026-07-24 07:08:58.875266
+2	5	2026-07-26	5	1	2026-07-26 11:56:49.248261
+3	7	2026-07-26	5	1	2026-07-26 12:14:55.200273
+4	4	2026-07-26	5	1	2026-07-26 12:53:14.612556
+5	3	2026-07-27	5	1	2026-07-27 05:40:36.096614
+6	8	2026-07-29	5	1	2026-07-29 10:49:39.112129
+7	4	2026-07-29	5	1	2026-07-29 13:53:51.748887
+8	10	2026-08-03	5	1	2026-08-03 11:00:39.285699
 \.
 
 
@@ -19077,6 +20379,14 @@ COPY trial.depts (id, name, parent_id, sort, status, created_at, shop_id) FROM s
 
 
 --
+-- Data for Name: distributor_bank_cards; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_bank_cards (id, distributor_id, bank_name, card_no, holder_name, is_default, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: distributor_goods; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
@@ -19085,10 +20395,34 @@ COPY trial.distributor_goods (id, distributor_id, goods_id, status, sort, custom
 
 
 --
+-- Data for Name: distributor_hidden_goods; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_hidden_goods (distributor_id, goods_id, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: distributor_materials; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
 COPY trial.distributor_materials (id, title, type, content, file_url, goods_id, scope, distributor_id, status, sort, created_at, updated_at, file_urls, cover_url, source, sync_url, synced_at, category) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_product_submissions; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_product_submissions (id, distributor_id, title, category, images, detail_images, description, spec, unit_name, suggested_price, stock_qty, freight_template, qualification_urls, platform_fee_rate, review_status, review_note, reviewed_by, reviewed_at, goods_id, machine_review_status, created_at, updated_at, deleted_at, short_title, ship_origin, shipping_fee, delivery_time) FROM stdin;
+\.
+
+
+--
+-- Data for Name: distributor_withdraws; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.distributor_withdraws (id, distributor_id, amount, bank_card_id, bank_name, card_no_snapshot, holder_name_snapshot, status, reject_reason, transfer_no, created_at, handled_at) FROM stdin;
 \.
 
 
@@ -19152,7 +20486,7 @@ COPY trial.finance_receivable (id, customer_id, customer_name, order_sn, total_a
 -- Data for Name: finance_statements; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.finance_statements (id, statement_no, customer_id, customer_name, amount, start_date, end_date, remark, status, created_at, deleted_at, shop_id) FROM stdin;
+COPY trial.finance_statements (id, statement_no, customer_id, customer_name, amount, start_date, end_date, remark, status, created_at, deleted_at, shop_id, supplier_id, supplier_name, partner_type, opening_recv, opening_pay, opening_balance, recv_amount, pay_amount, collected_amount, paid_amount, closing_recv, closing_pay, net_amount, settle_mode, detail, confirm_time, confirm_remark, admin_name) FROM stdin;
 \.
 
 
@@ -19160,7 +20494,7 @@ COPY trial.finance_statements (id, statement_no, customer_id, customer_name, amo
 -- Data for Name: goods; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand_id, brand_name, spec, price, cost, stock, min_stock, max_stock, remark, status, images, create_time, update_time, deleted_at, goods_name, goods_sn, en_name, goods_memo, goods_type, sell_price, cost_price, barcode, safe_min, safe_max, sort, make_time, can_sale, can_buy, can_make, can_outsource, multi_unit, multi_spec, shop_id) FROM stdin;
+COPY trial.goods (id, name, code, cate_id, cate_name, unit_id, unit_name, brand_id, brand_name, spec, price, cost, stock, min_stock, max_stock, remark, status, images, create_time, update_time, deleted_at, goods_name, goods_sn, en_name, goods_memo, goods_type, sell_price, cost_price, barcode, safe_min, safe_max, sort, make_time, can_sale, can_buy, can_make, can_outsource, multi_unit, multi_spec, shop_id, owner_type, owner_distributor_id, platform_fee_rate) FROM stdin;
 \.
 
 
@@ -19223,72 +20557,179 @@ COPY trial.mini_coupons (id, name, type, discount_value, min_order, validity_day
 173	签到7天专享券	signin7	8.00	30.00	14	-1	0	1	2026-06-11 05:33:14.183186	\N	2026-06-11 05:33:14.183186	0
 174	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	1	2026-06-11 05:33:14.183186	\N	2026-06-11 05:33:14.183186	0
 175	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	1	2026-06-11 05:33:14.183186	\N	2026-06-11 05:33:14.183186	0
-216	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
-217	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
-218	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-219	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-220	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-221	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-222	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-223	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
-224	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
-225	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
+472	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+548	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+495	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+410	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+236	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
+442	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+443	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+377	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
+229	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
+463	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+195	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+243	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+406	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
+446	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+583	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+499	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+506	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+507	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+192	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+193	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+194	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+519	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+520	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+521	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+522	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+523	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+530	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+531	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+532	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+196	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+199	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+200	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+201	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+240	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
+362	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
+363	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
+376	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
+407	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
+408	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
+409	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
+237	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
+470	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+471	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+414	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+415	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+428	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+429	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+593	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+508	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+197	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+198	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
+260	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
+599	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+600	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+365	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
+366	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
+367	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
+374	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
+375	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
+496	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+534	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+535	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+323	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
+602	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+603	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+604	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+605	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
+176	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+177	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+178	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+189	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+190	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+191	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+206	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
+350	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+351	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+352	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+518	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
+202	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+203	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+204	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+242	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+244	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+263	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
+179	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+188	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
+474	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+475	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+497	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+302	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+411	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+412	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+413	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
+431	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+432	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+433	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+440	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+441	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+449	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+459	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+212	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+213	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+214	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+549	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+550	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
+581	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+445	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+582	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
+590	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+591	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+444	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
+594	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+595	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+596	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+597	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+598	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
+207	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
 226	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
 227	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
 228	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
-229	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
-236	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
-237	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
-238	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
 239	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
-240	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
-241	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
-242	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-243	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-244	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-245	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-246	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-247	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
-260	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
-261	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
-262	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
-263	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
-264	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
 265	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
+447	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+509	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+510	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+511	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
+498	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+238	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
+448	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+324	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
+269	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
+289	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:30:19.269143	\N	2026-06-13 08:30:19.269143	0
+592	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
+336	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
+337	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
+353	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+354	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+264	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
 266	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
 267	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
 268	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
-269	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
-289	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:30:19.269143	\N	2026-06-13 08:30:19.269143	0
-302	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-303	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-304	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-305	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-306	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-307	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
-308	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
-309	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
-310	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
+215	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+216	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+217	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
+533	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
+430	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
+473	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
+462	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+450	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+451	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
+458	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+245	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+246	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+247	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 05:02:54.733063	\N	2026-06-13 05:02:54.733063	0
+224	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
+225	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 14:25:03.390812	\N	2026-06-11 14:25:03.390812	0
+261	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
+262	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 06:55:10.526302	\N	2026-06-13 06:55:10.526302	0
+205	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
+180	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+181	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
+460	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+461	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
+601	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
 311	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
 312	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
 313	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
 320	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
 321	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
 322	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
-323	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
-324	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
-325	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
-332	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-333	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-334	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-335	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-336	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-337	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
-350	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
-351	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
-352	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
-353	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
-354	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
+241	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-12 04:22:30.725368	\N	2026-06-12 04:22:30.725368	0
+309	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
+310	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
 355	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 10:22:00.607026	\N	2026-06-13 10:22:00.607026	0
 356	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-14 02:07:35.927323	\N	2026-06-14 02:07:35.927323	0
 357	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-14 02:07:35.927323	\N	2026-06-14 02:07:35.927323	0
@@ -19296,16 +20737,31 @@ COPY trial.mini_coupons (id, name, type, discount_value, min_order, validity_day
 359	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-14 02:07:35.927323	\N	2026-06-14 02:07:35.927323	0
 360	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-14 02:07:35.927323	\N	2026-06-14 02:07:35.927323	0
 361	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-14 02:07:35.927323	\N	2026-06-14 02:07:35.927323	0
-362	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
-363	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
 364	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
-365	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
-366	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
-367	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-14 09:17:32.325545	\N	2026-06-14 09:17:32.325545	0
-374	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
-375	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
-376	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
-377	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
+218	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+219	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+220	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+221	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+222	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+223	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 13:49:52.313838	\N	2026-06-11 13:49:52.313838	0
+488	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+489	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+490	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+491	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+492	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+493	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
+494	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
+303	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+304	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+305	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+306	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+307	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 08:37:04.277086	\N	2026-06-13 08:37:04.277086	0
+308	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 09:26:39.309459	\N	2026-06-13 09:26:39.309459	0
+325	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 09:29:24.528826	\N	2026-06-13 09:29:24.528826	0
+332	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
+333	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
+334	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
+335	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-13 09:46:53.524688	\N	2026-06-13 09:46:53.524688	0
 378	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
 379	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-15 15:44:47.480624	\N	2026-06-15 15:44:47.480624	0
 398	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-17 06:08:40.84314	\N	2026-06-17 06:08:40.84314	0
@@ -19316,132 +20772,10 @@ COPY trial.mini_coupons (id, name, type, discount_value, min_order, validity_day
 403	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-17 06:08:40.84314	\N	2026-06-17 06:08:40.84314	0
 404	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
 405	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
-406	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
-407	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
-408	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
-409	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-17 08:33:45.434522	\N	2026-06-17 08:33:45.434522	0
-410	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-411	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-412	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-413	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-414	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-415	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 05:36:32.306568	\N	2026-06-20 05:36:32.306568	0
-428	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-429	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-430	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-431	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-432	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-433	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:04:03.647644	\N	2026-06-20 06:04:03.647644	0
-440	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-441	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-442	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-443	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-444	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-445	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:12:41.056853	\N	2026-06-20 06:12:41.056853	0
-446	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-447	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-448	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-449	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-450	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-451	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:24:38.250414	\N	2026-06-20 06:24:38.250414	0
-458	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-459	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-460	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-461	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-462	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-463	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 06:34:17.456491	\N	2026-06-20 06:34:17.456491	0
-470	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-471	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-472	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-473	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-474	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-475	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:03:46.570688	\N	2026-06-20 07:03:46.570688	0
-488	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-489	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-490	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-491	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-492	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-493	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:29:48.27147	\N	2026-06-20 07:29:48.27147	0
-494	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-495	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-496	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-497	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-498	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-499	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:35:39.781306	\N	2026-06-20 07:35:39.781306	0
-506	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-507	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-508	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-509	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-510	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-511	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:38:28.89571	\N	2026-06-20 07:38:28.89571	0
-518	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-519	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-520	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-521	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-522	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-523	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 07:51:45.226384	\N	2026-06-20 07:51:45.226384	0
-530	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-531	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-532	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-533	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-534	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-535	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-20 08:16:44.577119	\N	2026-06-20 08:16:44.577119	0
-548	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
-549	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
-550	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-22 13:14:32.375211	\N	2026-06-22 13:14:32.375211	0
-581	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
-582	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
-583	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-04 09:04:04.045067	\N	2026-07-04 09:04:04.045067	0
-590	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-591	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-592	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-593	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-594	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-595	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-15 02:12:14.389987	\N	2026-07-15 02:12:14.389987	0
-596	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-597	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-598	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-599	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-600	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-601	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-07-15 02:32:12.024508	\N	2026-07-15 02:32:12.024508	0
-602	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
-603	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
-604	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
-605	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-07-15 08:15:34.829402	\N	2026-07-15 08:15:34.829402	0
-176	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-177	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-178	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-179	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-192	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-193	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-194	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-195	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-196	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-197	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-198	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-199	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 07:29:55.936395	\N	2026-06-11 07:29:55.936395	0
-200	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-201	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-202	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-203	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-204	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-205	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 07:47:35.971146	\N	2026-06-11 07:47:35.971146	0
-180	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-181	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 05:36:53.948139	\N	2026-06-11 05:36:53.948139	0
-188	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-189	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-190	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-191	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 06:12:54.29052	\N	2026-06-11 06:12:54.29052	0
-206	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
-207	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
 208	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
 209	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
 210	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
 211	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-11 08:42:25.686201	\N	2026-06-11 08:42:25.686201	0
-212	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
-213	新客满减券·满300减20	new_user	20.00	300.00	30	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
-214	生日特权券	birthday	15.00	50.00	7	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
-215	签到7天专享券	signin7	8.00	30.00	14	-1	0	0	2026-06-11 12:23:52.95069	\N	2026-06-11 12:23:52.95069	0
 270	抽奖券·满50减5	lottery	5.00	50.00	7	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
 271	抽奖券·满100减10	lottery	10.00	100.00	7	-1	0	0	2026-06-13 07:28:39.717123	\N	2026-06-13 07:28:39.717123	0
 278	新客满减券·满100减10	new_user	10.00	100.00	30	-1	0	0	2026-06-13 08:17:26.205491	\N	2026-06-13 08:17:26.205491	0
@@ -19502,7 +20836,7 @@ COPY trial.mini_favorites (id, user_id, goods_id, created_at) FROM stdin;
 -- Data for Name: mini_order_items; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.mini_order_items (id, order_id, goods_id, goods_name, spec, price, qty) FROM stdin;
+COPY trial.mini_order_items (id, order_id, goods_id, goods_name, spec, price, qty, seller_type, seller_distributor_id, promotion_rate_snapshot, platform_fee_rate_snapshot, platform_fee_amount, seller_receivable_amount) FROM stdin;
 \.
 
 
@@ -19510,7 +20844,7 @@ COPY trial.mini_order_items (id, order_id, goods_id, goods_name, spec, price, qt
 -- Data for Name: mini_orders; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.mini_orders (id, order_no, user_id, total, address, remark, status, paid_at, created_at, deleted_at, total_amount, original_amount, discount, points_used, express_company, tracking_no, shipped_at, distributor_code, commission, commission_settled, confirmed_at, wx_transaction_id, delivery_type, store_id, store_name, store_address) FROM stdin;
+COPY trial.mini_orders (id, order_no, user_id, total, address, remark, status, paid_at, created_at, deleted_at, total_amount, original_amount, discount, points_used, express_company, tracking_no, shipped_at, distributor_code, commission, commission_settled, confirmed_at, wx_transaction_id, delivery_type, store_id, store_name, store_address, payment_expires_at, cancel_reason, price_adjusted_from, price_adjustment_note, price_adjusted_at, price_change_requested) FROM stdin;
 \.
 
 
@@ -19599,10 +20933,26 @@ COPY trial.mini_search_log (id, keyword, cnt, updated_at) FROM stdin;
 
 
 --
+-- Data for Name: mini_service_messages; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.mini_service_messages (id, session_id, role, source, content, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: mini_service_sessions; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
+--
+
+COPY trial.mini_service_sessions (id, user_id, client_key, product_id, product_name, product_snapshot, status, human_requested_at, created_at, updated_at, expires_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: mini_user_coupons; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_at, order_id, claimed_at) FROM stdin;
+COPY trial.mini_user_coupons (id, user_id, coupon_id, status, expire_at, used_at, order_id, claimed_at, coupon_type) FROM stdin;
 \.
 
 
@@ -19634,7 +20984,7 @@ COPY trial.mini_video_likes (id, video_id, user_id, created_at) FROM stdin;
 -- Data for Name: mini_videos; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.mini_videos (id, title, description, video_url, cover_url, goods_id, like_count, comment_count, view_count, sort, status, created_at) FROM stdin;
+COPY trial.mini_videos (id, title, description, video_url, cover_url, goods_id, like_count, comment_count, view_count, sort, status, created_at, content_type, content, images, source_url) FROM stdin;
 \.
 
 
@@ -19762,7 +21112,7 @@ COPY trial.sale_contracts (id, order_no, order_sn, customer_id, customer_name, a
 -- Data for Name: sale_customers; Type: TABLE DATA; Schema: trial; Owner: neondb_owner
 --
 
-COPY trial.sale_customers (id, name, nickname, code, mobile, tel, email, address, contact, level_name, source_name, level_id, source_id, follow_admin_id, follow_admin, balance, is_sea, remark, status, create_time, update_time, deleted_at, shop_id) FROM stdin;
+COPY trial.sale_customers (id, name, nickname, code, mobile, tel, email, address, contact, level_name, source_name, level_id, source_id, follow_admin_id, follow_admin, balance, is_sea, remark, status, create_time, update_time, deleted_at, shop_id, linked_supplier_id) FROM stdin;
 \.
 
 
@@ -19923,7 +21273,7 @@ COPY trial.warehouses (id, name, address, remark, status, create_time, shop_id) 
 -- Name: admins_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.admins_id_seq', 656, true);
+SELECT pg_catalog.setval('public.admins_id_seq', 734, true);
 
 
 --
@@ -19944,7 +21294,7 @@ SELECT pg_catalog.setval('public.bom_order_id_seq', 26, true);
 -- Name: collect_receipt_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.collect_receipt_id_seq', 246, true);
+SELECT pg_catalog.setval('public.collect_receipt_id_seq', 249, true);
 
 
 --
@@ -19958,14 +21308,14 @@ SELECT pg_catalog.setval('public.company_info_id_seq', 1, true);
 -- Name: customer_level_prices_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.customer_level_prices_id_seq', 1, false);
+SELECT pg_catalog.setval('public.customer_level_prices_id_seq', 51, true);
 
 
 --
 -- Name: customer_levels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.customer_levels_id_seq', 1, false);
+SELECT pg_catalog.setval('public.customer_levels_id_seq', 1, true);
 
 
 --
@@ -19973,6 +21323,13 @@ SELECT pg_catalog.setval('public.customer_levels_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('public.depts_id_seq', 50, true);
+
+
+--
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.distributor_bank_cards_id_seq', 1, false);
 
 
 --
@@ -19990,10 +21347,24 @@ SELECT pg_catalog.setval('public.distributor_materials_id_seq', 1, false);
 
 
 --
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.distributor_product_submissions_id_seq', 1, false);
+
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.distributor_withdraws_id_seq', 1, false);
+
+
+--
 -- Name: distributors_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.distributors_id_seq', 1, true);
+SELECT pg_catalog.setval('public.distributors_id_seq', 3, true);
 
 
 --
@@ -20042,7 +21413,7 @@ SELECT pg_catalog.setval('public.finance_receivable_id_seq', 50, true);
 -- Name: finance_statements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.finance_statements_id_seq', 50, true);
+SELECT pg_catalog.setval('public.finance_statements_id_seq', 51, true);
 
 
 --
@@ -20063,7 +21434,7 @@ SELECT pg_catalog.setval('public.goods_cate_id_seq', 424, true);
 -- Name: goods_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.goods_id_seq', 3186, true);
+SELECT pg_catalog.setval('public.goods_id_seq', 3206, true);
 
 
 --
@@ -20077,7 +21448,7 @@ SELECT pg_catalog.setval('public.goods_spec_id_seq', 247, true);
 -- Name: goods_unit_convert_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.goods_unit_convert_id_seq', 670, true);
+SELECT pg_catalog.setval('public.goods_unit_convert_id_seq', 737, true);
 
 
 --
@@ -20098,7 +21469,7 @@ SELECT pg_catalog.setval('public.jobs_id_seq', 50, true);
 -- Name: ledger_flow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.ledger_flow_id_seq', 1783, true);
+SELECT pg_catalog.setval('public.ledger_flow_id_seq', 1924, true);
 
 
 --
@@ -20112,7 +21483,7 @@ SELECT pg_catalog.setval('public.mini_coupons_id_seq', 631, true);
 -- Name: mini_favorites_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_favorites_id_seq', 1, false);
+SELECT pg_catalog.setval('public.mini_favorites_id_seq', 1, true);
 
 
 --
@@ -20140,7 +21511,7 @@ SELECT pg_catalog.setval('public.mini_points_goods_redemptions_id_seq', 1, false
 -- Name: mini_points_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_points_log_id_seq', 2, true);
+SELECT pg_catalog.setval('public.mini_points_log_id_seq', 5, true);
 
 
 --
@@ -20154,7 +21525,7 @@ SELECT pg_catalog.setval('public.mini_refunds_id_seq', 3, true);
 -- Name: mini_reviews_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_reviews_id_seq', 5300, true);
+SELECT pg_catalog.setval('public.mini_reviews_id_seq', 8732, true);
 
 
 --
@@ -20165,24 +21536,38 @@ SELECT pg_catalog.setval('public.mini_search_log_id_seq', 1, true);
 
 
 --
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.mini_service_messages_id_seq', 1, false);
+
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('public.mini_service_sessions_id_seq', 12, true);
+
+
+--
 -- Name: mini_user_coupons_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_user_coupons_id_seq', 130, true);
+SELECT pg_catalog.setval('public.mini_user_coupons_id_seq', 152, true);
 
 
 --
 -- Name: mini_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_users_id_seq', 3, true);
+SELECT pg_catalog.setval('public.mini_users_id_seq', 10, true);
 
 
 --
 -- Name: mini_video_comments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_video_comments_id_seq', 15, true);
+SELECT pg_catalog.setval('public.mini_video_comments_id_seq', 30, true);
 
 
 --
@@ -20196,7 +21581,7 @@ SELECT pg_catalog.setval('public.mini_video_likes_id_seq', 1, false);
 -- Name: mini_videos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.mini_videos_id_seq', 5, true);
+SELECT pg_catalog.setval('public.mini_videos_id_seq', 10, true);
 
 
 --
@@ -20217,7 +21602,7 @@ SELECT pg_catalog.setval('public.operation_logs_id_seq', 1000, true);
 -- Name: pay_receipt_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.pay_receipt_id_seq', 846, true);
+SELECT pg_catalog.setval('public.pay_receipt_id_seq', 876, true);
 
 
 --
@@ -20231,7 +21616,7 @@ SELECT pg_catalog.setval('public.prepay_record_id_seq', 50, true);
 -- Name: procure_inhouse_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.procure_inhouse_id_seq', 530, true);
+SELECT pg_catalog.setval('public.procure_inhouse_id_seq', 558, true);
 
 
 --
@@ -20252,7 +21637,7 @@ SELECT pg_catalog.setval('public.procure_return_id_seq', 50, true);
 -- Name: purchase_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.purchase_order_id_seq', 625, true);
+SELECT pg_catalog.setval('public.purchase_order_id_seq', 653, true);
 
 
 --
@@ -20273,7 +21658,7 @@ SELECT pg_catalog.setval('public.retail_members_id_seq', 10, true);
 -- Name: retail_orders_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.retail_orders_id_seq', 1586, true);
+SELECT pg_catalog.setval('public.retail_orders_id_seq', 1653, true);
 
 
 --
@@ -20301,14 +21686,14 @@ SELECT pg_catalog.setval('public.roles_id_seq', 14, true);
 -- Name: sale_contracts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_contracts_id_seq', 421, true);
+SELECT pg_catalog.setval('public.sale_contracts_id_seq', 431, true);
 
 
 --
 -- Name: sale_customers_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_customers_id_seq', 65, true);
+SELECT pg_catalog.setval('public.sale_customers_id_seq', 67, true);
 
 
 --
@@ -20329,7 +21714,7 @@ SELECT pg_catalog.setval('public.sale_offers_id_seq', 51, true);
 -- Name: sale_out_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.sale_out_order_id_seq', 257, true);
+SELECT pg_catalog.setval('public.sale_out_order_id_seq', 269, true);
 
 
 --
@@ -20378,14 +21763,14 @@ SELECT pg_catalog.setval('public.stock_checks_id_seq', 51, true);
 -- Name: stock_flow_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_flow_id_seq', 4078, true);
+SELECT pg_catalog.setval('public.stock_flow_id_seq', 4280, true);
 
 
 --
 -- Name: stock_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_inventory_id_seq', 671, true);
+SELECT pg_catalog.setval('public.stock_inventory_id_seq', 694, true);
 
 
 --
@@ -20399,14 +21784,14 @@ SELECT pg_catalog.setval('public.stock_other_in_id_seq', 122, true);
 -- Name: stock_other_out_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.stock_other_out_id_seq', 1147, true);
+SELECT pg_catalog.setval('public.stock_other_out_id_seq', 1215, true);
 
 
 --
 -- Name: supplier_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.supplier_id_seq', 141, true);
+SELECT pg_catalog.setval('public.supplier_id_seq', 144, true);
 
 
 --
@@ -20420,21 +21805,21 @@ SELECT pg_catalog.setval('public.sys_params_id_seq', 50, true);
 -- Name: user_lottery_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.user_lottery_id_seq', 1, true);
+SELECT pg_catalog.setval('public.user_lottery_id_seq', 3, true);
 
 
 --
 -- Name: user_signin_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.user_signin_id_seq', 1, true);
+SELECT pg_catalog.setval('public.user_signin_id_seq', 8, true);
 
 
 --
 -- Name: warehouses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.warehouses_id_seq', 573, true);
+SELECT pg_catalog.setval('public.warehouses_id_seq', 651, true);
 
 
 --
@@ -20494,6 +21879,13 @@ SELECT pg_catalog.setval('trial.depts_id_seq', 1, false);
 
 
 --
+-- Name: distributor_bank_cards_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.distributor_bank_cards_id_seq', 1, false);
+
+
+--
 -- Name: distributor_goods_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
 --
 
@@ -20505,6 +21897,20 @@ SELECT pg_catalog.setval('trial.distributor_goods_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('trial.distributor_materials_id_seq', 1, false);
+
+
+--
+-- Name: distributor_product_submissions_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.distributor_product_submissions_id_seq', 1, false);
+
+
+--
+-- Name: distributor_withdraws_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.distributor_withdraws_id_seq', 1, false);
 
 
 --
@@ -20673,6 +22079,20 @@ SELECT pg_catalog.setval('trial.mini_reviews_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('trial.mini_search_log_id_seq', 1, false);
+
+
+--
+-- Name: mini_service_messages_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.mini_service_messages_id_seq', 1, false);
+
+
+--
+-- Name: mini_service_sessions_id_seq; Type: SEQUENCE SET; Schema: trial; Owner: neondb_owner
+--
+
+SELECT pg_catalog.setval('trial.mini_service_sessions_id_seq', 1, false);
 
 
 --
@@ -21029,6 +22449,14 @@ ALTER TABLE ONLY public.depts
 
 
 --
+-- Name: distributor_bank_cards distributor_bank_cards_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_bank_cards
+    ADD CONSTRAINT distributor_bank_cards_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: distributor_goods distributor_goods_distributor_id_goods_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
@@ -21045,11 +22473,35 @@ ALTER TABLE ONLY public.distributor_goods
 
 
 --
+-- Name: distributor_hidden_goods distributor_hidden_goods_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_hidden_goods
+    ADD CONSTRAINT distributor_hidden_goods_pkey PRIMARY KEY (distributor_id, goods_id);
+
+
+--
 -- Name: distributor_materials distributor_materials_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.distributor_materials
     ADD CONSTRAINT distributor_materials_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_product_submissions distributor_product_submissions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_product_submissions
+    ADD CONSTRAINT distributor_product_submissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_withdraws distributor_withdraws_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.distributor_withdraws
+    ADD CONSTRAINT distributor_withdraws_pkey PRIMARY KEY (id);
 
 
 --
@@ -21290,6 +22742,22 @@ ALTER TABLE ONLY public.mini_search_log
 
 ALTER TABLE ONLY public.mini_search_log
     ADD CONSTRAINT mini_search_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mini_service_messages mini_service_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mini_service_messages
+    ADD CONSTRAINT mini_service_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mini_service_sessions mini_service_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mini_service_sessions
+    ADD CONSTRAINT mini_service_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -21741,6 +23209,14 @@ ALTER TABLE ONLY trial.depts
 
 
 --
+-- Name: distributor_bank_cards distributor_bank_cards_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_bank_cards
+    ADD CONSTRAINT distributor_bank_cards_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: distributor_goods distributor_goods_distributor_id_goods_id_key; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
 --
 
@@ -21757,11 +23233,35 @@ ALTER TABLE ONLY trial.distributor_goods
 
 
 --
+-- Name: distributor_hidden_goods distributor_hidden_goods_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_hidden_goods
+    ADD CONSTRAINT distributor_hidden_goods_pkey PRIMARY KEY (distributor_id, goods_id);
+
+
+--
 -- Name: distributor_materials distributor_materials_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY trial.distributor_materials
     ADD CONSTRAINT distributor_materials_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_product_submissions distributor_product_submissions_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_product_submissions
+    ADD CONSTRAINT distributor_product_submissions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: distributor_withdraws distributor_withdraws_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.distributor_withdraws
+    ADD CONSTRAINT distributor_withdraws_pkey PRIMARY KEY (id);
 
 
 --
@@ -21994,6 +23494,22 @@ ALTER TABLE ONLY trial.mini_search_log
 
 ALTER TABLE ONLY trial.mini_search_log
     ADD CONSTRAINT mini_search_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mini_service_messages mini_service_messages_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.mini_service_messages
+    ADD CONSTRAINT mini_service_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mini_service_sessions mini_service_sessions_pkey; Type: CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.mini_service_sessions
+    ADD CONSTRAINT mini_service_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -22393,6 +23909,13 @@ CREATE INDEX idx_ledger_flow_type ON public.ledger_flow USING btree (type);
 
 
 --
+-- Name: idx_mini_content_type; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_mini_content_type ON public.mini_videos USING btree (content_type, status, sort DESC, id DESC);
+
+
+--
 -- Name: idx_mini_reviews_goods; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
@@ -22442,10 +23965,59 @@ CREATE INDEX idx_refunds_user ON public.mini_refunds USING btree (user_id);
 
 
 --
+-- Name: idx_service_messages_session; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_messages_session ON public.mini_service_messages USING btree (session_id, id);
+
+
+--
+-- Name: idx_service_sessions_client; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_client ON public.mini_service_sessions USING btree (client_key, product_id, updated_at DESC);
+
+
+--
+-- Name: idx_service_sessions_expire; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_expire ON public.mini_service_sessions USING btree (expires_at);
+
+
+--
+-- Name: idx_service_sessions_user; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_user ON public.mini_service_sessions USING btree (user_id, product_id, updated_at DESC);
+
+
+--
+-- Name: uniq_muc_birthday_year; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE UNIQUE INDEX uniq_muc_birthday_year ON public.mini_user_coupons USING btree (user_id, coupon_id, EXTRACT(year FROM claimed_at)) WHERE ((coupon_type)::text = 'birthday'::text);
+
+
+--
+-- Name: uniq_muc_new_user; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE UNIQUE INDEX uniq_muc_new_user ON public.mini_user_coupons USING btree (user_id, coupon_id) WHERE ((coupon_type)::text = 'new_user'::text);
+
+
+--
 -- Name: user_lottery_free_once_idx; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE UNIQUE INDEX user_lottery_free_once_idx ON public.user_lottery USING btree (user_id, spin_date) WHERE (COALESCE(use_points, false) = false);
+
+
+--
+-- Name: idx_mini_content_type; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE INDEX idx_mini_content_type ON trial.mini_videos USING btree (content_type, status, sort DESC, id DESC);
 
 
 --
@@ -22491,6 +24063,34 @@ CREATE INDEX idx_refunds_user ON trial.mini_refunds USING btree (user_id);
 
 
 --
+-- Name: idx_service_messages_session; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_messages_session ON trial.mini_service_messages USING btree (session_id, id);
+
+
+--
+-- Name: idx_service_sessions_client; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_client ON trial.mini_service_sessions USING btree (client_key, product_id, updated_at DESC);
+
+
+--
+-- Name: idx_service_sessions_expire; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_expire ON trial.mini_service_sessions USING btree (expires_at);
+
+
+--
+-- Name: idx_service_sessions_user; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE INDEX idx_service_sessions_user ON trial.mini_service_sessions USING btree (user_id, product_id, updated_at DESC);
+
+
+--
 -- Name: mini_refunds_order_id_idx; Type: INDEX; Schema: trial; Owner: neondb_owner
 --
 
@@ -22530,6 +24130,20 @@ CREATE INDEX mini_video_comments_video_id_idx ON trial.mini_video_comments USING
 --
 
 CREATE INDEX qr_scans_scene_idx ON trial.qr_scans USING btree (scene);
+
+
+--
+-- Name: uniq_muc_birthday_year; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE UNIQUE INDEX uniq_muc_birthday_year ON trial.mini_user_coupons USING btree (user_id, coupon_id, EXTRACT(year FROM claimed_at)) WHERE ((coupon_type)::text = 'birthday'::text);
+
+
+--
+-- Name: uniq_muc_new_user; Type: INDEX; Schema: trial; Owner: neondb_owner
+--
+
+CREATE UNIQUE INDEX uniq_muc_new_user ON trial.mini_user_coupons USING btree (user_id, coupon_id) WHERE ((coupon_type)::text = 'new_user'::text);
 
 
 --
@@ -22617,6 +24231,22 @@ CREATE TRIGGER trg_sale_return_ledger AFTER INSERT OR DELETE OR UPDATE ON public
 
 
 --
+-- Name: mini_service_messages mini_service_messages_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mini_service_messages
+    ADD CONSTRAINT mini_service_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.mini_service_sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: mini_service_messages mini_service_messages_session_id_fkey; Type: FK CONSTRAINT; Schema: trial; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY trial.mini_service_messages
+    ADD CONSTRAINT mini_service_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES trial.mini_service_sessions(id) ON DELETE CASCADE;
+
+
+--
 -- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
 --
 
@@ -22634,5 +24264,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABL
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yrGLdZHYMiNTRzIk72tlUKV7Udax25sbdjidWe9XoTvlkuu1zRShrnq0qCK93Hm
+\unrestrict ghUupaE6Zsto7JdTaCqPTv4PbJ4vakYVOUok3EiU1LBGIcyJPwT7uCEGdk1Vq1q
 
