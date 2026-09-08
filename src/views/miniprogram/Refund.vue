@@ -45,6 +45,7 @@
           <template v-if="row.status === 0">
             <el-button size="small" type="success" @click="openHandle(row, 'approve')">{{ t('miniprogramRefund.approve') }}</el-button>
             <el-button size="small" type="danger" @click="openHandle(row, 'reject')">{{ t('miniprogramRefund.reject') }}</el-button>
+            <el-button size="small" @click="openHandle(row, 'negotiate')">协商处理</el-button>
           </template>
           <span v-else style="color:#999;font-size:12px">{{ row.note || '—' }}</span>
         </template>
@@ -62,18 +63,26 @@
     </div>
 
     <!-- 处理弹窗 -->
-    <el-dialog v-model="handleVisible" :title="handleAction === 'approve' ? t('miniprogramRefund.approveTitle') : t('miniprogramRefund.rejectTitle')" width="380px">
+    <el-dialog v-model="handleVisible" :title="dialogTitle" width="400px">
       <el-form label-width="80px">
         <el-form-item :label="t('miniprogramRefund.order')">{{ handleRow?.order_no }}</el-form-item>
         <el-form-item :label="t('miniprogramRefund.amount')">¥{{ Number(handleRow?.amount || 0).toFixed(2) }}</el-form-item>
+        <el-form-item v-if="handleAction === 'negotiate'" label="处理方式">
+          <el-select v-model="resolution" style="width:100%">
+            <el-option label="协商退款" value="refund" />
+            <el-option label="换货" value="exchange" />
+            <el-option label="补发" value="resend" />
+            <el-option label="部分退款/补偿" value="compensate" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="t('miniprogramRefund.remark')">
           <el-input v-model="handleNote" :placeholder="handleAction === 'approve' ? t('miniprogramRefund.approvePlaceholder') : t('miniprogramRefund.rejectPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="handleVisible = false">{{ t('miniprogramRefund.cancel') }}</el-button>
-        <el-button :type="handleAction === 'approve' ? 'success' : 'danger'" :loading="acting" @click="submitHandle">
-          {{ handleAction === 'approve' ? t('miniprogramRefund.confirmApprove') : t('miniprogramRefund.confirmReject') }}
+        <el-button :type="handleAction === 'approve' ? 'success' : handleAction === 'reject' ? 'danger' : 'primary'" :loading="acting" @click="submitHandle">
+          {{ handleAction === 'approve' ? t('miniprogramRefund.confirmApprove') : handleAction === 'reject' ? t('miniprogramRefund.confirmReject') : '保存协商方案' }}
         </el-button>
       </template>
     </el-dialog>
@@ -95,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
@@ -116,8 +125,9 @@ const activeTab = ref('')
 
 const handleVisible = ref(false)
 const handleRow = ref<any>(null)
-const handleAction = ref<'approve' | 'reject'>('approve')
+const handleAction = ref<'approve' | 'reject' | 'negotiate'>('approve')
 const handleNote = ref('')
+const resolution = ref('exchange')
 const acting = ref(false)
 
 const imgVisible = ref(false)
@@ -136,10 +146,15 @@ async function loadList() {
   }
 }
 
-function openHandle(row: any, action: 'approve' | 'reject') {
+const dialogTitle = computed(() => handleAction.value === 'approve'
+  ? t('miniprogramRefund.approveTitle')
+  : handleAction.value === 'reject' ? t('miniprogramRefund.rejectTitle') : '协商售后处理')
+
+function openHandle(row: any, action: 'approve' | 'reject' | 'negotiate') {
   handleRow.value = row
   handleAction.value = action
   handleNote.value = ''
+  resolution.value = 'exchange'
   handleVisible.value = true
 }
 
@@ -149,6 +164,7 @@ async function submitHandle() {
     const res = await http.post('/refund/handle', {
       id: handleRow.value.id,
       action: handleAction.value,
+      resolution: resolution.value,
       note: handleNote.value,
     })
     ElMessage.success(res.data?.message || t('miniprogramRefund.operationSuccess'))
