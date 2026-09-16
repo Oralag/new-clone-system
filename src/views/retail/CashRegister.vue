@@ -1068,10 +1068,12 @@ const adjustmentAmount = computed({
 })
 
 function addToCart(g: any) {
-  const exist = cartItems.find(i => i.goods_id === g.id)
+  const goodsId = Number(g?.id)
+  if (!Number.isSafeInteger(goodsId) || goodsId <= 0) { ElMessage.error('商品资料异常，请刷新商品列表后重试'); return }
+  const exist = cartItems.find(i => i.goods_id === goodsId)
   if (exist) {
     exist.num++
-    pricingTargetIndex.value = cartItems.findIndex(i => i.goods_id === g.id)
+    pricingTargetIndex.value = cartItems.findIndex(i => i.goods_id === goodsId)
     calcTotal()
     return
   }
@@ -1081,7 +1083,7 @@ function addToCart(g: any) {
     : Number(g.sell_price) || 0
   const usePrice = Math.round(rawPrice * 100) / 100
   cartItems.push({
-    goods_id: g.id,
+    goods_id: goodsId,
     goods_name: g.goods_name,
     goods_sn: g.goods_sn || '',
     unit_name: g.unit_name || '',
@@ -1308,7 +1310,8 @@ const wcJinPresets = computed(() => {
 
 async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: number) {
   const target = g ?? selectedGoods.value
-  wcGoodsId.value = target?.id ?? null
+  const targetGoodsId = Number(target?.id)
+  wcGoodsId.value = Number.isSafeInteger(targetGoodsId) && targetGoodsId > 0 ? targetGoodsId : null
   wcGoodsName.value = target?.goods_name ?? ''
   wcSpecLabel.value = specLabel || ''
   wcGoodsUnit.value = target?.unit_name || '斤'
@@ -1316,9 +1319,9 @@ async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: numbe
   wcGramsPerBaseUnit.value = 500 // 先 reset 默认值
   wcAuxUnits.value = []
   // 从换算表加载单位换算比例
-  if (target?.id) {
+  if (wcGoodsId.value) {
     try {
-      const res = await getUnitConvert(target.id)
+      const res = await getUnitConvert(wcGoodsId.value)
       const units: any[] = res.data?.rows ?? []
       const gUnit = units.find((u: any) => u.unit_name === 'g')
       if (gUnit) {
@@ -1393,6 +1396,7 @@ function addWeightItemToCart() {
     finalGrams = wcReverseGrams.value
   }
   if (finalAmount <= 0) return
+  if (!Number.isSafeInteger(Number(wcGoodsId.value)) || Number(wcGoodsId.value) <= 0) { ElMessage.error('商品资料异常，请刷新商品列表后重试'); return }
   const baseName = wcGoodsName.value || t('retail.cashRegister.bulkItem')
   const name = wcSpecLabel.value ? `${baseName} · ${wcSpecLabel.value}` : baseName
   const newNum = parseFloat((finalGrams / wcGramsPerBaseUnit.value).toFixed(4))
@@ -1408,7 +1412,7 @@ function addWeightItemToCart() {
     ElMessage.success(t('retail.cashRegister.weightUpdated'))
   } else {
     cartItems.push({
-      goods_id: wcGoodsId.value ?? -1,
+      goods_id: Number(wcGoodsId.value),
       goods_name: `${name} ${finalGrams.toFixed(1)}g`,
       goods_sn: '',
       unit_name: wcGoodsUnit.value,
@@ -1444,11 +1448,13 @@ function addPackageToCart(unit: { unit_name: string; ratio: number; sell_price?:
     try { return JSON.parse(g?.spec || '{}').unit_linked_goods?.[unit.unit_name] } catch { return null }
   })()
   const effectiveGoodsId = linkedSpec?.id || unit.linked_goods_id || wcGoodsId.value
+  const safeEffectiveGoodsId = Number(effectiveGoodsId)
+  if (!Number.isSafeInteger(safeEffectiveGoodsId) || safeEffectiveGoodsId <= 0) { ElMessage.error('商品资料异常，请刷新商品列表后重试'); return }
   const effectiveGoodsName = linkedSpec?.name || unit.linked_goods_name || `${wcGoodsName.value} · ${unit.unit_name}`
   const effectiveRatio = (linkedSpec?.id || unit.linked_goods_id) ? 1 : unit.ratio
   const cost = unit.cost_price && unit.cost_price > 0 ? unit.cost_price : Number(g?.cost_price || 0) * unit.ratio
   cartItems.push({
-    goods_id: effectiveGoodsId ?? -1,
+    goods_id: safeEffectiveGoodsId,
     goods_name: effectiveGoodsName,
     goods_sn: '',
     unit_name: unit.unit_name,
