@@ -1230,9 +1230,9 @@ async function handleCheckout() {
     })
     const res = await createRetailOrder({
       order_date: orderDate.value,
-      member_id: Number.isFinite(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
+      member_id: Number.isSafeInteger(memberIdNum) && memberIdNum > 0 ? memberIdNum : 0,
       member_name: selectedMember.value?.name ?? '',
-      store_id: Number.isFinite(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
+      store_id: Number.isSafeInteger(storeIdNum) && storeIdNum > 0 ? storeIdNum : 0,
       store_name: selectedStore.value?.name ?? '',
       total_amount: settled.totalAmount,
       discount_amount: settled.discountAmount,
