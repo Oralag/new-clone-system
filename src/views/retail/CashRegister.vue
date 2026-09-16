@@ -745,6 +745,12 @@ const cartDrawerOpen = ref(false)
 
 // 点击商品卡片：散装+规格→先选规格再称重；纯规格→规格弹窗；纯散装→称重弹窗；普通→直接加购物车
 function selectGoods(g: any) {
+  const goodsId = Number(g?.id)
+  if (!Number.isSafeInteger(goodsId) || goodsId <= 0) {
+    ElMessage.error('商品资料异常，请刷新商品列表后重试')
+    return
+  }
+  if (g.id !== goodsId) g = { ...g, id: goodsId }
   selectedGoods.value = g
   const isSpec = Number(g.multi_spec) === 1
   const isBulk = Number(g.goods_type) === 5
