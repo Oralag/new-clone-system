@@ -1,5 +1,10 @@
 <template>
-  <div class="fin-overview">
+  <div class="fin-overview" v-loading="dataLoading">
+    <el-alert v-if="dataLoadError" type="error" :closable="false" show-icon style="margin-bottom:16px"
+      :title="hasCompleteData ? '刷新失败，以下为上次完整加载的数据' : '财务数据未完整加载，暂不显示统计'"
+      :description="dataLoadError" />
+    <el-button v-if="dataLoadError" :loading="dataLoading" @click="loadAllData" style="margin-bottom:16px">重新加载</el-button>
+    <template v-if="hasCompleteData">
     <!-- 快捷操作栏 -->
     <div class="quick-action-bar">
       <div class="quick-action-card collect" @click="openQuickCollect">
@@ -53,7 +58,9 @@
               <div class="inline-sub">{{ t('finance.overview.accountCount', { count: fundList.length }) }}</div>
             </div>
           </div>
-          <div v-else class="empty-tip">{{ t('finance.overview.accountNoData') }}</div>
+          <div v-else class="empty-tip">
+            {{ fundLoadError ? ('账户加载失败：' + fundLoadError) : t('finance.overview.accountNoData') }}
+          </div>
         </el-card>
       </el-col>
       <el-col :span="14">
@@ -344,6 +351,7 @@
       </div>
     </div>
 
+    </template>
   </div>
 
   <!-- 快速收款弹窗 -->
@@ -478,6 +486,7 @@ import { useRouter } from 'vue-router'
 import { Wallet, TrendCharts, Bottom, DocumentChecked, Document, Money, List, ArrowUp, ArrowDown, ArrowRight, Box, Plus, Minus, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import http from '@/api/http'
+import { fetchAllPages } from '@/api/fetchAllPages'
 import { getFundList, getCollectReceiptList, getPayReceiptList, getExpenseList, createCollectReceipt } from '@/api/finance'
 import { getContractList } from '@/api/sale'
 import { applyProcureReturnsToFundRows, applyProcureReturnsToPayReceiptRows, applyProcureReturnsToPayableRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
@@ -493,6 +502,9 @@ const { t } = useI18n()
 const router = useRouter()
 
 const fundList = ref<any[]>([])
+// 账户列表加载失败的原因，直接显示在卡片里 —— 以前失败只显示「暂无账户数据」，
+// 和真的没数据长得一模一样，根本没法判断出了什么事
+const fundLoadError = ref('')
 const clientList = ref<any[]>([])
 const supplierList = ref<any[]>([])
 const prepayList = ref<any[]>([])
@@ -1083,27 +1095,33 @@ async function savePay() {
   } catch { ElMessage.error(t('finance.overview.msgSaveFailed')) } finally { paySaving.value = false }
 }
 
+const dataLoading = ref(false)
+const dataLoadError = ref('')
+const hasCompleteData = ref(false)
+let loadVersion = 0
 async function loadAllData() {
+  const version = ++loadVersion
+  dataLoading.value = true
+  dataLoadError.value = ''
   try {
-    const settled = await Promise.allSettled([
-      getFundList({ list_rows: 100 }),
-      http.get('/finance/Prepay/index', { params: { list_rows: 200 } }),
-      getCollectReceiptList({ list_rows: 1000 }),
-      getPayReceiptList({ list_rows: 1000 }),
-      http.get('/stock/PurchaseOrder/index', { params: { list_rows: 2000, status: 1 } }),
-      http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
-      http.get('/retail/order/index', { params: { list_rows: 2000 } }),
-      getExpenseList({ list_rows: 1000 }),
-      http.get('/retail/recharge/index', { params: { list_rows: 1000 } }),
-      http.get('/shop/ShopCustomer/index', { params: { list_rows: 500 } }),
-      http.get('/procure/supplier/index', { params: { list_rows: 500 } }),
-      http.get('/procure/ProcureReturn/index', { params: { status: 1, list_rows: 1000 } }),
-      http.get('/stock/SaleReturnOrder/index', { params: { status: 1, list_rows: 1000 } }),
-      getContractList({ list_rows: 1000 }),
-    ])
-    const ok = (i: number) => settled[i].status === 'fulfilled' ? (settled[i] as any).value : { data: { rows: [], list: [] } }
-    const [fundRes, prepayRes, collectRes, payRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes] = settled.map((_,i) => ok(i))
-    const rawFundList = fundRes.data?.rows ?? fundRes.data?.list ?? []
+    const endpoints = [
+      '/finance/Fund/index', '/finance/Prepay/index', '/finance/CollectReceipt/index',
+      '/finance/PayReceipt/index', '/stock/PurchaseOrder/index', '/stock/SaleOutOrder/index',
+      '/retail/order/index', '/finance/Expense/index', '/retail/recharge/index',
+      '/shop/ShopCustomer/index', '/procure/supplier/index', '/procure/ProcureReturn/index',
+      '/stock/SaleReturnOrder/index', '/shop/ContractOrder/index',
+    ]
+    // Limit concurrency; publish a new snapshot only after every source is complete.
+    const results: any[] = []
+    for (let start = 0; start < endpoints.length; start += 4) {
+      const batch = await Promise.all(endpoints.slice(start, start + 4).map(endpoint =>
+        fetchAllPages(params => http.get(endpoint, { params }))
+      ))
+      if (version !== loadVersion) return
+      results.push(...batch)
+    }
+    const [fundRes, prepayRes, collectRes, payRes, purchaseRes, saleOutRes, retailRes, expenseRes, rechargeRes, clientRes, supplierRes, returnRes, saleReturnRes, contractRes] = results
+    const rawFundList = fundRes.data.rows
     const fundNameMap = new Map<number, string>(rawFundList.map((row: any) => [Number(row.id), String(row.name || '')]))
     prepayList.value = prepayRes.data?.rows ?? prepayRes.data?.list ?? []
     const rawCollectList = collectRes.data?.rows ?? collectRes.data?.list ?? []
@@ -1227,7 +1245,9 @@ async function loadAllData() {
       }
       return { ...row, raw_balance: dynamicBalance, balance: dynamicBalance, display_balance: dynamicBalance }
     })
-    fundList.value = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
+    const nextFundList = applyProcureReturnsToFundRows(fundListWithDynamic, procureReturnFinanceList.value)
+    // 拿不到账户时保留上一次已经显示出来的，绝不用空列表把它清掉
+    if (nextFundList.length || !fundList.value.length) fundList.value = nextFundList
     saleReturnFinanceList.value = buildSaleReturnSettlementRows(rawReceivableList, normalizedSaleReturns)
     // 按供应商聚合采购订单计算应付（只算已审核 status===1 的单子）
     // 订单本体已付金额直接用后端 o.pay_amount；附加费用已付从付款单匹配
@@ -1390,11 +1410,23 @@ async function loadAllData() {
       if (r.pay_type === 'supplier') return !r.supplier_id || supplierIds.has(r.supplier_id)
       return true
     })
-  } catch {}
+    hasCompleteData.value = true
+  } catch (e: any) {
+    if (version === loadVersion) dataLoadError.value = e?.message || '数据加载失败'
+  } finally {
+    if (version === loadVersion) dataLoading.value = false
+  }
 }
 
-onMounted(() => loadAllData())
-onActivated(() => loadAllData())
+// 页面被 keep-alive 缓存：首次打开 onMounted 和 onActivated 都会触发，
+// 那十几个请求会原封不动打两遍（一次打开约 30 个请求），后端排队更容易漏掉几条。
+// 首次激活跳过，之后从别的标签切回来照常刷新。
+let skipFirstActivate = true
+onMounted(() => { loadAllData() })
+onActivated(() => {
+  if (skipFirstActivate) { skipFirstActivate = false; return }
+  loadAllData()
+})
 </script>
 
 <style scoped>

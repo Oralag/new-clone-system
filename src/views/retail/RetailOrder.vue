@@ -98,8 +98,8 @@
         </el-table-column>
         <el-table-column :label="$t('retail.retailOrder.colOperation')" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 0" type="primary" link size="small" @click="handleAudit(row, 1)">{{ $t('retail.retailOrder.audit') }}</el-button>
-            <el-button v-else type="warning" link size="small" @click="handleAudit(row, 0)">{{ $t('retail.retailOrder.unaudit') }}</el-button>
+            <el-button v-if="row.status === 0" type="primary" link size="small" :loading="auditingIds.has(Number(row.id))" @click="handleAudit(row, 1)">{{ $t('retail.retailOrder.audit') }}</el-button>
+            <el-button v-else type="warning" link size="small" :loading="auditingIds.has(Number(row.id))" @click="handleAudit(row, 0)">{{ $t('retail.retailOrder.unaudit') }}</el-button>
             <el-button v-if="row.status === 0" type="success" link size="small" @click="openForm(row)">{{ $t('retail.retailOrder.edit') }}</el-button>
             <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('retail.retailOrder.reconciled') : $t('retail.retailOrder.reconcile') }}</el-button>
             <el-button type="danger" link size="small" @click="handleDelete(row)">{{ $t('retail.retailOrder.delete') }}</el-button>
@@ -335,15 +335,13 @@ import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus, Delete } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getRetailOrderList, createRetailOrder, updateRetailOrder, deleteRetailOrder, getMemberList, getStoreList } from '@/api/retail'
 import { getFundList, getPayReceiptList, createPayReceipt, deletePayReceipt } from '@/api/finance'
 import http from '@/api/http'
-import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { stockEffect, deleteRetailStockFlows } from '@/utils/stockEffect'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
 const { t } = useI18n()
@@ -630,47 +628,19 @@ async function handleSave() {
   } finally { saving.value = false }
 }
 
-async function deductRetailFund(amount: number) {
-  if (amount <= 0) return
-  const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-  const funds: any[] = fundRes.data?.rows ?? []
-  const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
-  if (retailFund) {
-    const newBalance = Number(retailFund.balance || 0) - amount
-    await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: newBalance })
-  }
-}
-
+const auditingIds = ref<Set<number>>(new Set())
 async function handleAudit(row: any, status: number) {
-  const items = parseGoods(row.goods_info)
-  const payAmount = Number(row.pay_amount || 0)
-  if (status === 1) {
-    await http.post('/retail/order/audit', { id: row.id, status: 1 })
-    try { await retailStockEffect(items, 'deduct', row.id) } catch (e: any) { ElMessage.warning(t('retail.retailOrder.auditStockFail')) }
-    try {
-      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-      const funds: any[] = fundRes.data?.rows ?? []
-      const retailFund = funds.find((f: any) => f.name === RETAIL_FUND_NAME)
-      if (retailFund) {
-        await http.post('/finance/Fund/edit', { id: retailFund.id, name: retailFund.name, balance: Number(retailFund.balance || 0) + payAmount })
-      } else {
-        await http.post('/finance/Fund/add', { name: RETAIL_FUND_NAME, type: 2, balance: payAmount, remark: 'Retail Sale Out' })
-      }
-    } catch (e: any) { ElMessage.warning(t('retail.retailOrder.auditFundFail')) }
-    const stockDesc = items.map((i: any) => `${i.goods_name || 'item'} ×${i.num}`).join(', ')
-    ElNotification({ title: t('retail.retailOrder.auditSuccessTitle'), dangerouslyUseHTMLString: true, type: 'success', duration: 5000,
-      message: `<div style="font-size:12px;line-height:2">📦 ${t('retail.retailOrder.auditStockDeducted')}: ${stockDesc}<br>💰 ${RETAIL_FUND_NAME} +¥${payAmount.toFixed(2)}</div>` })
-  } else {
-    await http.post('/retail/order/audit', { id: row.id, status: 0 })
-    try { await deleteRetailStockFlows(row.id) } catch { /* silent skip if no stock flow found */ }
-    try { await deductRetailFund(payAmount) } catch (e: any) { ElMessage.warning(t('retail.retailOrder.unauditFundFail')) }
-    const stockDesc = items.map((i: any) => `${i.goods_name || 'item'} ×${i.num}`).join(', ')
-    ElNotification({ title: t('retail.retailOrder.unauditSuccessTitle'), dangerouslyUseHTMLString: true, type: 'warning', duration: 5000,
-      message: `<div style="font-size:12px;line-height:2">📦 ${t('retail.retailOrder.unauditStockRestored')}: ${stockDesc}<br>💰 ${RETAIL_FUND_NAME} -¥${payAmount.toFixed(2)}</div>` })
-  }
-  stockRefreshStore.trigger()
-  tableRef.value?.refresh()
-  loadFeePayMap()
+  if (auditingIds.value.has(Number(row.id))) return
+  auditingIds.value.add(Number(row.id))
+  try {
+    await http.post('/retail/order/audit', { id: row.id, status })
+    ElMessage.success(t(status === 1 ? 'retail.retailOrder.auditSuccessTitle' : 'retail.retailOrder.unauditSuccessTitle'))
+    stockRefreshStore.trigger()
+    tableRef.value?.refresh()
+    loadFeePayMap()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  } finally { auditingIds.value.delete(Number(row.id)) }
 }
 
 // 删除订单前清理其费用付款单（PayReceipt/del 会自动退款到对应资金账户）
@@ -698,31 +668,14 @@ async function handleDelete(row: any) {
 
 async function batchDelRetailOrders({ ids }: { ids: number[] }) {
   const rows: any[] = tableRef.value?.selectedRows ?? []
-  const auditedRows = rows.filter((r: any) => r.status === 1)
-  if (auditedRows.length) {
-    const totalPay = auditedRows.reduce((s: number, r: any) => s + Number(r.pay_amount || 0), 0)
-    try {
-      await deductRetailFund(totalPay)
-    } catch (e: any) {
-      console.warn('零售账户余额回滚失败', e?.message)
-    }
-    for (const row of auditedRows) {
-      try {
-        await deleteRetailStockFlows(row.id)
-      } catch { /* ignore */ }
-    }
-    stockRefreshStore.trigger()
+  if (rows.some((r: any) => Number(r.status) === 1)) {
+    throw new Error(t('retail.retailOrder.deleteAuditedFirst'))
   }
   for (const id of ids) {
     await cleanupRetailFeePayReceipts(id)
     removeFeeCache(id)
   }
   return http.post('/retail/order/batchDel', { ids })
-}
-
-async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
-  const remark = mode === 'deduct' ? (orderId ? `Retail Sale Out#${orderId}` : 'Retail Sale Out') : 'Retail Return In'
-  await stockEffect(items, mode, undefined, remark)
 }
 
 function parseGoods(info: any): any[] {

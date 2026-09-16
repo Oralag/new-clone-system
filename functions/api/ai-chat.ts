@@ -407,29 +407,8 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
         const res: any = await erpPost('/retail/order/add', payload, token)
         if (res?.code !== 1) { result = `创建失败：${res?.msg || JSON.stringify(res)}`; break }
         const orderId = res?.data?.id || res?.data?.lastId
-        // 审核
-        await erpPost('/retail/order/audit', { id: orderId, status: 1 }, token)
-        // 扣库存
-        try {
-          const whRes: any = await erpGet('/stock/WarehouseName/index', { list_rows: 1 }, token)
-          const wh = whRes?.data?.rows?.[0]
-          if (wh) {
-            for (const item of resolvedItems) {
-              if (!item.goods_id || !item.num) continue
-              const sr: any = await erpGet('/stock/StockAll/index', { goods_id: item.goods_id, warehouse_id: wh.id, list_rows: 10 }, token)
-              const stock = sr?.data?.rows?.[0]
-              if (stock) await erpPost('/stock/StockAll/edit', { id: stock.id, qty: Math.max(0, Number(stock.qty || 0) - Number(item.num)) }, token)
-            }
-          }
-        } catch { /* 库存失败不中断 */ }
-        // 更新零售收款账户
-        try {
-          const fundRes: any = await erpGet('/finance/Fund/index', { list_rows: 100 }, token)
-          const funds: any[] = fundRes?.data?.rows || []
-          const rf = funds.find((f: any) => f.name === '零售收款账户')
-          if (rf) await erpPost('/finance/Fund/edit', { id: rf.id, name: rf.name, balance: Number(rf.balance || 0) + payAmount }, token)
-          else await erpPost('/finance/Fund/add', { name: '零售收款账户', type: 2, balance: payAmount, remark: '零售单自动累计' }, token)
-        } catch { /* 财务失败不中断 */ }
+        const auditRes: any = await erpPost('/retail/order/audit', { id: orderId, status: 1 }, token)
+        if (auditRes?.code !== 1) { result = `零售单已保存为草稿，审核失败：${auditRes?.message || auditRes?.msg || '请核对单据'}`; break }
         const itemsSummary = resolvedItems.map((i: any) => `@ ${i.goods_name} × ${i.num || 1} ¥${((i.num || 1) * (i.price || 0)).toFixed(2)}`).join('\n')
         result = `零售单录入完成！\n单号：${orderSn}\n${itemsSummary}${discountAmt > 0 ? `\n折扣 -¥${discountAmt.toFixed(2)}` : ''}\n合计：¥${payAmount.toFixed(2)}\n已自动审核，库存和账户已更新。`
         break
@@ -470,7 +449,8 @@ async function executeTool(name: string, input: Record<string, any>, token: stri
       }
       case 'delete_retail_order': {
         // 先反审核（status=1的单子不能直接删），再删除
-        await erpPost('/retail/order/audit', { id: input.id, status: 0 }, token)
+        const auditRes: any = await erpPost('/retail/order/audit', { id: input.id, status: 0 }, token)
+        if (auditRes?.code !== 1) { result = `反审核失败：${auditRes?.message || auditRes?.msg || '请核对单据'}`; break }
         const res: any = await erpPost('/retail/order/del', { id: input.id }, token)
         result = res?.code === 1 ? `零售订单已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break

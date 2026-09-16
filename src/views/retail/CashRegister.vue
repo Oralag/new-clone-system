@@ -688,10 +688,7 @@ import { getSaleContractList } from '@/api/reports'
 import { createProcureOrder, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getSupplierList, createSupplier } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
-import { adjustFundBalance } from '@/utils/fund'
-import { RETAIL_FUND_NAME } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
-import { stockEffect } from '@/utils/stockEffect'
 import { usePermissionStore } from '@/stores/permission'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
@@ -1191,14 +1188,6 @@ const successVisible = ref(false)
 const lastPayAmount = ref(0)
 const lastOrderNo = ref('')
 
-// 零售库存变动：deduct=扣减，restore=加回
-async function retailStockEffect(items: any[], mode: 'deduct' | 'restore', orderId?: number) {
-  const remark = mode === 'deduct'
-    ? (orderId ? t('retail.cashRegister.retailOutboundRemarkWithId', { id: orderId }) : t('retail.cashRegister.retailOutboundRemark'))
-    : t('retail.cashRegister.retailReturnRemark')
-  await stockEffect(items, mode, undefined, remark)
-}
-
 function extractRows(res: any): any[] {
   if (Array.isArray(res?.data?.rows)) return res.data.rows
   if (Array.isArray(res?.data?.list)) return res.data.list
@@ -1210,6 +1199,7 @@ function extractRows(res: any): any[] {
 }
 
 async function handleCheckout() {
+  if (paying.value) return
   if (!cartItems.length) { ElMessage.warning(t('retail.cashRegister.cartEmptyWarning')); return }
   // 会员余额支付验证
   if (payMethod.value === 'balance') {
@@ -1260,20 +1250,7 @@ async function handleCheckout() {
     const feesTotal = normalizedRetailFeeItems().reduce((s, f) => s + Number(f.amount), 0)
     lastPayAmount.value = settled.payAmount
     lastOrderNo.value = created.order_sn || created.id || res.data?.order_no || res.data?.id || ''
-    // 收银台扣减库存
-    try {
-      await retailStockEffect(cartItems, 'deduct', createdId || 0)
-    } catch {
-      ElMessage.warning(t('retail.cashRegister.stockDeductFail'))
-    }
-    // 更新资金账户：商品实付（附加费用由我方承担，不计入客户收款）
-    try {
-      await adjustFundBalance({
-        fundName: RETAIL_FUND_NAME,
-        delta: settled.payAmount,
-        allowCreate: true,
-      })
-    } catch { /* 资金更新失败不阻塞 */ }
+    // 已审核单由后端在一个事务中保存单据、扣库存和入账。
     stockRefreshStore.trigger()
     clearCart()
     successVisible.value = true
