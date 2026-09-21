@@ -42,19 +42,19 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiCost', { period: periodLabel }) }}</div>
-        <div class="kpi-val purple">¥{{ fmt(kpi.cost) }}</div>
+        <div class="kpi-val purple">{{ costIncomplete ? '—' : `¥${fmt(kpi.cost)}` }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiGrossProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.profit >= 0 ? '#16a34a' : '#dc2626' }">
-          {{ kpi.profit >= 0 ? '+' : '' }}¥{{ fmt(kpi.profit) }}
+          {{ costIncomplete ? '—' : `${kpi.profit >= 0 ? '+' : ''}¥${fmt(kpi.profit)}` }}
         </div>
-        <div class="kpi-sub">{{ $t('sale.overview.kpiGrossMargin', { rate: kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }) }}</div>
+        <div v-if="!costIncomplete" class="kpi-sub">{{ $t('sale.overview.kpiGrossMargin', { rate: kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }) }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiNetProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.netProfit >= 0 ? '#0071e3' : '#dc2626' }">
-          {{ kpi.netProfit >= 0 ? '+' : '' }}¥{{ fmt(kpi.netProfit) }}
+          {{ costIncomplete ? '—' : `${kpi.netProfit >= 0 ? '+' : ''}¥${fmt(kpi.netProfit)}` }}
         </div>
         <div class="kpi-sub">{{ $t('sale.overview.kpiFreightDeduct', { amount: fmt(kpi.sellerFreight) }) }}</div>
       </div>
@@ -73,6 +73,9 @@
         <div class="kpi-val blue">{{ kpi.orders }}</div>
       </div>
     </div>
+
+    <el-alert v-if="!costLoading && costIncomplete" type="warning" :closable="false" show-icon
+      :title="locale === 'en-US' ? 'Cost data is incomplete. Profit is unavailable; check BOM, purchase costs or retry.' : '成本数据不完整，暂不显示利润；请检查 BOM、采购成本或重新加载。'" />
 
     <!-- Tab 数据表格 -->
     <el-card style="margin-top:14px">
@@ -275,6 +278,12 @@ import { createCollectReceipt } from '@/api/finance'
 import http from '@/api/http'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { stockEffect } from '@/utils/stockEffect'
+import { findNaiDoufuGoods } from '@/utils/goodsAlias'
+import {
+  createProfitCostContext, loadBomItems, loadUnitConvertRows, parseItems,
+  calcContractSaleAmount, contractDateOf, myFreightShare, getItemUnitCost, itemQty,
+  type BomItemFlat,
+} from '@/utils/profitCalc'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -289,6 +298,10 @@ const goodsList = ref<any[]>([])
 const fundList = ref<any[]>([])
 const inhouseList = ref<any[]>([])
 const bomList = ref<any[]>([])
+const bomItems = ref<BomItemFlat[]>([])
+const unitConvertRows = ref<any[]>([])
+const costLoading = ref(true)
+const costLoadFailed = ref(false)
 const stockRows = ref<any[]>([])
 const activeTab = ref('contract')
 
@@ -367,7 +380,7 @@ function firstDate(...values: any[]): string {
 }
 
 function getContractDate(row: any): string {
-  return firstDate(row?.sign_date, row?.contract_date, row?.order_date, row?.create_time, row?.created_at)
+  return contractDateOf(row)
 }
 
 function getOfferDate(row: any): string {
@@ -379,41 +392,7 @@ function getSaleOutDate(row: any): string {
 }
 
 // ── 成本计算 ──────────────────────────────────────────────────────────────────
-const goodsCostMap = computed(() => {
-  const m: Record<number, number> = {}
-  for (const g of goodsList.value) {
-    m[g.id] = Number(g.cost_price || g.purchase_price || g.avg_price || g.in_price || 0)
-  }
-  const snTC: Record<string, number> = {}, snTQ: Record<string, number> = {}
-  for (const ih of inhouseList.value) {
-    if (Number(ih.status) !== 1) continue
-    try { for (const item of JSON.parse(ih.goods_info || '[]')) {
-      const sn = item.goods_sn; if (!sn) continue
-      const q = Number(item.num || 0), p = Number(item.price || 0)
-      if (q > 0 && p > 0) { snTC[sn] = (snTC[sn] || 0) + q * p; snTQ[sn] = (snTQ[sn] || 0) + q }
-    }} catch {}
-  }
-  const snAvg: Record<string, number> = {}
-  for (const sn in snTQ) if (snTQ[sn] > 0) snAvg[sn] = snTC[sn] / snTQ[sn]
-  const bomMap: Record<number, { sn: string; num: number }[]> = {}
-  for (const b of bomList.value) { const gid = Number(b.goods_id || 0); if (!gid) continue; if (!bomMap[gid]) bomMap[gid] = []; bomMap[gid].push({ sn: b.material_sn || '', num: Number(b.num || 0) }) }
-  for (const gid in bomMap) { const g = goodsList.value.find(x => x.id === Number(gid)); if (!g?.goods_sn) continue; let bc = 0; for (const mt of bomMap[Number(gid)]) bc += mt.num * (snAvg[mt.sn] || 0); if (bc > 0) { snTC[g.goods_sn] = bc; snTQ[g.goods_sn] = 1 } }
-  for (const g of goodsList.value) { const sn = g.goods_sn; if (sn && snTQ[sn] > 0) m[g.id] = snTC[sn] / snTQ[sn] }
-  return m
-})
-
-const goodsCostBySn = computed(() => {
-  const m: Record<string, number> = {}
-  for (const g of goodsList.value) {
-    const sn = String(g.goods_sn || '')
-    if (!sn) continue
-    const c = Number(goodsCostMap.value[g.id] || g.cost_price || g.purchase_price || g.avg_price || g.in_price || 0)
-    if (c > 0) m[sn] = c
-  }
-  return m
-})
-
-// goods_id / goods_sn -> 库存均价（优先口径）
+// goods_id / goods_sn -> 库存均价（缺失成本的补充来源）
 const stockAvgCostMap = computed(() => {
   const byId: Record<number, { totalAmt: number; totalQty: number }> = {}
   const bySn: Record<string, { totalAmt: number; totalQty: number }> = {}
@@ -445,6 +424,21 @@ const stockAvgCostMap = computed(() => {
     if (t.totalQty > 0) snMap[sn] = t.totalAmt / t.totalQty
   }
   return { idMap, snMap }
+})
+
+// 与利润报表共用 BOM、采购均价和单位换算；库存均价仅补充缺失成本。
+const costContext = computed(() => {
+  const ctx = createProfitCostContext({
+    goodsList: goodsList.value, inhouseList: inhouseList.value,
+    bomHeaders: bomList.value, bomItems: bomItems.value,
+    unitConvertRows: unitConvertRows.value,
+  })
+  for (const g of goodsList.value) {
+    if (!(ctx.costMap[g.id] > 0)) {
+      ctx.costMap[g.id] = stockAvgCostMap.value.idMap[g.id] || stockAvgCostMap.value.snMap[g.goods_sn] || 0
+    }
+  }
+  return ctx
 })
 
 // ── 时间维度切换 ──────────────────────────────────────────────────────────────
@@ -488,7 +482,7 @@ function inPeriod(dateStr: string): boolean {
 
 // ── KPI ───────────────────────────────────────────────────────────────────────
 const kpi = computed(() => {
-  let sale = 0, cost = 0, sellerFreight = 0
+  let sale = 0, cost = 0, sellerFreight = 0, missingCost = 0
   const customerSet = new Set<number>()
   let orders = 0
 
@@ -496,36 +490,30 @@ const kpi = computed(() => {
     if (Number(c.status) !== 1) continue
     const d = getContractDate(c)
     if (inPeriod(d)) {
-      const afterDisc = Number(c.after_discount)
-      sale += (afterDisc > 0 && afterDisc <= Number(c.total_amount || 0)) ? afterDisc : Number(c.total_amount || 0)
-      if (c.freight_bearer === 'seller') sellerFreight += Number(c.freight_amount || 0)
+      sale += calcContractSaleAmount(c)
+      sellerFreight += myFreightShare(c)
+      // 销售额和成本归属同一合同月份，避免跨月出库使本月成本丢失。
+      let items = parseItems(c.goods_info)
+      if (!items.length) {
+        const sn = getContractSn(c)
+        items = saleOutRows.value.filter(so => {
+          if (Number(so.status) !== 1) return false
+          const contractId = Number(so.contract_id || so.source_contract_id || so.from_contract_id || 0)
+          if (contractId > 0) return contractId === Number(c.id)
+          const contractSn = String(so.contract_sn || so.source_contract_sn || so.source_order_sn || '').trim()
+          return !!sn && (contractSn === sn || String(so.remark || '').includes(sn))
+        }).flatMap(so => parseItems(so.goods_info))
+      }
+      if (!items.length) missingCost++
+      for (const item of items) {
+        const qty = itemQty(item)
+        const { unitCost } = getItemUnitCost(item, costContext.value, findNaiDoufuGoods)
+        if (qty > 0 && !(unitCost > 0)) missingCost++
+        cost += qty * unitCost
+      }
       if (c.customer_id) customerSet.add(c.customer_id)
       orders++
     }
-  }
-
-  // 成本以“销售出库”口径核算（与库存扣减一致），避免历史合同缺少明细导致成本为0
-  for (const so of saleOutRows.value) {
-    const d = getSaleOutDate(so)
-    if (!inPeriod(d) || Number(so.status) !== 1) continue
-    try {
-      for (const g of JSON.parse(so.goods_info || '[]')) {
-        const qty = Number(g.num || 0)
-        const unitCost = Number(
-          stockAvgCostMap.value.idMap[g.goods_id] ||
-          stockAvgCostMap.value.snMap[g.goods_sn] ||
-          g.cost_price ||
-          g.cost ||
-          g.purchase_price ||
-          g.in_price ||
-          g.avg_price ||
-          goodsCostMap.value[g.goods_id] ||
-          goodsCostBySn.value[g.goods_sn] ||
-          0
-        )
-        cost += qty * unitCost
-      }
-    } catch {}
   }
 
   const pendingOffer = offerRows.value.filter(r => Number(r.status) === 0).length
@@ -534,7 +522,7 @@ const kpi = computed(() => {
   const netProfit = grossProfit - sellerFreight
 
   return {
-    sale, cost,
+    sale, cost, missingCost,
     profit: grossProfit,
     netProfit,
     sellerFreight,
@@ -544,6 +532,8 @@ const kpi = computed(() => {
     orders,
   }
 })
+
+const costIncomplete = computed(() => costLoading.value || costLoadFailed.value || kpi.value.missingCost > 0)
 
 // ── 快捷操作 ──────────────────────────────────────────────────────────────────
 async function quickAuditContract(row: any) {
@@ -779,6 +769,8 @@ function fmt(v: number): string {
 
 // ── 加载 ──────────────────────────────────────────────────────────────────────
 async function loadData() {
+  costLoading.value = true
+  costLoadFailed.value = false
   const [c, o, s, cust, wh, g, ih, b, fd, st] = await Promise.allSettled([
     getContractList({ list_rows: 2000 }),
     getOfferList({ list_rows: 2000 }),
@@ -801,10 +793,26 @@ async function loadData() {
   customerList.value = cust.status === 'fulfilled' ? (cust.value?.data?.rows ?? []) : []
   warehouseList.value = wh.status === 'fulfilled' ? (wh.value?.data?.rows ?? []) : []
   goodsList.value = g.status === 'fulfilled' ? (g.value?.data?.rows ?? []) : []
-  inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => r.status === 1) : []
-  bomList.value = b.status === 'fulfilled' ? (b.value?.data?.rows ?? []) : []
+  inhouseList.value = ih.status === 'fulfilled' ? (ih.value?.data?.rows ?? []).filter((r: any) => Number(r.status) === 1) : []
+  bomList.value = b.status === 'fulfilled' ? (b.value?.data?.list ?? b.value?.data?.rows ?? []) : []
   fundList.value = fd.status === 'fulfilled' ? (fd.value?.data?.rows ?? []) : []
   stockRows.value = st.status === 'fulfilled' ? (st.value?.data?.rows ?? []) : []
+  // 共享加载器会容忍部分请求失败，此处同时记录失败，避免把不完整成本当作真实利润。
+  const costHttp = { get: async (url: string, config?: any) => {
+    try { return await http.get(url, config) }
+    catch (error) { costLoadFailed.value = true; throw error }
+  } }
+  costLoadFailed.value = [c, s, g, ih, b, st].some(result => result.status === 'rejected')
+  try {
+    const [units, materials] = await Promise.all([
+      loadUnitConvertRows(costHttp, goodsList.value),
+      loadBomItems(costHttp, bomList.value),
+    ])
+    unitConvertRows.value = units
+    bomItems.value = materials
+  } finally {
+    costLoading.value = false
+  }
 }
 
 onMounted(loadData)
