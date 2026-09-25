@@ -42,19 +42,19 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiCost', { period: periodLabel }) }}</div>
-        <div class="kpi-val purple">{{ costIncomplete ? '—' : `¥${fmt(kpi.cost)}` }}</div>
+        <div class="kpi-val purple">{{ costLoading ? '—' : `¥${fmt(kpi.cost)}` }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiGrossProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.profit >= 0 ? '#16a34a' : '#dc2626' }">
-          {{ costIncomplete ? '—' : `${kpi.profit >= 0 ? '+' : ''}¥${fmt(kpi.profit)}` }}
+          {{ costLoading ? '—' : `${kpi.profit >= 0 ? '+' : ''}¥${fmt(kpi.profit)}` }}
         </div>
-        <div v-if="!costIncomplete" class="kpi-sub">{{ $t('sale.overview.kpiGrossMargin', { rate: kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }) }}</div>
+        <div v-if="!costLoading" class="kpi-sub">{{ $t('sale.overview.kpiGrossMargin', { rate: kpi.sale > 0 ? (kpi.profit / kpi.sale * 100).toFixed(1) : '0.0' }) }}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">{{ $t('sale.overview.kpiNetProfit', { period: periodLabel }) }}</div>
         <div class="kpi-val" :style="{ color: kpi.netProfit >= 0 ? '#0071e3' : '#dc2626' }">
-          {{ costIncomplete ? '—' : `${kpi.netProfit >= 0 ? '+' : ''}¥${fmt(kpi.netProfit)}` }}
+          {{ costLoading ? '—' : `${kpi.netProfit >= 0 ? '+' : ''}¥${fmt(kpi.netProfit)}` }}
         </div>
         <div class="kpi-sub">{{ $t('sale.overview.kpiFreightDeduct', { amount: fmt(kpi.sellerFreight) }) }}</div>
       </div>
@@ -74,8 +74,13 @@
       </div>
     </div>
 
-    <el-alert v-if="!costLoading && costIncomplete" type="warning" :closable="false" show-icon
-      :title="locale === 'en-US' ? 'Cost data is incomplete. Profit is unavailable; check BOM, purchase costs or retry.' : '成本数据不完整，暂不显示利润；请检查 BOM、采购成本或重新加载。'" />
+    <el-alert v-if="!costLoading && costIncomplete" type="warning" :closable="false" show-icon style="margin-top:10px">
+      <template #title>
+        <span v-if="costLoadFailed">成本数据加载不完整，当前利润按已加载的成本计算。</span>
+        <span v-else>已按可用成本核算，{{ missingCostItems.length }} 条商品明细尚未维护成本。</span>
+        <el-button v-if="missingCostItems.length" type="warning" link @click="missingCostVisible = true">补充缺失成本</el-button>
+      </template>
+    </el-alert>
 
     <!-- Tab 数据表格 -->
     <el-card style="margin-top:14px">
@@ -259,6 +264,24 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="missingCostVisible" title="补充缺失成本" width="760px">
+      <div style="margin-bottom:12px;color:#606266;font-size:13px">以下商品未能取得成本价。补充后回到销售总览刷新，即会重新计算利润。</div>
+      <el-table :data="missingCostItems" size="small" max-height="420" border>
+        <el-table-column prop="goods_name" label="商品" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="goods_sn" label="编码" min-width="110" show-overflow-tooltip />
+        <el-table-column prop="unit_name" label="单位" width="70" />
+        <el-table-column prop="qty" label="待核算数量" align="right" width="110" />
+        <el-table-column prop="contracts" label="涉及合同" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="reason" label="缺失原因" min-width="120" />
+        <el-table-column label="操作" width="105" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="openGoodsCost(row)">去补成本</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer><el-button @click="missingCostVisible = false">关闭</el-button></template>
+    </el-dialog>
+
     <GoodsSelect ref="qsGoodsRef" @confirm="onQsGoodsConfirm" />
   </div>
 </template>
@@ -281,7 +304,7 @@ import { stockEffect } from '@/utils/stockEffect'
 import { findNaiDoufuGoods } from '@/utils/goodsAlias'
 import {
   createProfitCostContext, loadBomItems, loadUnitConvertRows, parseItems,
-  calcContractSaleAmount, contractDateOf, myFreightShare, getItemUnitCost, itemQty,
+  calcContractSaleAmount, contractDateOf, myFreightShare, getItemUnitCost, itemQty, itemName, itemSn,
   type BomItemFlat,
 } from '@/utils/profitCalc'
 
@@ -304,6 +327,7 @@ const costLoading = ref(true)
 const costLoadFailed = ref(false)
 const stockRows = ref<any[]>([])
 const activeTab = ref('contract')
+const missingCostVisible = ref(false)
 
 function hasLinkedSaleOut(contractRow: any): boolean {
   const contractId = Number(contractRow?.id || 0)
@@ -483,6 +507,10 @@ function inPeriod(dateStr: string): boolean {
 // ── KPI ───────────────────────────────────────────────────────────────────────
 const kpi = computed(() => {
   let sale = 0, cost = 0, sellerFreight = 0, missingCost = 0
+  const missingItemMap = new Map<string, {
+    goods_id: number; goods_name: string; goods_sn: string; unit_name: string
+    qty: number; contracts: Set<string>; reason: string
+  }>()
   const customerSet = new Set<number>()
   let orders = 0
 
@@ -504,11 +532,34 @@ const kpi = computed(() => {
           return !!sn && (contractSn === sn || String(so.remark || '').includes(sn))
         }).flatMap(so => parseItems(so.goods_info))
       }
-      if (!items.length) missingCost++
+      if (!items.length) {
+        missingCost++
+        missingItemMap.set(`contract_${c.id}`, {
+          goods_id: 0, goods_name: '合同商品明细缺失', goods_sn: '', unit_name: '', qty: 0,
+          contracts: new Set([getContractSn(c)]), reason: '合同未保存商品明细',
+        })
+      }
       for (const item of items) {
         const qty = itemQty(item)
         const { unitCost } = getItemUnitCost(item, costContext.value, findNaiDoufuGoods)
-        if (qty > 0 && !(unitCost > 0)) missingCost++
+        if (qty > 0 && !(unitCost > 0)) {
+          missingCost++
+          const goodsId = Number(item.goods_id || 0)
+          const goodsSn = itemSn(item)
+          const goodsName = itemName(item) || '未识别商品'
+          const key = String(goodsId || goodsSn || goodsName)
+          const existing = missingItemMap.get(key)
+          if (existing) {
+            existing.qty += qty
+            existing.contracts.add(getContractSn(c))
+          } else {
+            missingItemMap.set(key, {
+              goods_id: goodsId, goods_name: goodsName, goods_sn: goodsSn,
+              unit_name: String(item.unit_name || item.unit || ''), qty,
+              contracts: new Set([getContractSn(c)]), reason: '未维护成本价',
+            })
+          }
+        }
         cost += qty * unitCost
       }
       if (c.customer_id) customerSet.add(c.customer_id)
@@ -523,6 +574,11 @@ const kpi = computed(() => {
 
   return {
     sale, cost, missingCost,
+    missingItems: [...missingItemMap.values()].map(item => ({
+      ...item,
+      qty: Number(item.qty.toFixed(4)),
+      contracts: [...item.contracts].join('、'),
+    })),
     profit: grossProfit,
     netProfit,
     sellerFreight,
@@ -534,6 +590,13 @@ const kpi = computed(() => {
 })
 
 const costIncomplete = computed(() => costLoading.value || costLoadFailed.value || kpi.value.missingCost > 0)
+const missingCostItems = computed(() => kpi.value.missingItems)
+
+function openGoodsCost(row: { goods_name: string; goods_sn: string }) {
+  missingCostVisible.value = false
+  router.push('/goods/info')
+  ElMessage.info(`请搜索“${row.goods_sn || row.goods_name}”，在商品资料中补充成本价后返回刷新`)
+}
 
 // ── 快捷操作 ──────────────────────────────────────────────────────────────────
 async function quickAuditContract(row: any) {
