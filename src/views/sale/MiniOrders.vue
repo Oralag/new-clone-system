@@ -255,7 +255,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
@@ -490,7 +490,12 @@ function fmtTime(value: string) {
   return new Date(value).toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { hour12: false }).replace(/\//g, '-')
 }
 
-onMounted(load)
+const onMiniOrderArrived = () => { void load() }
+onMounted(() => {
+  void load()
+  window.addEventListener('mini-order-arrived', onMiniOrderArrived)
+})
+onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderArrived))
 </script>
 
 <style scoped>

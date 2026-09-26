@@ -190,6 +190,8 @@ import { usePermissionStore } from '@/stores/permission'
 import { useRoute, useRouter } from 'vue-router'
 import { Sunny, Moon, View } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessageBox } from 'element-plus'
+import { TOKEN_NAME } from '@/config'
 
 const { t } = useI18n()
 const tt = (key: string) => (key && (key.startsWith('route.') || key.startsWith('menu.') || key.startsWith('app.')) ? t(key) : key)
@@ -206,11 +208,80 @@ const showQuickCreate = ref(false)
 
 const isMobile = ref(window.innerWidth < 768)
 const onResize = () => { isMobile.value = window.innerWidth < 768 }
+let orderStreamController: AbortController | null = null
+let orderStreamReconnect: ReturnType<typeof setTimeout> | null = null
+let adminLayoutDisposed = false
+
+async function connectMiniOrderStream() {
+  if (adminLayoutDisposed || !authStore.isLoggedIn || orderStreamController) return
+  const controller = new AbortController()
+  orderStreamController = controller
+  try {
+    const response = await fetch('/adminapi/mini/orders/events', {
+      headers: { token: localStorage.getItem(TOKEN_NAME) || '' },
+      signal: controller.signal,
+    })
+    if (!response.ok || !response.body) throw new Error(`订单提醒连接失败：${response.status}`)
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (!controller.signal.aborted) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const blocks = buffer.split('\n\n')
+      buffer = blocks.pop() || ''
+      for (const block of blocks) {
+        const event = block.match(/^event:\s*(.+)$/m)?.[1]
+        const data = block.match(/^data:\s*(.+)$/m)?.[1]
+        if (event !== 'new_order' || !data) continue
+        try {
+          const order = JSON.parse(data)
+          void showIncomingOrder(order)
+          window.dispatchEvent(new CustomEvent('mini-order-arrived', { detail: order }))
+        } catch { /* 忽略格式异常的推送 */ }
+      }
+    }
+  } catch { /* 断线后自动重连，不影响 ERP 操作 */ }
+  finally {
+    if (orderStreamController === controller) orderStreamController = null
+    if (!adminLayoutDisposed && authStore.isLoggedIn && !orderStreamReconnect) {
+      orderStreamReconnect = setTimeout(() => {
+        orderStreamReconnect = null
+        void connectMiniOrderStream()
+      }, 5000)
+    }
+  }
+}
+
+async function showIncomingOrder(order: any) {
+  const orderNo = order.order_no || `订单${order.id || ''}`
+  const amount = Number(order.total_amount || 0).toFixed(2)
+  const goods = Array.isArray(order.items) && order.items.length
+    ? `\n商品：${order.items.slice(0, 4).map((item: any) => `${item.goods_name}×${item.qty}`).join('、')}`
+    : ''
+  try {
+    await ElMessageBox.confirm(
+      `订单号：${orderNo}\n实付金额：¥${amount}${goods}`,
+      '收到小程序新订单',
+      { confirmButtonText: '查看订单', cancelButtonText: '稍后处理', type: 'warning', distinguishCancelAndClose: true }
+    )
+    router.push('/sale/mini-orders')
+  } catch { /* 用户选择稍后处理 */ }
+}
+
 onMounted(() => {
   window.addEventListener('resize', onResize)
   ;(window as any).__pageContent = pageContentRef
+  if (authStore.isLoggedIn) void connectMiniOrderStream()
 })
-onUnmounted(() => window.removeEventListener('resize', onResize))
+onUnmounted(() => {
+  adminLayoutDisposed = true
+  window.removeEventListener('resize', onResize)
+  orderStreamController?.abort()
+  if (orderStreamReconnect) clearTimeout(orderStreamReconnect)
+})
 
 // 底部Tab页不在顶栏重复显示标题，其他页面显示当前路由标题
 const TAB_PATHS = ['/dashboard', '/mobile/apps', '/mobile/stats', '/mobile/profile']
