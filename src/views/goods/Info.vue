@@ -699,7 +699,7 @@
           <div class="form-section" ref="secRemark" data-sec="remark">
             <div class="sec-title">{{ $t('goods.info.secRemark') }}</div>
             <el-form-item :label="$t('goods.info.remarkField')" prop="remark">
-              <el-input v-model="fd.remark" type="textarea" :rows="4" :placeholder="$t('goods.info.remarkPh')" />
+              <el-input v-model="fd.user_remark" type="textarea" :rows="4" :placeholder="$t('goods.info.remarkPh')" />
             </el-form-item>
           </div>
 
@@ -1604,7 +1604,9 @@ const defaultFd = () => ({
   safe_min: 0, safe_max: 0,
   sort: 0, make_time: 0,
   can_sale: 1, can_buy: 1, can_make: 1, can_outsource: 1,
-  status: 1, remark: '',
+  // `remark` stores the brand-center JSON used by the mini-program. Keep the
+  // human-facing note separate so the JSON is never shown or overwritten.
+  status: 1, remark: '', user_remark: '',
 })
 const fd = reactive(defaultFd())
 const formRef = ref()
@@ -1655,6 +1657,7 @@ function openEdit(row: any) {
     const applyBrandRemark = (remarkStr: string) => {
       try {
         const b = JSON.parse(remarkStr || '{}')['__brand__'] || {}
+        fd.user_remark = typeof b.note === 'string' ? b.note : ''
         if (b.image) brandFd.image = b.image
         if (b.headerImages?.length) brandFd.headerImages = [...b.headerImages, '', '', ''].slice(0, Math.max(b.headerImages.length + 1, 4))
         if (b.detailImage) brandFd.detailImage = b.detailImage
@@ -1706,6 +1709,10 @@ function openView(row: any) {
     safe_max: Number(row.safe_max) || 0,
     sort: Number(row.sort) || 0,
   })
+  try {
+    const b = JSON.parse(row.remark || '{}').__brand__ || {}
+    fd.user_remark = typeof b.note === 'string' ? b.note : ''
+  } catch { fd.user_remark = '' }
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
@@ -1719,6 +1726,7 @@ function openCopy(row: any) {
     multi_unit: !!(row.multi_unit),
     multi_spec: !!(row.multi_spec),
   })
+  fd.user_remark = ''
   showForm.value = true
   activeTab.value = 'base'
   nextTick(() => { scrollRef.value?.scrollTo({ top: 0 }); loadSpecs() })
@@ -1786,8 +1794,10 @@ async function handleSave() {
     // Convert boolean multi_unit/multi_spec to 0/1
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
-    // Save non-brand fields first (remark excluded — brand handled separately via patchBrand)
+    // Save non-brand fields first. `remark` is internal JSON; the visible note
+    // is atomically merged below, alongside the brand-center fields.
     delete payload.remark
+    delete payload.user_remark
     if (fd.id) {
       await updateGoods(payload)
     } else {
@@ -1814,6 +1824,7 @@ async function handleSave() {
             .map((c: any) => ({ label: c.combo.join(' / '), price: c.price, erpId: c.erpId })),
           isRedeemable: brandFd.isRedeemable,
           pointsCost: brandFd.pointsCost,
+          note: fd.user_remark.trim(),
         },
       })
     }
@@ -1876,9 +1887,43 @@ async function handleSaveAndNew() {
     const payload: any = { ...fd }
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
-    fd.id ? await updateGoods(payload) : await createGoods(payload)
+    // Do not pass the internal JSON blob through the generic edit API.
+    delete payload.remark
+    delete payload.user_remark
+    let savedId = fd.id
+    if (savedId) {
+      await updateGoods(payload)
+    } else {
+      const res = await createGoods(payload)
+      savedId = res.data?.id ?? 0
+    }
+    if (savedId) {
+      await http.post('/goods/ShopGoods/patchBrand', {
+        id: savedId,
+        brand_fields: {
+          image: brandFd.image,
+          headerImages: brandFd.headerImages.filter(Boolean),
+          detailImage: brandFd.detailImage,
+          tags: brandFd.tags,
+          category: brandFd.category,
+          wholesalePrice: brandFd.wholesalePrice,
+          minOrderQuantity: brandFd.minOrderQuantity,
+          baseSales: brandFd.baseSales,
+          specGroups: brandFd.specGroups,
+          skuCombos: brandFd.skuCombos,
+          skuVariants: brandFd.skuCombos
+            .filter((c: any) => c.combo?.length)
+            .map((c: any) => ({ label: c.combo.join(' / '), price: c.price, erpId: c.erpId })),
+          isRedeemable: brandFd.isRedeemable,
+          pointsCost: brandFd.pointsCost,
+          note: fd.user_remark.trim(),
+        },
+      })
+    }
     ElMessage.success(t('goods.info.msgSaveAndNew'))
     Object.assign(fd, defaultFd())
+    Object.assign(brandFd, defaultBrandFd())
+    brandFd.headerImages = ['', '', '', '']
     specList.value = []
     nextTick(() => scrollRef.value?.scrollTo({ top: 0 }))
   } catch (e: any) {
