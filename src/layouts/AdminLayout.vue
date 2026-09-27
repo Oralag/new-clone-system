@@ -211,13 +211,16 @@ const onResize = () => { isMobile.value = window.innerWidth < 768 }
 let orderStreamController: AbortController | null = null
 let orderStreamReconnect: ReturnType<typeof setTimeout> | null = null
 let adminLayoutDisposed = false
+let initialPendingOrdersChecked = false
+const handledIncomingOrderIds = new Set<string>()
 
 async function connectMiniOrderStream() {
   if (adminLayoutDisposed || !authStore.isLoggedIn || orderStreamController) return
   const controller = new AbortController()
   orderStreamController = controller
   try {
-    const response = await fetch('/adminapi/mini/orders/events', {
+    const includePending = initialPendingOrdersChecked ? '' : '?include_pending=1'
+    const response = await fetch(`/adminapi/mini/orders/events${includePending}`, {
       headers: { token: localStorage.getItem(TOKEN_NAME) || '' },
       signal: controller.signal,
     })
@@ -235,11 +238,21 @@ async function connectMiniOrderStream() {
       for (const block of blocks) {
         const event = block.match(/^event:\s*(.+)$/m)?.[1]
         const data = block.match(/^data:\s*(.+)$/m)?.[1]
-        if (event !== 'new_order' || !data) continue
+        if (!data) continue
         try {
-          const order = JSON.parse(data)
-          void showIncomingOrder(order)
-          window.dispatchEvent(new CustomEvent('mini-order-arrived', { detail: order }))
+          const payload = JSON.parse(data)
+          if (event === 'pending_orders') {
+            initialPendingOrdersChecked = true
+            const orders = (payload.orders || []).filter((order: any) => !handledIncomingOrderIds.has(String(order.id)))
+            orders.forEach((order: any) => handledIncomingOrderIds.add(String(order.id)))
+            if (orders.length) void showPendingOrders(orders, Number(payload.total || orders.length))
+          } else if (event === 'new_order') {
+            const order = payload
+            if (handledIncomingOrderIds.has(String(order.id))) continue
+            handledIncomingOrderIds.add(String(order.id))
+            void showIncomingOrder(order)
+            window.dispatchEvent(new CustomEvent('mini-order-arrived', { detail: order }))
+          }
         } catch { /* 忽略格式异常的推送 */ }
       }
     }
@@ -265,6 +278,22 @@ async function showIncomingOrder(order: any) {
     await ElMessageBox.confirm(
       `订单号：${orderNo}\n实付金额：¥${amount}${goods}`,
       '收到小程序新订单',
+      { confirmButtonText: '查看订单', cancelButtonText: '稍后处理', type: 'warning', distinguishCancelAndClose: true }
+    )
+    router.push('/sale/mini-orders')
+  } catch { /* 用户选择稍后处理 */ }
+}
+
+async function showPendingOrders(orders: any[], total: number) {
+  const details = orders.slice(0, 5).map((order: any) => {
+    const orderNo = order.order_no || `订单${order.id || ''}`
+    return `${orderNo}（¥${Number(order.total_amount || order.total || 0).toFixed(2)}）`
+  }).join('、')
+  const suffix = total > orders.length ? '等' : ''
+  try {
+    await ElMessageBox.confirm(
+      `当前有 ${total} 笔待处理订单：\n${details}${suffix}`,
+      '发现待处理小程序订单',
       { confirmButtonText: '查看订单', cancelButtonText: '稍后处理', type: 'warning', distinguishCancelAndClose: true }
     )
     router.push('/sale/mini-orders')
