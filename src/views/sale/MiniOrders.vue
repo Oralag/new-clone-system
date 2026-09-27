@@ -73,17 +73,20 @@
         <el-table-column :label="t('sale.miniOrders.colCreatedAt')" width="160">
           <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAction')" width="260" fixed="right">
+        <el-table-column :label="t('sale.miniOrders.colAction')" width="340" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 0">
-              <el-button v-if="row.price_change_requested" type="warning" size="small" @click="openAdjustPrice(row)">改价</el-button>
-              <el-button type="primary" plain size="small" @click="remindPayment(row)">催付款</el-button>
-              <el-button type="success" plain size="small" @click="openGrantCoupon(row)">发优惠券</el-button>
-              <el-button size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
-            </template>
-            <el-button v-else-if="row.status === 1" type="primary" size="small" @click="openShip(row)">{{ shipBtnText(row.delivery_type) }}</el-button>
-            <el-button v-else-if="row.status === 2 && row.delivery_type === 2" type="success" size="small" @click="openPickup(row)">{{ t('sale.miniOrders.pickupVerifyBtn') }}</el-button>
-            <el-button v-else size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
+            <div class="mini-order-actions">
+              <el-button type="success" plain size="small" @click="openPrivateMessage(row)">私信</el-button>
+              <template v-if="row.status === 0">
+                <el-button v-if="row.price_change_requested" type="warning" size="small" @click="openAdjustPrice(row)">改价</el-button>
+                <el-button type="primary" plain size="small" @click="remindPayment(row)">催付款</el-button>
+                <el-button type="success" plain size="small" @click="openGrantCoupon(row)">发优惠券</el-button>
+                <el-button size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
+              </template>
+              <el-button v-else-if="row.status === 1" type="primary" size="small" @click="openShip(row)">{{ shipBtnText(row.delivery_type) }}</el-button>
+              <el-button v-else-if="row.status === 2 && row.delivery_type === 2" type="success" size="small" @click="openPickup(row)">{{ t('sale.miniOrders.pickupVerifyBtn') }}</el-button>
+              <el-button v-else size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -212,6 +215,35 @@
       </template>
     </el-dialog>
 
+    <!-- 给小程序客户发送私信 -->
+    <el-dialog v-model="privateMessageDialog" title="发送客户私信" width="500px" :close-on-click-modal="false">
+      <el-form label-width="80px">
+        <el-form-item label="客户">
+          <span>{{ current?.user_phone || '—' }}</span>
+        </el-form-item>
+        <el-form-item label="关联订单">
+          <span>{{ current?.order_no }} · ¥{{ current?.total_amount }}</span>
+        </el-form-item>
+        <el-form-item label="快捷话术">
+          <el-button size="small" @click="setPaymentMessage">催付款</el-button>
+        </el-form-item>
+        <el-form-item label="私信内容" required>
+          <el-input
+            v-model="privateMessageText"
+            type="textarea"
+            :rows="5"
+            maxlength="4000"
+            show-word-limit
+            placeholder="输入要发送给客户的内容"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="privateMessageDialog = false">取消</el-button>
+        <el-button type="primary" :loading="sendingPrivateMessage" @click="sendPrivateMessage">发送私信</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailDialog" :title="t('sale.miniOrders.detailDialogTitle')" width="560px">
       <template v-if="current">
@@ -281,10 +313,13 @@ const shipDialog = ref(false)
 const detailDialog = ref(false)
 const adjustDialog = ref(false)
 const couponDialog = ref(false)
+const privateMessageDialog = ref(false)
 const shipping = ref(false)
 const adjusting = ref(false)
 const grantingCoupon = ref(false)
+const sendingPrivateMessage = ref(false)
 const current = ref<any>(null)
+const privateMessageText = ref('')
 const shipForm = reactive({ express_company: DEFAULT_EXPRESS_COMPANY, tracking_no: '' })
 const adjustForm = reactive({ amount: 0, note: '' })
 const availableCoupons = ref<any[]>([])
@@ -361,18 +396,34 @@ async function submitAdjustPrice() {
 }
 
 async function remindPayment(row: any) {
+  openPrivateMessage(row, true)
+}
+
+function setPaymentMessage() {
+  const orderNo = current.value?.order_no || ''
+  const amount = Number(current.value?.total_amount || 0).toFixed(2)
+  privateMessageText.value = `您好，您的订单 ${orderNo}（金额 ¥${amount}）目前还未付款，请方便时完成支付。如有疑问可以直接回复我们。`
+}
+
+function openPrivateMessage(row: any, withPaymentTemplate = false) {
+  current.value = row
+  privateMessageText.value = ''
+  privateMessageDialog.value = true
+  if (withPaymentTemplate) setPaymentMessage()
+}
+
+async function sendPrivateMessage() {
+  const content = privateMessageText.value.trim()
+  if (!current.value || !content || sendingPrivateMessage.value) return
+  sendingPrivateMessage.value = true
   try {
-    await ElMessageBox.confirm(
-      `确认向客户 ${row.user_phone || ''} 发送待付款提醒？`,
-      '催付款',
-      { confirmButtonText: '发送提醒', cancelButtonText: '取消', type: 'warning' }
-    )
-    await http.post('/mini/order/remind-payment', { order_id: row.id })
-    ElMessage.success('催付款提醒已发送')
-    load()
+    await http.post('/mini/order/private-message', { order_id: current.value.id, content })
+    ElMessage.success('私信已发送到客户的小程序客服会话')
+    privateMessageDialog.value = false
   } catch (e: any) {
-    if (e === 'cancel' || e?.message === 'cancel') return
-    ElMessage.error(e.message || '催付款失败')
+    ElMessage.error(e.message || '私信发送失败')
+  } finally {
+    sendingPrivateMessage.value = false
   }
 }
 
@@ -499,6 +550,8 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 </script>
 
 <style scoped>
+.mini-order-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mini-order-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .page-container { padding: 16px; }
 .search-card { margin-bottom: 0; }
 .item-line { font-size: 12px; color: #555; line-height: 1.6; }
