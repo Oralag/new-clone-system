@@ -20,7 +20,7 @@
           <div class="actions">
             <el-button type="primary" @click="newOrder">新增零售单</el-button>
             <el-button @click="openCandidates">关联已有零售单</el-button>
-            <el-button @click="newExpense">录入费用</el-button>
+            <el-button @click="newExpense">录入展会费用</el-button>
           </div>
         </div>
         <el-alert v-if="returnsError || stats.missingCosts" type="warning" :closable="false" show-icon :title="[returnsError, stats.missingCosts ? `${stats.missingCosts} 项商品成本缺失，当前利润仅为暂估` : ''].filter(Boolean).join('；')" />
@@ -96,6 +96,16 @@
       <p>确认后生成付款单，并扣减所选资金账户余额。</p>
       <template #footer><el-button @click="paymentVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="submitPayment">确认登记付款</el-button></template>
     </el-dialog>
+    <el-dialog v-model="expenseVisible" title="录入展会费用" width="520px">
+      <el-form label-width="90px">
+        <el-form-item label="所属展会"><el-input :model-value="detail.exhibition?.name || ''" disabled /></el-form-item>
+        <el-form-item label="费用类别"><el-input v-model="expenseForm.name" placeholder="人工、车费、摊位费、样品等" maxlength="200" /></el-form-item>
+        <el-form-item label="金额"><el-input-number v-model="expenseForm.amount" :min="0.01" :precision="2" style="width:100%" /></el-form-item>
+        <el-form-item label="费用日期"><el-date-picker v-model="expenseForm.expense_date" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="expenseForm.remark" type="textarea" maxlength="500" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="expenseVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="submitExpense">保存费用</el-button></template>
+    </el-dialog>
   </div>
 </template>
 
@@ -105,7 +115,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExhibitions, saveExhibition, getExhibitionDetail, getExhibitionCandidates, assignExhibition, payExhibitionExpense, undoExhibitionExpensePayment } from '@/api/retail/exhibition'
 import { getRetailReturnList } from '@/api/retail'
-import { getFundList } from '@/api/finance'
+import { getFundList, createExpense } from '@/api/finance'
 import { calculateExhibitionFinance, exhibitionSaleAmount, exhibitionOrderCost, exhibitionOrderFees } from '@/utils/exhibitionFinance'
 
 const router = useRouter(), route = useRoute()
@@ -120,6 +130,7 @@ const eventVisible = ref(false), eventFormRef = ref(), eventForm = reactive<any>
 const rules = {name:[{required:true,message:'请填写展会名称',trigger:'blur'}],start_date:[{required:true,message:'请选择开始日期',trigger:'change'}],end_date:[{required:true,message:'请选择结束日期',trigger:'change'}]}
 const candidatesVisible=ref(false),candidatesLoading=ref(false),candidateDates=ref<string[]>([]),candidates=ref<any[]>([]),candidateSelection=ref<any[]>([]),candidateTable=ref()
 const paymentVisible=ref(false),paymentExpense=ref<any>(),funds=ref<any[]>([]),payment=reactive({fund_id:undefined as number|undefined,pay_date:today()})
+const expenseVisible=ref(false),expenseForm=reactive({name:'',amount:0,expense_date:today(),remark:''})
 const eventName=(id:any)=>Number(id) ? events.value.find(e=>Number(e.id)===Number(id))?.name || '其他展会' : '日常零售'
 const isPaid=(row:any)=>Number(row.exhibition_payment_id)>0 || /【已付款】|\[已付款\]/.test(row.remark||'')
 async function loadAll(){
@@ -152,7 +163,12 @@ function openEvent(row?:any){Object.assign(eventForm,{id:null,name:'',start_date
 async function submitEvent(){if(!await eventFormRef.value.validate().catch(()=>false))return;if(eventForm.end_date<eventForm.start_date){ElMessage.warning('结束日期不能早于开始日期');return}saving.value=true;try{const r=await saveExhibition(eventForm);selectedId.value=Number(r.data.id);eventVisible.value=false;await loadAll();ElMessage.success('展会已保存')}finally{saving.value=false}}
 function newOrder(){router.push({path:'/retail/order',query:{exhibition_id:selectedId.value,create:'1'}})}
 function viewOrder(row:any){router.push({path:'/retail/order',query:{exhibition_id:selectedId.value,order_no:row.order_sn}})}
-function newExpense(){router.push({path:'/finance/expense',query:{exhibition_id:selectedId.value,create:'1'}})}
+function newExpense(){Object.assign(expenseForm,{name:'',amount:0,expense_date:today(),remark:''});expenseVisible.value=true}
+async function submitExpense(){
+  if(!expenseForm.name.trim()||Number(expenseForm.amount)<=0||!expenseForm.expense_date){ElMessage.warning('请填写费用类别、金额和日期');return}
+  saving.value=true
+  try{await createExpense({...expenseForm,exhibition_id:Number(selectedId.value)});expenseVisible.value=false;await loadDetail();ElMessage.success('展会费用已保存')}finally{saving.value=false}
+}
 function viewExpense(row:any){router.push({path:'/finance/expense',query:{exhibition_id:selectedId.value,expense_no:row.expense_no}})}
 async function openCandidates(){candidateDates.value=[date(detail.value.exhibition.start_date),date(detail.value.exhibition.end_date)];candidatesVisible.value=true;await loadCandidates()}
 async function loadCandidates(){if(candidateDates.value?.length!==2)return;candidatesLoading.value=true;candidates.value=[];candidateSelection.value=[];try{candidates.value=(await getExhibitionCandidates(...candidateDates.value as [string,string])).data?.rows||[]}finally{candidatesLoading.value=false}}
