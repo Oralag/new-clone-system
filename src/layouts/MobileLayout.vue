@@ -62,6 +62,8 @@
 import { ref, computed, watch, onMounted, onUnmounted, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import http from '@/api/http'
+import { ElMessageBox } from 'element-plus'
+import { TOKEN_NAME } from '@/config'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import MobileMeetingPinned from './MobileMeetingPinned.vue'
@@ -104,6 +106,97 @@ const activeTab = ref('chat')
 const unreadCount = ref(0)
 const pendingCount = ref(0)
 let unreadPoll: ReturnType<typeof setInterval> | null = null
+let orderStreamController: AbortController | null = null
+let orderStreamReconnect: ReturnType<typeof setTimeout> | null = null
+let mobileLayoutDisposed = false
+let initialPendingOrdersChecked = false
+const handledIncomingOrderIds = new Set<string>()
+
+async function connectMiniOrderStream() {
+  if (mobileLayoutDisposed || !authStore.isLoggedIn || orderStreamController) return
+  const controller = new AbortController()
+  orderStreamController = controller
+  try {
+    const includePending = initialPendingOrdersChecked ? '' : '?include_pending=1'
+    const response = await fetch(`/adminapi/mini/orders/events${includePending}`, {
+      headers: { token: localStorage.getItem(TOKEN_NAME) || '' },
+      signal: controller.signal,
+    })
+    if (!response.ok || !response.body) throw new Error(`订单提醒连接失败：${response.status}`)
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (!controller.signal.aborted) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const blocks = buffer.split('\n\n')
+      buffer = blocks.pop() || ''
+      for (const block of blocks) {
+        const event = block.match(/^event:\s*(.+)$/m)?.[1]
+        const data = block.match(/^data:\s*(.+)$/m)?.[1]
+        if (!data) continue
+        try {
+          const payload = JSON.parse(data)
+          if (event === 'pending_orders') {
+            initialPendingOrdersChecked = true
+            const orders = (payload.orders || []).filter((order: any) => !handledIncomingOrderIds.has(String(order.id)))
+            orders.forEach((order: any) => handledIncomingOrderIds.add(String(order.id)))
+            if (orders.length) void showPendingOrders(orders, Number(payload.total || orders.length))
+          } else if (event === 'new_order') {
+            const order = payload
+            if (handledIncomingOrderIds.has(String(order.id))) continue
+            handledIncomingOrderIds.add(String(order.id))
+            void showIncomingOrder(order)
+            window.dispatchEvent(new CustomEvent('mini-order-arrived', { detail: order }))
+          }
+        } catch { /* 忽略格式异常的推送 */ }
+      }
+    }
+  } catch { /* 断线后自动重连，不影响手机端操作 */ }
+  finally {
+    if (orderStreamController === controller) orderStreamController = null
+    if (!mobileLayoutDisposed && authStore.isLoggedIn && !orderStreamReconnect) {
+      orderStreamReconnect = setTimeout(() => {
+        orderStreamReconnect = null
+        void connectMiniOrderStream()
+      }, 5000)
+    }
+  }
+}
+
+async function showIncomingOrder(order: any) {
+  const orderNo = order.order_no || `订单${order.id || ''}`
+  const amount = Number(order.total_amount || 0).toFixed(2)
+  const goods = Array.isArray(order.items) && order.items.length
+    ? `\n商品：${order.items.slice(0, 4).map((item: any) => `${item.goods_name}×${item.qty}`).join('、')}`
+    : ''
+  try {
+    await ElMessageBox.confirm(
+      `订单号：${orderNo}\n实付金额：¥${amount}${goods}`,
+      '收到小程序新订单',
+      { confirmButtonText: '查看订单', cancelButtonText: '稍后处理', type: 'warning', distinguishCancelAndClose: true }
+    )
+    router.push('/sale/mini-orders')
+  } catch { /* 用户选择稍后处理 */ }
+}
+
+async function showPendingOrders(orders: any[], total: number) {
+  const details = orders.slice(0, 5).map((order: any) => {
+    const orderNo = order.order_no || `订单${order.id || ''}`
+    return `${orderNo}（¥${Number(order.total_amount || order.total || 0).toFixed(2)}）`
+  }).join('、')
+  const suffix = total > orders.length ? '等' : ''
+  try {
+    await ElMessageBox.confirm(
+      `当前有 ${total} 笔待处理订单：\n${details}${suffix}`,
+      '发现待处理小程序订单',
+      { confirmButtonText: '查看订单', cancelButtonText: '稍后处理', type: 'warning', distinguishCancelAndClose: true }
+    )
+    router.push('/sale/mini-orders')
+  } catch { /* 用户选择稍后处理 */ }
+}
 
 const taskCount = ref(0)
 const keepAlivePages = ['MobileWorkbench', 'MobileChat', 'MobileContacts', 'MobileModules']
@@ -175,6 +268,8 @@ watch(unreadCount, (n) => {
 })
 
 onMounted(async () => {
+  if (authStore.isLoggedIn) void connectMiniOrderStream()
+
   // 默认跳工作台
   if (route.path === '/' || !tabs.value.find(t => route.path.startsWith(t.path))) {
     router.replace('/mobile/dashboard')
@@ -199,6 +294,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  mobileLayoutDisposed = true
+  orderStreamController?.abort()
+  if (orderStreamReconnect) clearTimeout(orderStreamReconnect)
   if (unreadPoll) clearInterval(unreadPoll)
 })
 </script>
