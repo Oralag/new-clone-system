@@ -396,7 +396,19 @@ async function submitAdjustPrice() {
 }
 
 async function remindPayment(row: any) {
-  openPrivateMessage(row, true)
+  try {
+    await ElMessageBox.confirm(
+      `确认向客户 ${row.user_phone || ''} 发送微信待付款订阅提醒？客户需事先同意接收此类通知。私信可通过旁边的“私信”按钮单独发送。`,
+      '催付款',
+      { confirmButtonText: '发送提醒', cancelButtonText: '取消', type: 'warning' }
+    )
+    await http.post('/mini/order/remind-payment', { order_id: row.id })
+    ElMessage.success('微信待付款提醒已提交发送；如客户未授权，微信可能无法送达')
+    load()
+  } catch (e: any) {
+    if (e === 'cancel' || e?.message === 'cancel') return
+    ElMessage.error(e.message || '催付款提醒发送失败')
+  }
 }
 
 function setPaymentMessage() {
