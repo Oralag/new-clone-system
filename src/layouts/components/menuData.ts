@@ -78,6 +78,14 @@ export const menuData: TopMenuItem[] = [
     ],
   },
   {
+    key: 'exhibition',
+    title: 'menu.group.exhibition',
+    icon: 'Calendar',
+    children: [
+      { key: 'exhibition-management', title: 'menu.item.retail-exhibition', path: '/retail/exhibition' },
+    ],
+  },
+  {
     key: 'procure',
     title: 'menu.group.procure',
     icon: 'Box',

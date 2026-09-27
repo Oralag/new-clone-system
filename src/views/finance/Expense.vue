@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Plus, Wallet, CreditCard } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -128,6 +129,7 @@ import { fmtDt } from '@/utils/date'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const tableRef = ref<InstanceType<typeof ScTable>>()
 const { toggle: toggleReconcile, ids: reconciledIds } = useReconcile('reconcile_expense', tableRef)
 const formRef = ref<InstanceType<typeof ScForm>>()
@@ -190,6 +192,7 @@ function openForm(row?: any) {
     apply_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     payment_status: 'pending',
     remark: '',
+    exhibition_id: Number(route.query.exhibition_id || 0),
   })
 }
 
@@ -288,6 +291,7 @@ async function handleBatchDel({ ids }: { ids: number[] }) {
 
 onMounted(() => {
   loadFunds().catch(() => {})
+  if (route.query.create === '1') openForm()
 })
 </script>
 

@@ -57,6 +57,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'retail/overview', name: 'RetailOverview', component: () => import('@/views/retail/RetailOverview.vue'), meta: { title: '零售总览' } },
       { path: 'retail/store', name: 'RetailStore', component: () => import('@/views/retail/StoreManagement.vue'), meta: { title: '门店管理' } },
       { path: 'retail/order', name: 'RetailOrder', component: () => import('@/views/retail/RetailOrder.vue'), meta: { title: '零售订单' } },
+      { path: 'retail/exhibition', name: 'RetailExhibition', component: () => import('@/views/retail/Exhibition.vue'), meta: { title: '展会管理' } },
       { path: 'retail/return', name: 'RetailReturn', component: () => import('@/views/retail/RetailReturn.vue'), meta: { title: '零售退货' } },
       { path: 'retail/customer', name: 'RetailCustomer', component: () => import('@/views/retail/MemberManage.vue'), meta: { title: '会员管理' } },
       { path: 'retail/recharge', name: 'RetailRecharge', component: () => import('@/views/retail/MemberRecharge.vue'), meta: { title: '会员充值' } },

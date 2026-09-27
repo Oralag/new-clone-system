@@ -334,6 +334,7 @@
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
@@ -345,6 +346,7 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 
 const { t } = useI18n()
+const route = useRoute()
 
 function fmtDt(val: string) {
   if (!val) return '-'
@@ -476,6 +478,7 @@ onMounted(async () => {
   if (mr.status === 'fulfilled') memberList.value = mr.value.data?.rows ?? []
   loadFunds()
   loadFeePayMap()
+  if (route.query.create === '1') openForm()
 })
 
 // 表单
@@ -484,6 +487,7 @@ const saving = ref(false)
 const editId = ref<number | null>(null)
 const formRef = ref()
 const form = reactive({
+  exhibition_id: Number(route.query.exhibition_id || 0),
   store_id: null as any, store_name: '',
   member_id: null as any, member_name: '',
   order_date: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
@@ -606,6 +610,7 @@ async function handleSave() {
       status: 0,
       goods_info: JSON.stringify(settled.items),
       fee_items: JSON.stringify(cleanFeeItems),
+      exhibition_id: Number(form.exhibition_id || 0),
     }
     if (editId.value) {
       await updateRetailOrder({ ...payload, id: editId.value })
