@@ -261,8 +261,10 @@
             <el-descriptions-item :label="t('sale.miniOrders.detailCreatedAt')">{{ fmtTime(current.created_at) }}</el-descriptions-item>
             <el-descriptions-item :label="t('sale.miniOrders.detailAddress')" :span="2">{{ current.address?.province }}{{ current.address?.city }}{{ current.address?.district }}{{ current.address?.detail }}</el-descriptions-item>
           </template>
-          <el-descriptions-item v-if="current.tracking_no" :label="t('sale.miniOrders.detailExpressCompany')">{{ current.express_company }}</el-descriptions-item>
-          <el-descriptions-item v-if="current.tracking_no" :label="t('sale.miniOrders.detailTrackingNo')">{{ current.tracking_no }}</el-descriptions-item>
+          <el-descriptions-item v-if="current.express_company" :label="t('sale.miniOrders.detailExpressCompany')">{{ current.express_company }}</el-descriptions-item>
+          <el-descriptions-item v-if="current.tracking_no" :label="t('sale.miniOrders.detailTrackingNo')">
+            <span class="tracking-no" title="可复制快递单号">{{ current.tracking_no }}</span>
+          </el-descriptions-item>
           <el-descriptions-item v-if="current.shipped_at" :label="t('sale.miniOrders.detailShippedAt')" :span="2">{{ fmtTime(current.shipped_at) }}</el-descriptions-item>
           <el-descriptions-item v-if="current.remark" :label="t('sale.miniOrders.detailRemark')" :span="2">{{ current.remark }}</el-descriptions-item>
         </el-descriptions>
@@ -568,6 +570,7 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .search-card { margin-bottom: 0; }
 .item-line { font-size: 12px; color: #555; line-height: 1.6; }
 .tracking { font-size: 12px; color: #409eff; }
+.tracking-no { color: #409eff; font-weight: 600; letter-spacing: .3px; user-select: all; }
 .tracking-alt { font-size: 12px; color: #67c23a; }
 .no-tracking { color: #ccc; }
 .original-price { color:#999; font-size:12px; text-decoration:line-through; }
