@@ -65,6 +65,7 @@
         <el-table-column :label="t('sale.miniOrders.colExpress')" width="160">
           <template #default="{ row }">
             <span v-if="row.tracking_no" class="tracking">{{ row.express_company }} {{ row.tracking_no }}</span>
+            <el-button v-if="row.tracking_no" type="primary" link size="small" @click="viewTracking(row)">查看物流</el-button>
             <span v-else-if="row.delivery_type === 1 && row.status >= 2" class="tracking-alt">{{ t('sale.miniOrders.statusDeliveredByErrand') }}</span>
             <span v-else-if="row.delivery_type === 2 && row.status >= 2" class="tracking-alt">{{ t('sale.miniOrders.statusPickupReady') }}</span>
             <span v-else class="no-tracking">—</span>
@@ -285,6 +286,26 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="trackingDialog" title="物流轨迹" width="560px">
+      <div v-loading="trackingLoading">
+        <template v-if="trackingDetail">
+          <div class="tracking-summary">
+            <b>{{ trackingDetail.carrier || current?.express_company || '快递' }}</b>
+            <span>{{ trackingDetail.number || current?.tracking_no }}</span>
+            <el-tag size="small" type="primary">{{ trackingDetail.status }}</el-tag>
+          </div>
+          <el-timeline v-if="trackingDetail.events?.length">
+            <el-timeline-item v-for="event in trackingDetail.events" :key="`${event.time}-${event.description}`" :timestamp="fmtTime(event.time)">
+              <div>{{ event.description || event.stage }}</div>
+              <div v-if="event.location" class="tracking-location">{{ event.location }}</div>
+            </el-timeline-item>
+          </el-timeline>
+          <el-empty v-else description="物流信息正在同步，稍后刷新即可查看轨迹" :image-size="80" />
+        </template>
+      </div>
+      <template #footer><el-button @click="viewTracking(current)">刷新物流</el-button></template>
+    </el-dialog>
   </div>
 </template>
 
@@ -313,6 +334,9 @@ const total = ref(0)
 const loading = ref(false)
 const shipDialog = ref(false)
 const detailDialog = ref(false)
+const trackingDialog = ref(false)
+const trackingLoading = ref(false)
+const trackingDetail = ref<any>(null)
 const adjustDialog = ref(false)
 const couponDialog = ref(false)
 const privateMessageDialog = ref(false)
@@ -369,6 +393,22 @@ function openShip(row: any) {
 function viewDetail(row: any) {
   current.value = row
   detailDialog.value = true
+}
+
+async function viewTracking(row: any) {
+  if (!row?.tracking_no) return
+  current.value = row
+  trackingDialog.value = true
+  trackingLoading.value = true
+  trackingDetail.value = null
+  try {
+    const res = await http.get(`/mini/order/tracking/${row.id}`)
+    trackingDetail.value = res.data || res
+  } catch (e: any) {
+    ElMessage.error(e.message || '物流查询失败')
+  } finally {
+    trackingLoading.value = false
+  }
 }
 
 function openAdjustPrice(row: any) {
@@ -570,6 +610,8 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .search-card { margin-bottom: 0; }
 .item-line { font-size: 12px; color: #555; line-height: 1.6; }
 .tracking { font-size: 12px; color: #409eff; }
+.tracking-summary { display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:12px; background:#f5f7fa; border-radius:6px; }
+.tracking-location { color:#909399; font-size:12px; margin-top:3px; }
 .tracking-no { color: #409eff; font-weight: 600; letter-spacing: .3px; user-select: all; }
 .tracking-alt { font-size: 12px; color: #67c23a; }
 .no-tracking { color: #ccc; }
