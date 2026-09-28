@@ -62,12 +62,9 @@
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status, row.delivery_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colExpress')" width="190">
+        <el-table-column :label="t('sale.miniOrders.colExpress')" width="160">
           <template #default="{ row }">
-            <template v-if="row.tracking_no">
-              <div class="tracking">{{ row.express_company }} {{ row.tracking_no }}</div>
-              <el-link type="primary" :underline="false" class="tracking-link" @click="openTracking(row)">查看物流 →</el-link>
-            </template>
+            <span v-if="row.tracking_no" class="tracking">{{ row.express_company }} {{ row.tracking_no }}</span>
             <span v-else-if="row.delivery_type === 1 && row.status >= 2" class="tracking-alt">{{ t('sale.miniOrders.statusDeliveredByErrand') }}</span>
             <span v-else-if="row.delivery_type === 2 && row.status >= 2" class="tracking-alt">{{ t('sale.miniOrders.statusPickupReady') }}</span>
             <span v-else class="no-tracking">—</span>
@@ -519,23 +516,6 @@ async function doShip() {
   }
 }
 
-function openTracking(row: any) {
-  const companyCodes: Record<string, string> = {
-    '顺丰速运': 'shunfeng',
-    '京东物流': 'jd',
-    '中通快递': 'zhongtong',
-    '圆通速递': 'yuantong',
-    '申通快递': 'shentong',
-    '韵达快递': 'yunda',
-    '极兔速递': 'jtexpress',
-    '邮政EMS': 'ems',
-  }
-  const trackingNo = String(row.tracking_no || '').trim()
-  if (!trackingNo) return ElMessage.warning('暂无快递单号')
-  const company = companyCodes[row.express_company] || 'auto'
-  window.open(`https://www.kuaidi100.com/chaxun?com=${encodeURIComponent(company)}&nu=${encodeURIComponent(trackingNo)}`, '_blank', 'noopener,noreferrer')
-}
-
 function deliveryLabel(deliveryType: number) {
   if (deliveryType === 1) return t('sale.miniOrders.deliveryErrand')
   if (deliveryType === 2) return t('sale.miniOrders.deliveryPickup')
@@ -590,7 +570,6 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .search-card { margin-bottom: 0; }
 .item-line { font-size: 12px; color: #555; line-height: 1.6; }
 .tracking { font-size: 12px; color: #409eff; }
-.tracking-link { margin-top: 3px; font-size: 12px; }
 .tracking-no { color: #409eff; font-weight: 600; letter-spacing: .3px; user-select: all; }
 .tracking-alt { font-size: 12px; color: #67c23a; }
 .no-tracking { color: #ccc; }
