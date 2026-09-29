@@ -2366,6 +2366,11 @@ const agentRegistry = [
 
   const targetUrl = backend + pathname + url.search
   const headers = new Headers(request.headers)
+  // Keep the 17TRACK credential in the Pages secret store so every backend
+  // selected by an existing ERP login can perform the same embedded lookup.
+  if (pathname.startsWith('/adminapi/mini/order/tracking/') && env.TRACK17_API_KEY) {
+    headers.set('x-track17-token', env.TRACK17_API_KEY)
+  }
   headers.set('host', new URL(backend).host)
   if (realToken) headers.set('token', realToken)
   else headers.delete('token')
