@@ -27,6 +27,7 @@ export async function onRequest(context) {
   const targetUrl = `${backend}/miniapi/${path}${url.search}`
 
   const headers = new Headers(request.headers)
+  if (path.startsWith('order/tracking/') && env.TRACK17_API_KEY) headers.set('x-track17-token', env.TRACK17_API_KEY)
   headers.delete('host')
 
   try {
