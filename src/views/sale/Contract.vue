@@ -1405,6 +1405,7 @@
 </template>
 
 <script setup lang="ts">
+import { specText } from '@/utils/goodsSpec'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -1631,10 +1632,7 @@ async function fetchGoodsSpecs(goodsId: number) {
 
 // spec 字段兼作 unit_linked_goods JSON 存储，显示时过滤掉 JSON 字符串
 function parseDisplaySpec(raw: string | undefined | null): string {
-  if (!raw) return ''
-  const s = String(raw).trim()
-  if (s.startsWith('{') || s.startsWith('[')) return ''
-  return s
+  return specText(raw)
 }
 
 async function fillMissingSpecs(items: any[]) {

@@ -1089,6 +1089,7 @@ import {
 } from '@/api/goods'
 import { getStockList } from '@/api/warehouse'
 import { useImageUpload } from '@/composables/useImageUpload'
+import { specText, specMeta, composeSpec, type SpecMeta } from '@/utils/goodsSpec'
 
 const { t } = useI18n()
 
@@ -1650,7 +1651,11 @@ async function autoSyncAllLocalSpecs() {
         }
         // 同时把 sku 价格写入 goods.spec 字段
         const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')[gid] ?? {}
-        const specJson = JSON.stringify({
+        // 先读当前 spec 再合并，保留规格文字和多单位关联
+        const cur = await http.get('/goods/ShopGoods/read', { params: { id: Number(gid) } })
+        const curSpec = (cur as any)?.data?.spec
+        const specJson = composeSpec(specText(curSpec), {
+          ...specMeta(curSpec),
           attrs: attrs.map((a: any) => ({ name: a.name, values: a.values })),
           skus: skuMap,
         })
@@ -1681,6 +1686,12 @@ const defaultFd = () => ({
   status: 1, remark: '', user_remark: '',
 })
 const fd = reactive(defaultFd())
+// goods.spec 里的内部 JSON（多单位关联成品 / 多规格 SKU）单独保存，表单里的 fd.spec 只放用户可见的规格文字
+const specMetaRef = ref<SpecMeta>({})
+function normalizeFdSpec() {
+  specMetaRef.value = specMeta(fd.spec)
+  fd.spec = specText(fd.spec)
+}
 const formRef = ref()
 const saving = ref(false)
 const savingAndNew = ref(false)
@@ -1688,6 +1699,7 @@ const originalGoodsName = ref('')
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  specMetaRef.value = {}
   Object.assign(brandFd, defaultBrandFd())
   brandFd.headerImages = ['', '', '', '']
   specList.value = []
@@ -1722,6 +1734,7 @@ function openEdit(row: any) {
     safe_max: Number(row.safe_max) || 0,
     sort: Number(row.sort) || 0,
   })
+  normalizeFdSpec()
   showForm.value = true
   activeTab.value = 'base'
   loadBrandCategoryOptions()
@@ -1783,6 +1796,7 @@ function openView(row: any) {
     safe_max: Number(row.safe_max) || 0,
     sort: Number(row.sort) || 0,
   })
+  normalizeFdSpec()
   try {
     const b = JSON.parse(row.remark || '{}').__brand__ || {}
     fd.user_remark = typeof b.note === 'string' ? b.note : ''
@@ -1801,6 +1815,7 @@ function openCopy(row: any) {
     multi_unit: !!(row.multi_unit),
     multi_spec: !!(row.multi_spec),
   })
+  normalizeFdSpec()
   fd.user_remark = ''
   showForm.value = true
   activeTab.value = 'base'
@@ -1870,6 +1885,7 @@ async function handleSave() {
     // Convert boolean multi_unit/multi_spec to 0/1
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
+    payload.spec = composeSpec(fd.spec, specMetaRef.value)
     // Save non-brand fields first. `remark` is internal JSON; the visible note
     // is atomically merged below, alongside the brand-center fields.
     delete payload.remark
@@ -1970,6 +1986,7 @@ async function handleSaveAndNew() {
     const payload: any = { ...fd }
     payload.multi_unit = fd.multi_unit ? 1 : 0
     payload.multi_spec = fd.multi_spec ? 1 : 0
+    payload.spec = composeSpec(fd.spec, specMetaRef.value)
     // Do not pass the internal JSON blob through the generic edit API.
     delete payload.remark
     delete payload.user_remark
@@ -2005,6 +2022,7 @@ async function handleSaveAndNew() {
     }
     ElMessage.success(t('goods.info.msgSaveAndNew'))
     Object.assign(fd, defaultFd())
+    specMetaRef.value = {}
     Object.assign(brandFd, defaultBrandFd())
     brandFd.headerImages = ['', '', '', '']
     specList.value = []
@@ -2774,14 +2792,13 @@ async function syncSpecToBackend(goodsId: number) {
     for (const row of skuList.value) {
       skuMap[row.vals.join('|')] = { sell_price: row.sell_price, cost_price: row.cost_price, sku_sn: row.sku_sn, barcode: row.barcode }
     }
-    // 保留 unit_linked_goods 不被覆盖
-    let existingUnitLinked: any = {}
-    try { existingUnitLinked = JSON.parse(fd.spec || '{}').unit_linked_goods || {} } catch {}
-    const specJson = JSON.stringify({
+    // 保留 unit_linked_goods 和用户填的规格文字不被覆盖
+    const specJson = composeSpec(fd.spec, {
+      ...specMetaRef.value,
       attrs: specAttrs.value.filter(a => a.values.length > 0).map(a => ({ name: a.name, values: a.values })),
       skus: skuMap,
-      unit_linked_goods: existingUnitLinked,
     })
+    specMetaRef.value = specMeta(specJson)
     await updateGoods({ id: goodsId, spec: specJson })
   } catch {}
 }
@@ -2855,7 +2872,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     if (!rows.length) return []
     // 从 goods.spec 读关联BOM成品
     let unitLinked: Record<string, { id: number; name: string }> = {}
-    try { unitLinked = JSON.parse(fd.spec || '{}').unit_linked_goods || {} } catch {}
+    unitLinked = specMetaRef.value.unit_linked_goods || {}
     // 找到基础单位行（匹配 fd.unit_name），放第一位；其余为辅助单位
     const baseUnitName = fd.unit_name
     const baseCostPrice = Number(fd.cost_price) || 0
@@ -2908,11 +2925,9 @@ async function saveMultiUnitsToServer(goodsId: number) {
     multiUnitRows.value.forEach(r => {
       if (r.linked_goods_id) unitLinked[r.unit_name] = { id: r.linked_goods_id, name: r.linked_goods_name || '' }
     })
-    let specObj: any = {}
-    try { specObj = JSON.parse(fd.spec || '{}') } catch {}
-    specObj.unit_linked_goods = unitLinked
-    const newSpec = JSON.stringify(specObj)
-    fd.spec = newSpec
+    // 规格文字保留在 fd.spec；关联为空时 composeSpec 只回写文字，不再冲成 {"unit_linked_goods":{}}
+    const newSpec = composeSpec(fd.spec, { ...specMetaRef.value, unit_linked_goods: unitLinked })
+    specMetaRef.value = specMeta(newSpec)
     await updateGoods({ id: goodsId, spec: newSpec })
   } catch { /* 静默失败，不影响主流程 */ }
 }
