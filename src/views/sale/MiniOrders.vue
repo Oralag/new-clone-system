@@ -32,14 +32,14 @@
     <!-- 表格 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="list" v-loading="loading" border stripe height="calc(100vh - 270px)">
-        <el-table-column :label="t('sale.miniOrders.colOrderNo')" prop="order_no" width="180" />
-        <el-table-column :label="t('sale.miniOrders.colUserPhone')" prop="user_phone" width="130" />
-        <el-table-column :label="t('sale.miniOrders.colDelivery')" width="100" align="center">
+        <el-table-column :label="t('sale.miniOrders.colOrderNo')" prop="order_no" width="152" show-overflow-tooltip />
+        <el-table-column :label="t('sale.miniOrders.colUserPhone')" prop="user_phone" width="112" show-overflow-tooltip />
+        <el-table-column :label="t('sale.miniOrders.colDelivery')" width="84" align="center">
           <template #default="{ row }">
             <el-tag :type="deliveryTagType(row.delivery_type)" size="small">{{ deliveryLabel(row.delivery_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAddress')" min-width="180">
+        <el-table-column :label="t('sale.miniOrders.colAddress')" min-width="220">
           <template #default="{ row }">
             <template v-if="row.delivery_type === 2">
               <div class="item-line" style="font-weight:600;">{{ row.store_name || t('sale.miniOrders.pickupSelf') }}</div>
@@ -51,25 +51,25 @@
             </template>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colGoods')" min-width="180">
+        <el-table-column :label="t('sale.miniOrders.colGoods')" min-width="150">
           <template #default="{ row }">
             <div v-for="item in row.items" :key="item.id" class="item-line">
               {{ item.goods_name }}×{{ item.qty }}
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAmount')" width="100" align="right">
+        <el-table-column :label="t('sale.miniOrders.colAmount')" width="90" align="right">
           <template #default="{ row }">
             <div v-if="row.price_adjusted_from" class="original-price">¥{{ row.price_adjusted_from }}</div>
             <b>¥{{ row.total_amount }}</b>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colStatus')" width="90" align="center">
+        <el-table-column :label="t('sale.miniOrders.colStatus')" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status, row.delivery_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colExpress')" width="160">
+        <el-table-column :label="t('sale.miniOrders.colExpress')" width="130">
           <template #default="{ row }">
             <span v-if="row.tracking_no" class="tracking">{{ row.express_company }} {{ row.tracking_no }}</span>
             <el-button v-if="row.tracking_no" type="primary" link size="small" @click="viewTracking(row)">查看物流</el-button>
@@ -78,10 +78,10 @@
             <span v-else class="no-tracking">—</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colCreatedAt')" width="160">
+        <el-table-column :label="t('sale.miniOrders.colCreatedAt')" width="135">
           <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAction')" width="340" fixed="right">
+        <el-table-column :label="t('sale.miniOrders.colAction')" width="230" fixed="right">
           <template #default="{ row }">
             <div class="mini-order-actions">
               <el-button type="success" plain size="small" @click="openPrivateMessage(row)">私信</el-button>
@@ -639,7 +639,7 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 </script>
 
 <style scoped>
-.mini-order-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mini-order-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .mini-order-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .page-container { padding: 16px; }
 .order-hub-card { margin-bottom: 0; border-radius: 16px; }
@@ -675,8 +675,13 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .search-label { color: #909399; font-size: 14px; font-weight: 600; }
 .order-search-input { width: 320px; max-width: 42vw; }
 .table-card { margin-top: 12px; }
-.item-line { font-size: 12px; color: #555; line-height: 1.6; }
-.tracking { font-size: 12px; color: #409eff; }
+.table-card :deep(.el-card__body) { padding: 12px 14px; }
+.table-card :deep(.el-table) { font-size: 13px; }
+.table-card :deep(.el-table__cell) { padding: 8px 0; }
+.table-card :deep(.el-table .cell) { padding: 0 10px; line-height: 1.45; }
+.table-card :deep(.el-button--small) { padding: 5px 9px; }
+.item-line { font-size: 12px; color: #555; line-height: 1.55; word-break: break-word; }
+.tracking { display: block; font-size: 12px; color: #409eff; line-height: 1.45; word-break: break-all; }
 .tracking-summary { display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:12px; background:#f5f7fa; border-radius:6px; }
 .tracking-location { color:#909399; font-size:12px; margin-top:3px; }
 .tracking-no { color: #409eff; font-weight: 600; letter-spacing: .3px; user-select: all; }
