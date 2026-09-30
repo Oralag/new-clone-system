@@ -5,6 +5,7 @@ interface Env {
   AI_API_KEY?: string
   AI_BASE_URL?: string
   AI_MODEL?: string
+  NOVA_AI_MODELS?: string
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -24,7 +25,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const baseURL = (env.AI_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/+$/, '')
-  const model = env.AI_MODEL || 'llama-3.3-70b-versatile'
+  // Groq 免费档额度按模型独立计算（每模型 8K TPM）。Nova 优先用亚当不用的模型，
+  // 遇到 413/429（额度）或 404/400（模型下线/参数不支持）依次换下一个，最后才用共享的 AI_MODEL
+  const models = [...new Set([
+    ...(env.NOVA_AI_MODELS || 'qwen/qwen3.8-27b,openai/gpt-oss-20b').split(',').map(m => m.trim()).filter(Boolean),
+    env.AI_MODEL || 'openai/gpt-oss-120b',
+  ])]
 
   let body: any
   try { body = await request.json() } catch {
@@ -112,28 +118,37 @@ ${brandContext || '（当前无实时商品数据，遇到具体价格/规格问
       }
 
       try {
-        const response = await fetch(`${baseURL}/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model,
-            max_tokens: 1024,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
-            ],
-          }),
-        })
+        let response: Response | null = null
+        const tried: string[] = []
+        for (const model of models) {
+          const extra: Record<string, unknown> = model.startsWith('qwen/')
+            ? { reasoning_format: 'hidden' }
+            : model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}
+          response = await fetch(`${baseURL}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model,
+              max_tokens: 700,
+              ...extra,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+              ],
+            }),
+          })
+          tried.push(`${model}:${response.status}`)
+          if (response.ok || ![400, 404, 413, 429].includes(response.status)) break
+        }
 
-        if (!response.ok) {
-          send({ type: 'error', error: `API 错误: ${response.status}` })
+        if (!response || !response.ok) {
+          send({ type: 'error', error: `API 错误: ${tried.join(' ')}` })
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
           return
         }
 
         const data = await response.json() as any
-        const text = data.choices?.[0]?.message?.content || ''
+        const text = String(data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
         if (text) send({ type: 'text', text })
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (e: any) {
