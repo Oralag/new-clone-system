@@ -1,30 +1,37 @@
 <template>
   <div class="page-container">
-    <!-- 搜索栏 -->
-    <el-card class="search-card" shadow="never">
-      <el-form inline>
-        <el-form-item :label="t('sale.miniOrders.statusLabel')">
-          <el-select v-model="query.status" :placeholder="t('sale.miniOrders.statusAll')" clearable style="width:130px" @change="load">
-            <el-option :label="t('sale.miniOrders.statusPending')" :value="0" />
-            <el-option :label="t('sale.miniOrders.statusWaitShip')" :value="1" />
-            <el-option :label="t('sale.miniOrders.statusShipped')" :value="2" />
-            <el-option :label="t('sale.miniOrders.statusDone')" :value="3" />
-            <el-option :label="t('sale.miniOrders.statusCancelled')" :value="4" />
-            <el-option :label="t('sale.miniOrders.statusRefunding')" :value="5" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="t('sale.miniOrders.searchLabel')">
-          <el-input v-model="query.keyword" :placeholder="t('sale.miniOrders.searchPlaceholder')" style="width:220px" clearable @keyup.enter="load" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="load">{{ t('sale.miniOrders.queryBtn') }}</el-button>
-        </el-form-item>
-      </el-form>
+    <!-- 状态分类 + 搜索 -->
+    <el-card class="order-hub-card" shadow="never">
+      <div class="order-status-tabs">
+        <button
+          v-for="tab in statusTabs"
+          :key="tab.countKey"
+          type="button"
+          class="order-status-tab"
+          :class="{ active: query.status === tab.value }"
+          @click="switchStatus(tab.value)"
+        >
+          <span class="status-tab-label">{{ t(tab.labelKey) }}</span>
+          <span class="status-tab-count">{{ statusCount(tab.countKey) }}</span>
+        </button>
+      </div>
+      <div class="order-search-row">
+        <span class="search-label">{{ t('sale.miniOrders.searchLabel') }}</span>
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('sale.miniOrders.searchPlaceholder')"
+          class="order-search-input"
+          clearable
+          @clear="searchOrders"
+          @keyup.enter="searchOrders"
+        />
+        <el-button type="primary" @click="searchOrders">{{ t('sale.miniOrders.queryBtn') }}</el-button>
+      </div>
     </el-card>
 
     <!-- 表格 -->
-    <el-card shadow="never" style="margin-top:12px;">
-      <el-table :data="list" v-loading="loading" border stripe height="calc(100vh - 240px)">
+    <el-card class="table-card" shadow="never">
+      <el-table :data="list" v-loading="loading" border stripe height="calc(100vh - 270px)">
         <el-table-column :label="t('sale.miniOrders.colOrderNo')" prop="order_no" width="180" />
         <el-table-column :label="t('sale.miniOrders.colUserPhone')" prop="user_phone" width="130" />
         <el-table-column :label="t('sale.miniOrders.colDelivery')" width="100" align="center">
@@ -331,6 +338,7 @@ const DEFAULT_EXPRESS_COMPANY = EXPRESS_LIST[0].value
 
 const list = ref<any[]>([])
 const total = ref(0)
+const statusCounts = ref<Record<string, number>>({ all: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 })
 const loading = ref(false)
 const shipDialog = ref(false)
 const detailDialog = ref(false)
@@ -352,6 +360,16 @@ const availableCoupons = ref<any[]>([])
 const selectedCouponId = ref<number | null>(null)
 
 const query = reactive({ page: 1, list_rows: 20, status: '' as number | '', keyword: '' })
+
+const statusTabs: Array<{ value: number | ''; labelKey: string; countKey: string }> = [
+  { value: '', labelKey: 'sale.miniOrders.statusAll', countKey: 'all' },
+  { value: 0, labelKey: 'sale.miniOrders.statusPending', countKey: '0' },
+  { value: 1, labelKey: 'sale.miniOrders.statusWaitShip', countKey: '1' },
+  { value: 2, labelKey: 'sale.miniOrders.statusShipped', countKey: '2' },
+  { value: 3, labelKey: 'sale.miniOrders.statusDone', countKey: '3' },
+  { value: 4, labelKey: 'sale.miniOrders.statusCancelled', countKey: '4' },
+  { value: 5, labelKey: 'sale.miniOrders.statusRefunding', countKey: '5' },
+]
 
 const shipDialogTitle = computed(() => {
   if (!current.value) return t('sale.miniOrders.processOrder')
@@ -378,9 +396,26 @@ async function load() {
     const res = await http.get('/mini/orders', { params })
     list.value = res.data?.rows || []
     total.value = res.data?.total || 0
+    statusCounts.value = { all: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, ...(res.data?.status_counts || {}) }
   } finally {
     loading.value = false
   }
+}
+
+function statusCount(key: string) {
+  return Number(statusCounts.value?.[key] || 0)
+}
+
+function switchStatus(status: number | '') {
+  if (query.status === status) return
+  query.status = status
+  query.page = 1
+  void load()
+}
+
+function searchOrders() {
+  query.page = 1
+  void load()
 }
 
 function openShip(row: any) {
@@ -607,7 +642,39 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .mini-order-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .mini-order-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .page-container { padding: 16px; }
-.search-card { margin-bottom: 0; }
+.order-hub-card { margin-bottom: 0; border-radius: 16px; }
+.order-hub-card :deep(.el-card__body) { padding: 18px 20px; }
+.order-status-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.order-status-tab {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: space-between;
+  min-width: 122px;
+  padding: 12px 14px;
+  border: 1px solid #edf0f5;
+  border-radius: 14px;
+  background: #fff;
+  color: #606266;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.order-status-tab:hover {
+  color: #1677ff;
+  border-color: #b7d7ff;
+  background: #f7fbff;
+}
+.order-status-tab.active {
+  color: #1677ff;
+  border-color: #409eff;
+  background: linear-gradient(180deg, #f2f8ff 0%, #ffffff 100%);
+  box-shadow: 0 8px 18px rgba(64, 158, 255, .14);
+}
+.status-tab-label { font-size: 14px; font-weight: 600; }
+.status-tab-count { margin-left: 10px; font-size: 20px; font-weight: 800; line-height: 1; }
+.order-search-row { display: flex; align-items: center; gap: 12px; }
+.search-label { color: #909399; font-size: 14px; font-weight: 600; }
+.order-search-input { width: 320px; max-width: 42vw; }
+.table-card { margin-top: 12px; }
 .item-line { font-size: 12px; color: #555; line-height: 1.6; }
 .tracking { font-size: 12px; color: #409eff; }
 .tracking-summary { display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:12px; background:#f5f7fa; border-radius:6px; }
