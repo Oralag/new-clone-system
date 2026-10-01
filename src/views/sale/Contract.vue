@@ -98,6 +98,9 @@
                           <el-table-column prop="spec" :label="$t('sale.contract.colSpec')" width="100" />
                           <el-table-column prop="unit_name" :label="$t('sale.contract.colUnit')" width="65" align="center" />
                           <el-table-column prop="num" :label="$t('sale.contract.colQty')" width="80" align="right" />
+                          <el-table-column :label="$t('sale.contract.colRetailPrice')" width="100" align="right">
+                            <template #default="{row:item}"><span style="color:#86868b">{{ retailPriceText(item) }}</span></template>
+                          </el-table-column>
                           <el-table-column :label="$t('sale.contract.colPriceWithTax')" width="110" align="right">
                             <template #default="{row:item}">¥{{ Number(item.price||0).toFixed(2) }}</template>
                           </el-table-column>
@@ -147,6 +150,9 @@
                   <el-table-column prop="spec" :label="$t('sale.contract.colSpec')" width="100" />
                   <el-table-column prop="unit_name" :label="$t('sale.contract.colUnit')" width="65" align="center" />
                   <el-table-column prop="num" :label="$t('sale.contract.colQty')" width="80" align="right" />
+                  <el-table-column :label="$t('sale.contract.colRetailPrice')" width="100" align="right">
+                    <template #default="{ row: item }"><span style="color:#86868b">{{ retailPriceText(item) }}</span></template>
+                  </el-table-column>
                   <el-table-column :label="$t('sale.contract.colPriceWithTax')" width="110" align="right">
                     <template #default="{ row: item }">¥{{ Number(item.price || 0).toFixed(2) }}</template>
                   </el-table-column>
@@ -585,6 +591,11 @@
                 <span style="color:#dc2626">{{ ((row.num||0) * (row.price_no_tax||0) * (row.tax_rate||0) / 100).toFixed(2) }}</span>
               </template>
             </el-table-column>
+            <el-table-column :label="$t('sale.contract.colRetailPrice')" width="100" align="right">
+              <template #default="{ row }">
+                <span style="color:#86868b">{{ retailPriceText(row) }}</span>
+              </template>
+            </el-table-column>
             <el-table-column width="130">
               <template #header>
                 <div class="batch-header">
@@ -694,6 +705,10 @@
                 <el-input-number v-model="row.num" :min="0" :precision="4" size="small"
                   controls-position="right" style="flex:1" :disabled="isReadonly"
                   @change="calcItemTax(row); calcTotal()" />
+              </div>
+              <div class="mgc-row">
+                <span class="mgc-label">{{ $t('sale.contract.colRetailPrice') }}</span>
+                <span style="flex:1;color:#86868b">{{ retailPriceText(row) }}</span>
               </div>
               <div class="mgc-row">
                 <span class="mgc-label">{{ $t('sale.contract.mobileLabelPrice') }}</span>
@@ -1431,11 +1446,32 @@ import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
 import { calcExchangeDeductFromItems, calcSaleContractReceivable } from '@/utils/saleContractAmount'
+import { buildRetailPriceMap, retailPriceOf, type RetailPriceMap } from '@/utils/goodsRetailPrice'
 
 const isMobile = ref(window.innerWidth <= 768)
 function onResize() { isMobile.value = window.innerWidth <= 768 }
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
+
+// ── 零售价（展示用，表格/手机卡片/PDF 共用） ──
+const retailPriceMap = ref<RetailPriceMap>(new Map())
+let retailPriceLoading: Promise<void> | null = null
+function loadRetailPrices(force = false) {
+  if (retailPriceLoading && !force) return retailPriceLoading
+  retailPriceLoading = (async () => {
+    try {
+      const res: any = await getGoodsList({ list_rows: 3000 })
+      retailPriceMap.value = buildRetailPriceMap(res?.data?.rows ?? res?.data?.list ?? [])
+    } catch { retailPriceLoading = null }
+  })()
+  return retailPriceLoading
+}
+function retailPriceText(item: any) {
+  const p = retailPriceOf(item, retailPriceMap.value)
+  return p === null ? '—' : `¥${p.toFixed(2)}`
+}
+onMounted(() => { loadRetailPrices() })
+onActivated(() => { loadRetailPrices(true) })
 
 const DRAFT_KEY = 'sale_contract_draft_from_offer'
 const permStore = usePermissionStore()
@@ -3336,7 +3372,7 @@ async function handleBatchSharePdf(selRows: any[]) {
   if (!rows.length) { ElMessage.warning(t('sale.contract.msgSelectOrdersFirst')); return }
   const msg = ElMessage({ message: `${t('sale.contract.msgGeneratingBatchPdf')} ${rows.length} ${t('sale.contract.msgGeneratingBatchPdfSuffix')}`, duration: 0, type: 'info' })
   try {
-    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas')])
+    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas'), loadRetailPrices()])
     const fmt2 = (v: any) => Number(v || 0).toFixed(2)
     const fmtD = (d: any) => d ? String(d).slice(0, 10) : '—'
 
@@ -3391,6 +3427,7 @@ async function handleBatchSharePdf(selRows: any[]) {
           <td style="padding:7px 6px">${item.line_type === 'exchange' ? exTag2 : ''}${item.goods_name || ''}</td>
           <td style="padding:7px 6px;text-align:center">${item.spec || '—'}</td>
           <td style="padding:7px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+          <td style="padding:7px 6px;text-align:right;color:#86868b">${retailPriceText(item)}</td>
           <td style="padding:7px 6px;text-align:right">¥${fmt2(item.price)}</td>
           <td style="padding:7px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
         </tr>`).join('')
@@ -3458,7 +3495,8 @@ async function handleBatchSharePdf(selRows: any[]) {
               <th style="padding:8px 6px;text-align:left">${t('sale.contract.colGoodsName')}</th>
               <th style="padding:8px 6px;text-align:center">${t('sale.contract.colSpecModel')}</th>
               <th style="padding:8px 6px;text-align:center">${t('sale.contract.colBatchQty')}</th>
-              <th style="padding:8px 6px;text-align:right">${t('sale.contract.colPrice')}</th>
+              <th style="padding:8px 6px;text-align:right">${t('sale.contract.colRetailPrice')}</th>
+              <th style="padding:8px 6px;text-align:right">${t('sale.contract.colWholesalePrice')}</th>
               <th style="padding:8px 6px;text-align:right">${t('sale.contract.colTotalWithTaxHeader')}</th>
             </tr>
           </thead>
@@ -3560,7 +3598,7 @@ async function handleSharePdf() {
   if (!id) { ElMessage.warning(t('sale.contract.msgNoSaveFirst')); return }
   const msg = ElMessage({ message: t('sale.contract.msgGeneratingPdf'), duration: 0, type: 'info' })
   try {
-    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas')])
+    const [{ jsPDF }, html2canvas] = await Promise.all([import('jspdf'), import('html2canvas'), loadRetailPrices()])
 
     const fmt2 = (v: any) => Number(v || 0).toFixed(2)
     const fmtD = (d: any) => d ? String(d).slice(0, 10) : '—'
@@ -3595,6 +3633,7 @@ async function handleSharePdf() {
         <td style="padding:8px 6px">${item.line_type === 'exchange' ? exTag : ''}${item.goods_name || ''}</td>
         <td style="padding:8px 6px;text-align:center">${item.spec || '—'}</td>
         <td style="padding:8px 6px;text-align:center">${item.num || 0} ${item.unit_name || ''}</td>
+        <td style="padding:8px 6px;text-align:right;color:#86868b">${retailPriceText(item)}</td>
         <td style="padding:8px 6px;text-align:right">¥${fmt2(item.price)}</td>
         <td style="padding:8px 6px;text-align:right;font-weight:600;color:#0071e3">¥${fmt2(Number(item.price) * Number(item.num))}</td>
       </tr>`).join('')
@@ -3673,7 +3712,8 @@ async function handleSharePdf() {
             <th style="padding:9px 6px;text-align:left;font-weight:600">${t('sale.contract.colGoodsName')}</th>
             <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colSpecModel')}</th>
             <th style="padding:9px 6px;text-align:center;font-weight:600">${t('sale.contract.colBatchQty')}</th>
-            <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colPrice')}</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colRetailPrice')}</th>
+            <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colWholesalePrice')}</th>
             <th style="padding:9px 6px;text-align:right;font-weight:600">${t('sale.contract.colTotalWithTaxHeader')}</th>
           </tr>
         </thead>
