@@ -70,7 +70,8 @@
           <div class="goods-header">
             <span class="g-name">{{ $t('share.contractSingle.goodsName') }}</span>
             <span class="g-num">{{ $t('share.contractSingle.qty') }}</span>
-            <span class="g-price">{{ $t('share.contractSingle.unitPrice') }}</span>
+            <span class="g-price">{{ $t('share.contractSingle.retailPrice') }}</span>
+            <span class="g-price">{{ $t('share.contractSingle.wholesalePrice') }}</span>
             <span class="g-sub">{{ $t('share.contractSingle.subtotal') }}</span>
           </div>
           <div v-for="(item, i) in goods" :key="i" class="goods-row">
@@ -79,6 +80,7 @@
               <span v-if="item.spec" class="item-spec">{{ item.spec }}</span>
             </div>
             <span class="g-num">{{ item.num }}{{ item.unit_name || '' }}</span>
+            <span class="g-price g-retail">{{ retailText(item) }}</span>
             <span class="g-price">¥{{ fmt(item.price) }}</span>
             <span class="g-sub">¥{{ fmt(Number(item.price) * Number(item.num)) }}</span>
           </div>
@@ -122,6 +124,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import { buildRetailPriceMap, retailPriceOf, type RetailPriceMap } from '@/utils/goodsRetailPrice'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -150,10 +153,22 @@ function fmt(v: any) { return Number(v || 0).toFixed(2) }
 function fmtDate(d: any) { return d ? String(d).slice(0, 10) : t('share.noDate') }
 function doPrint() { window.print() }
 
+const retailPriceMap = ref<RetailPriceMap>(new Map())
+function retailText(item: any) {
+  const p = retailPriceOf(item, retailPriceMap.value)
+  return p === null ? '—' : `¥${fmt(p)}`
+}
+function loadRetailPrices(token: string) {
+  axios.get('/adminapi/goods/ShopGoods/index?list_rows=3000', { headers: { token } })
+    .then(r => { retailPriceMap.value = buildRetailPriceMap(r.data?.data?.rows ?? r.data?.data?.list ?? []) })
+    .catch(() => { /* 零售价仅展示，拿不到显示 — */ })
+}
+
 onMounted(async () => {
   const id = route.params.id
   const token = route.query.token as string
   if (!token) { error.value = t('share.contractSingle.invalidLink'); loading.value = false; return }
+  loadRetailPrices(token)
   try {
     const res = await axios.get(`/adminapi/shop/ContractOrder/detail?id=${id}`, {
       headers: { token }
@@ -249,7 +264,7 @@ onMounted(async () => {
 .goods-list { font-size: 13px; }
 .goods-header, .goods-row {
   display: grid;
-  grid-template-columns: 1fr 60px 70px 80px;
+  grid-template-columns: 1fr 52px 64px 64px 76px;
   gap: 4px; padding: 8px 0;
 }
 .goods-header { color: #86868b; font-size: 11px; font-weight: 600; border-bottom: 1px solid #f2f2f7; }
@@ -257,6 +272,7 @@ onMounted(async () => {
 .goods-row:last-child { border-bottom: none; }
 .g-name { min-width: 0; }
 .g-num, .g-price, .g-sub { text-align: right; }
+.g-retail { color: #86868b; }
 .item-name { display: block; color: #1d1d1f; font-weight: 500; }
 .item-spec { display: block; font-size: 11px; color: #86868b; margin-top: 2px; }
 

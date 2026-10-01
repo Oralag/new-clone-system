@@ -54,6 +54,7 @@
                 <div v-for="(item, i) in parseGoods(c.goods_info)" :key="i" class="goods-item">
                   <span class="gi-name">{{ item.goods_name }}<span v-if="item.spec" class="gi-spec">（{{ item.spec }}）</span></span>
                   <span class="gi-num">× {{ item.num }}{{ item.unit_name || '' }}</span>
+                  <span class="gi-unit">{{ $t('share.contractBatch.retailPrice') }} {{ retailText(item) }} · {{ $t('share.contractBatch.wholesalePrice') }} ¥{{ fmt(item.price) }}</span>
                   <span class="gi-price">¥{{ fmt(Number(item.price) * Number(item.num)) }}</span>
                 </div>
               </div>
@@ -94,6 +95,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import { buildRetailPriceMap, retailPriceOf, type RetailPriceMap } from '@/utils/goodsRetailPrice'
 
 const route = useRoute()
 const { t, locale } = useI18n()
@@ -129,11 +131,23 @@ const totalPending = computed(() =>
   contracts.value.reduce((s, c) => s + pendingAmt(c), 0).toFixed(2)
 )
 
+const retailPriceMap = ref<RetailPriceMap>(new Map())
+function retailText(item: any) {
+  const p = retailPriceOf(item, retailPriceMap.value)
+  return p === null ? '—' : `¥${fmt(p)}`
+}
+function loadRetailPrices(token: string) {
+  axios.get('/adminapi/goods/ShopGoods/index?list_rows=3000', { headers: { token } })
+    .then(r => { retailPriceMap.value = buildRetailPriceMap(r.data?.data?.rows ?? r.data?.data?.list ?? []) })
+    .catch(() => { /* 零售价仅展示，拿不到显示 — */ })
+}
+
 onMounted(async () => {
   const idsRaw = route.query.ids as string
   const token = route.query.token as string
   if (!token || !idsRaw) { error.value = t('share.contractBatch.invalidLink'); loading.value = false; return }
   const ids = idsRaw.split(',').map(s => s.trim()).filter(Boolean)
+  loadRetailPrices(token)
   if (!ids.length) { error.value = t('share.contractBatch.invalidIds'); loading.value = false; return }
   try {
     const results = await Promise.all(
@@ -254,6 +268,7 @@ onMounted(async () => {
 .gi-name { color: #3a3a3c; flex: 1; min-width: 0; }
 .gi-spec { color: #86868b; font-size: 12px; }
 .gi-num { color: #86868b; white-space: nowrap; font-size: 12px; }
+.gi-unit { color: #86868b; white-space: nowrap; font-size: 12px; }
 .gi-price { color: #1d1d1f; font-weight: 600; white-space: nowrap; min-width: 80px; text-align: right; }
 
 /* 金额列 */
