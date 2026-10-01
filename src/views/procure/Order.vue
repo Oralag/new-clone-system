@@ -173,7 +173,7 @@
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? $t('procure.order.actionView') : $t('procure.order.actionEdit') }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">{{ $t('procure.order.actionAudit') }}</el-button>
-              <el-button v-if="row.status === 1 && getPayStatus(row).label !== $t('procure.order.payStatusPaid')" type="success" link size="small" @click="openPayDialog(row)">{{ $t('procure.order.actionPay') }}</el-button>
+              <el-button v-if="Number(row.status) === 1 && getUnpaidAmount(row) > 0" type="success" link size="small" @click="openPayDialog(row)">{{ $t('procure.order.actionPay') }}</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">{{ $t('procure.order.actionReverseAudit') }}</el-button>
               <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('procure.order.actionReconciled') : $t('procure.order.actionReconcile') }}</el-button>
               <el-button type="danger" link size="small" @click="row.status === 1 ? ElMessage.warning($t('procure.order.msgDeleteAuditedWarning')) : handleDelete(row)">{{ $t('procure.order.actionDelete') }}</el-button>
@@ -1672,9 +1672,7 @@ const batchPayItems = ref<{ orderId: number; orderSn: string; supplierName: stri
 function openBatchPayDialog(auditedRows: any[]) {
   const items = auditedRows
     .map(row => {
-      const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
-      const paid = getPaidAmount(row)
-      const unpaid = Math.max(0, total - paid)
+      const unpaid = getUnpaidAmount(row)
       return { orderId: row.id, orderSn: row.order_sn || row.order_no || `PO${row.id}`, supplierName: row.supplier_name || '', unpaid, amount: unpaid }
     })
     .filter(item => item.unpaid > 0)
@@ -1740,9 +1738,8 @@ const payForm = reactive({
 })
 
 function openPayDialog(row: any) {
-  const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
-  const paid = getPaidAmount(row)
-  const unpaid = Math.max(0, total - paid)
+  if (Number(row.status) !== 1) return
+  const unpaid = getUnpaidAmount(row)
   if (unpaid <= 0) {
     ElMessage.info(t('procure.order.msgOrderPaidUp'))
     return
@@ -1924,9 +1921,15 @@ function getPaidAmount(row: any): number {
     + (paidMapByKey.value[payKey(oSn, sup)] || paidMapByKey.value[payKey(oNo, sup)] || 0)
 }
 
+function getUnpaidAmount(row: any): number {
+  // Explicit zero is a free order, not a missing amount. Round to payable cents.
+  const total = Number(row.after_discount ?? row.total_amount ?? 0)
+  return Math.max(0, Math.round((total - getPaidAmount(row)) * 100) / 100)
+}
+
 function getPayStatus(row: any): { label: string; type: string } {
   if (Number(row.status) !== 1) return { label: '—', type: 'info' }
-  const total = (Number(row.after_discount) > 0 ? Number(row.after_discount) : Number(row.total_amount ?? 0))
+  const total = Number(row.after_discount ?? row.total_amount ?? 0)
   const paid = getPaidAmount(row)
   if (total <= 0) return { label: '—', type: 'info' }
   if (paid <= 0) return { label: t('procure.order.payStatusUnpaid'), type: 'danger' }
