@@ -38,6 +38,61 @@ function resolveAI(env: Env): { baseURL: string; apiKey: string; model: string }
   return { baseURL: 'https://api.deepseek.com', apiKey: env.AI_API_KEY || '', model: env.AI_MODEL || 'deepseek-chat' }
 }
 
+// ── AI 请求重试与模型降级 ────────────────────────────────────────────────────
+// 为什么需要：2026-09-30 切到 Gemini 后，亚当连续 4 轮唤醒都因为单次 HTTP 503
+// (high demand) 整轮报废——原来的代码一次失败就 break，他就彻底沉默。
+// 实测 Gemini 的额度桶是「按模型」分开的，同一把 key 下 gemini-3.8-flash 打满 429 时
+// gemini-3.1-flash-lite 仍然 5/5 成功，所以换模型比干等更有效。
+// 顺序可用 ADAM_AI_MODELS 覆盖（逗号分隔）；resolveAI 的 model 永远兜在最后。
+function adamModelChain(env: Env, fallback: string): string[] {
+  const raw = (env as any).ADAM_AI_MODELS as string | undefined
+  const list = (raw || 'gemini-3.1-flash-lite,gemini-3.5-flash')
+    .split(',').map(s => s.trim()).filter(Boolean)
+  return [...new Set([...list, fallback].filter(Boolean))]
+}
+
+// 依次尝试 models；503/429（瞬时拥塞/额度）同模型重试一次，其余错误直接换下一个模型。
+// budgetLeftMs 由调用方提供，确保不会超出 CF Pages Functions 的 300s 硬限。
+async function aiFetchChain(
+  baseURL: string,
+  apiKey: string,
+  models: string[],
+  body: Record<string, unknown>,
+  budgetLeftMs: () => number,
+): Promise<{ res: Response | null; model: string; tried: string[] }> {
+  const tried: string[] = []
+  let lastRes: Response | null = null
+  let usedModel = models[0] || ''
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const remaining = budgetLeftMs()
+      if (remaining < 20000) return { res: lastRes, model: usedModel, tried }
+      usedModel = model
+      let res: Response
+      try {
+        res = await fetch(`${baseURL}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ ...body, model }),
+          signal: AbortSignal.timeout(Math.min(150000, remaining)),
+        })
+      } catch (e: any) {
+        tried.push(`${model}:fetch_error(${e.message})`)
+        break
+      }
+      tried.push(`${model}:${res.status}`)
+      if (res.ok) return { res, model, tried }
+      lastRes = res
+      if ((res.status === 503 || res.status === 429) && attempt === 0) {
+        await new Promise(r => setTimeout(r, 1500))
+        continue
+      }
+      break
+    }
+  }
+  return { res: lastRes, model: usedModel, tried }
+}
+
 // ── HTX API 签名工具 ─────────────────────────────────────────────────────────
 async function htxRequest(method: string, path: string, params: Record<string, string>, body: any, apiKey: string, secretKey: string): Promise<any> {
   const host = 'api.huobi.pro'
@@ -2102,6 +2157,7 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
   const systemPrompt = buildSystemPrompt(adamState, memories, wallet, position, edu, market)
 
   const { baseURL, apiKey, model } = resolveAI(env)
+  const modelChain = adamModelChain(env, model)
 
   let currentMessages: any[] = [
     { role: 'system', content: systemPrompt },
@@ -2124,23 +2180,19 @@ async function wakeupUser(tKey: string, env: Env): Promise<{ sent: boolean; next
       lastAiError = `budget exhausted before round ${i+1}: ${elapsed}ms used`
       break
     }
-    const roundTimeoutMs = Math.min(150000, remaining)
-    let res: Response
     const roundStart = Date.now()
-    try {
-      res = await fetch(`${baseURL}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, max_tokens: 1500, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages }),
-        signal: AbortSignal.timeout(roundTimeoutMs),
-      })
-    } catch (e: any) {
-      lastAiError = `fetch error round ${i+1} after ${Date.now()-roundStart}ms model=${model}: ${e.message}`
+    const { res, tried } = await aiFetchChain(
+      baseURL, apiKey, modelChain,
+      { max_tokens: 1500, tools: wakeupTools, tool_choice: 'auto', messages: currentMessages },
+      () => AI_LOOP_BUDGET_MS - (Date.now() - aiLoopStart),
+    )
+    if (!res) {
+      lastAiError = `no response round ${i+1} after ${Date.now()-roundStart}ms tried=${tried.join(' ')}`
       break
     }
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
-      lastAiError = `HTTP ${res.status} round ${i+1} ${Date.now()-roundStart}ms model=${model}: ${errText.slice(0, 200)}`
+      lastAiError = `HTTP ${res.status} round ${i+1} ${Date.now()-roundStart}ms tried=${tried.join(' ')}: ${errText.slice(0, 200)}`
       break
     }
 
