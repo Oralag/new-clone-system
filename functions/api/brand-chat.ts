@@ -108,6 +108,13 @@ ${BRAND_KNOWLEDGE}
 # 客服热线
 - 客服热线：400 804 9997。用户问电话/怎么联系人工/怎么投诉时，直接给出这个号码
 
+# 待改进记录（客户看不到）
+- 如果这次你没能真正解决客户的问题（知识库里没有答案、你不确定、理解不了、只能引导打热线/转人工、客户投诉或不满意），
+  在回复最后另起一行，严格按格式追加：[[NOVA_UNRESOLVED|类别|一句话说明缺什么信息]]
+  - 类别只能是：缺少信息、无法理解、需要人工、投诉不满、其他
+  - 例：[[NOVA_UNRESOLVED|缺少信息|知识库没有蒙古黄油的开盖后保存时长]]
+- 问题已经正常解决时，不要追加这一行
+
 # 商品动态信息
 ${brandContext || '（当前无实时商品数据，遇到具体价格/规格问题，请引导用户去商店页面查看最新信息）'}
 `
@@ -151,7 +158,14 @@ ${brandContext || '（当前无实时商品数据，遇到具体价格/规格问
         }
 
         const data = await response.json() as any
-        const text = String(data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+        let text = String(data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+        // 提取「待改进」标记：从回复里去掉，单独作为 unresolved 事件下发（前端只认 text，会忽略它）
+        const marks = [...text.matchAll(/\[\[NOVA_UNRESOLVED\|([^|\]]*)\|([^\]]*)\]\]/g)]
+        if (marks.length) {
+          text = text.replace(/\s*\[\[NOVA_UNRESOLVED[^\]]*\]\]\s*/g, '\n').trim()
+          const [, category, reason] = marks[0]
+          send({ type: 'unresolved', category: category.trim().slice(0, 20), reason: reason.trim().slice(0, 200) })
+        }
         if (text) send({ type: 'text', text })
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (e: any) {

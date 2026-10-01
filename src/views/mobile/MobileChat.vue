@@ -84,7 +84,7 @@
           <div
             class="chat-item"
             :class="{ 'chat-item--pinned': g.is_pinned }"
-            @click="swipeMoved ? (swipeMoved = false) : (closeSwipe(), g.id === 'adam-virtual' ? openAdamChat() : (g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)))"
+            @click="swipeMoved ? (swipeMoved = false) : (closeSwipe(), g.id === 'adam-virtual' ? openAdamChat() : g.id === 'nova-virtual' ? openNovaChat() : (g.route ? router.push(g.route) : router.push(`/mobile/chat/${g.id}`)))"
             @touchstart.passive="onSwipeStart($event, g)"
             @touchend.passive="onSwipeEnd"
             @touchmove.passive="onSwipeMove"
@@ -598,6 +598,38 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ── Nova 留言面板（复用亚当面板样式，只读） ── -->
+  <Teleport to="body">
+    <div v-if="showNovaChat" class="adam-panel">
+      <div class="adam-panel-topbar">
+        <button class="adam-panel-back" @click="showNovaChat = false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
+        <div class="adam-panel-title">Nova 客服</div>
+        <div style="width:40px"></div>
+      </div>
+      <div ref="novaListRef" class="adam-panel-messages">
+        <div v-if="novaLoading" class="adam-panel-hint">{{ t('mobileChat.loading') }}</div>
+        <div v-else-if="novaMessages.length === 0" class="adam-panel-hint">Nova 还没有留言</div>
+        <template v-else>
+          <div v-for="msg in novaMessages" :key="msg.id" class="adam-panel-row">
+            <div class="adam-panel-avatar">N</div>
+            <div class="adam-panel-col">
+              <div class="adam-panel-name">Nova{{ msg.kind === 'alert' ? ' · 需要您处理' : '' }}</div>
+              <div class="adam-panel-bubble" style="white-space:pre-wrap">{{ msg.content }}</div>
+              <div class="adam-panel-time">{{ adamFormatTime(msg.created_at) }}</div>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="adam-panel-hint" style="padding:10px 16px calc(10px + env(safe-area-inset-bottom));font-size:12px">
+        Nova 每晚 9 点汇报当天工作；客户投诉或要找人工时会马上给您留言
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -629,6 +661,8 @@ const pinnedSessions = computed(() => ([
 const groups = ref<any[]>([])
 // 亚当条目独立维护，不参与 loadGroups 的覆盖，永不闪烁
 const adamGroup = ref<any | null>(null)
+// Nova（小程序客服 Agent）给老板的留言：每晚工作汇报 + 投诉/要人工即时留言
+const novaGroup = ref<any | null>(null)
 const contacts = ref<any[]>([])
 const searchKeyword = ref('')
 const searchResults = ref<any[]>([])
@@ -829,6 +863,9 @@ const displayedGroups = computed(() => {
   const merged = [...groups.value]
   if (adamGroup.value && !merged.find(g => g.id === adamGroup.value!.id || g.name === adamGroup.value!.name)) {
     merged.unshift(adamGroup.value)
+  }
+  if (novaGroup.value && !merged.find(g => g.id === novaGroup.value!.id)) {
+    merged.unshift(novaGroup.value)
   }
   const filtered = merged.filter(g => {
     if (!g.id) return false
@@ -1239,6 +1276,7 @@ async function loadGroups() {
   } catch { groups.value = [] }
   // 注入亚当条目（独立 ref，不会被覆盖）
   await mergeAdamInbox()
+  mergeNovaInbox()
 }
 
 // 加载内部员工通讯录
@@ -1415,6 +1453,54 @@ function adamFormatTime(ts: string) {
 async function adamScrollBottom() {
   await nextTick()
   if (adamListRef.value) adamListRef.value.scrollTop = adamListRef.value.scrollHeight
+}
+
+// ── Nova 留言 ──────────────────────────────────────────────
+const showNovaChat = ref(false)
+const novaMessages = ref<any[]>([])
+const novaLoading = ref(false)
+const novaListRef = ref<HTMLElement | null>(null)
+
+async function fetchNovaMessages() {
+  const res: any = await http.get('/mini/nova/messages')
+  return { rows: (res?.data?.rows ?? []) as any[], unread: Number(res?.data?.unread ?? 0) }
+}
+async function mergeNovaInbox() {
+  // 和亚当一样只给超管看
+  if (authStore.userInfo?.account !== '17747344571') { novaGroup.value = null; return }
+  try {
+    const { rows, unread } = await fetchNovaMessages()
+    if (!rows.length) { novaGroup.value = null; return }
+    const latest = rows[rows.length - 1]
+    novaGroup.value = {
+      id: 'nova-virtual',
+      name: 'Nova 客服',
+      avatar_text: 'N',
+      last_msg: String(latest.content || '').replace(/\s+/g, ' ').slice(0, 80),
+      last_time: formatTime(latest.created_at),
+      unread,
+      is_pinned: false,
+      last_message_at: latest.created_at,
+      member_count: 2,
+      member_ids: [],
+      is_private: true,
+      type: 'dm',
+    }
+  } catch { /* 后端未上线或网络问题时不影响消息列表 */ }
+}
+async function openNovaChat() {
+  showNovaChat.value = true
+  novaLoading.value = true
+  try {
+    novaMessages.value = (await fetchNovaMessages()).rows
+    await http.post('/mini/nova/messages/read')
+    if (novaGroup.value) novaGroup.value = { ...novaGroup.value, unread: 0 }
+  } catch (e) { console.error(e) }
+  finally {
+    novaLoading.value = false
+    await nextTick()
+    if (novaListRef.value) novaListRef.value.scrollTop = novaListRef.value.scrollHeight
+  }
 }
 
 async function openAdamChat() {
