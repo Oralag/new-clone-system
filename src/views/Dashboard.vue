@@ -1547,8 +1547,10 @@ function drawTrendChart(n: number) {
 }
 .guide-side-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
 }
 .guide-side-title {
@@ -1558,12 +1560,18 @@ function drawTrendChart(n: number) {
   font-size: 12px;
   font-weight: 700;
   color: var(--dark);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .guide-side-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 180px;
+  min-width: 0;
+  justify-content: flex-end;
 }
+.guide-side-actions .gmp-bar-wrap { flex: 1 1 40px; width: auto; max-width: 120px; min-width: 40px; }
 .guide-hide-btn {
   width: 22px;
   height: 22px;
