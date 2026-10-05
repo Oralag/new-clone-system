@@ -38,7 +38,10 @@
           <span class="msg-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
           <span class="msg-time">{{ msg.time }}</span>
         </div>
-        <div class="msg-content" v-html="renderMarkdown(msg.content)"></div>
+        <div class="msg-content" v-html="renderMarkdown(splitAiError(msg.content).body)"></div>
+        <div v-if="splitAiError(msg.content).error" class="msg-ai-error" :title="splitAiError(msg.content).error">
+          {{ t('adamChat.aiErrorTag') }}
+        </div>
         <div v-if="msg.images?.length" class="msg-images">
           <img v-for="(url, i) in msg.images" :key="i" :src="url" class="msg-img-thumb" />
         </div>
@@ -163,11 +166,21 @@ function isCleanContent(content: unknown) {
 function sanitizeMessages(raw: any[]): ChatMessage[] {
   return (Array.isArray(raw) ? raw : [])
     .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && isCleanContent(m.content))
-    .map((m: any) => ({
+    .map((m: any, i: number) => ({
       ...m,
+      // 后端从 inbox 同步进历史的消息只有 inbox_id/timestamp，没有 id/time
+      id: m.id || m.inbox_id || `h_${i}_${m.timestamp || ''}`,
+      time: m.time || (m.timestamp ? formatMsgTime(m.timestamp) : ''),
       content: String(m.content),
       toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
     }))
+}
+
+// cron 汇报末尾会附带 "(AI 异常: ...)" 原始报错，正文里不展示，折成一个小标签
+function splitAiError(content: string): { body: string; error: string } {
+  const m = String(content).match(/\n?\(AI 异常: ([\s\S]*)\)\s*$/)
+  if (!m) return { body: content, error: '' }
+  return { body: content.slice(0, m.index), error: m[1] }
 }
 
 // 外部触发打开（如 Workspace 点击亚当角色）
@@ -179,6 +192,7 @@ watch(() => adamStore.chatOpen, (val) => {
 })
 
 let pollTimer: number | undefined
+let stopStatusWatch: (() => void) | undefined
 
 onMounted(async () => {
   // 版本升级时清除污染历史
@@ -203,18 +217,23 @@ onMounted(async () => {
   // 打开时定位到最新一条消息
   scrollToBottom()
 
-  if (adamStore.core.status === 'alive') {
-    triggerWakeup()
-    pollTimer = window.setInterval(pollMessages, 30 * 1000)
-  }
+  // 状态是异步从 KV 加载的，挂载时多半还是默认的 dormant，所以要等它变成 alive 再开始拉消息
+  pollMessages()
+  stopStatusWatch = watch(() => adamStore.core.status, (status) => {
+    if (status === 'alive' && !pollTimer) {
+      triggerWakeup()
+      pollTimer = window.setInterval(pollMessages, 30 * 1000)
+    }
+  }, { immediate: true })
 })
 
 async function loadHistoryFromCloud() {
   const token = localStorage.getItem('erp_token') || ''
   if (!token) return
   try {
-    const res = await fetch('/api/adam/history', {
+    const res = await fetch(`/api/adam/history?_t=${Date.now()}`, {
       headers: { 'x-erp-token': token },
+      cache: 'no-store',
     })
     if (!res.ok) return
     const data = await res.json() as { messages: ChatMessage[] }
@@ -227,6 +246,7 @@ async function loadHistoryFromCloud() {
 }
 
 onUnmounted(() => {
+  stopStatusWatch?.()
   if (pollTimer) clearInterval(pollTimer)
 })
 
@@ -245,8 +265,9 @@ async function triggerWakeup() {
 async function pollMessages() {
   const token = localStorage.getItem('erp_token') || ''
   try {
-    const res = await fetch('/api/adam/messages', {
+    const res = await fetch(`/api/adam/messages?_t=${Date.now()}`, {
       headers: { 'x-erp-token': token },
+      cache: 'no-store',
     })
     if (!res.ok) return
     const data = await res.json() as { messages: Array<{ id: string; content: string; toolCalls?: any[]; timestamp: string }> }
@@ -601,6 +622,11 @@ function removePendingImage(idx: number) {
 .msg-time { font-size: 8px; color: var(--dim); font-family: 'SF Mono', 'Fira Code', monospace; opacity: 0.5; }
 .msg-content { font-size: 13px; line-height: 1.65; color: var(--dark); padding-left: 28px; }
 .msg.user .msg-content { color: var(--mid); }
+.msg-ai-error {
+  display: inline-block; margin: 6px 0 0 28px; padding: 2px 8px;
+  font-size: 10px; color: var(--dim); border: 1px dashed var(--border); border-radius: 999px;
+  cursor: help;
+}
 
 .msg-content :deep(p) { margin: 0 0 6px; }
 .msg-content :deep(p:last-child) { margin-bottom: 0; }
