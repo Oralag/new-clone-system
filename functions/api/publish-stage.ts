@@ -28,6 +28,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const key = KEY(token)
   const legacyKey = LEGACY_KEY(token)
   const items = (await env.AGENT_MEMORY.get(key, 'json')) as any[] || []
+  // ?count=1 只数不取（首页简报用），不能触发下面的「取走即删」
+  if (new URL(request.url).searchParams.get('count') === '1') {
+    return Response.json({ count: items.length }, { headers: corsHeaders })
+  }
   if (legacyKey !== key) {
     const legacy = (await env.AGENT_MEMORY.get(legacyKey, 'json')) as any[] || []
     if (legacy.length) { items.push(...legacy); await env.AGENT_MEMORY.delete(legacyKey) }

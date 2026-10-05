@@ -43,6 +43,37 @@
       </div>
     </section>
 
+    <!-- ── 今日简报：首屏直接看到「要处理什么、能借什么势」 ── -->
+    <section class="daily-brief">
+      <div class="db-card db-review" :class="{ 'has-todo': pendingReview > 0 }" @click="$router.push(ap('/agent/publish'))">
+        <div class="db-label">待审核内容</div>
+        <div class="db-value">{{ pendingReview }}<span class="db-unit">条</span></div>
+        <div class="db-sub">{{ pendingReview > 0 ? '点这里挑内容发布 →' : '暂时没有，点上面「一键生成」' }}</div>
+      </div>
+
+      <div class="db-card db-trend">
+        <div class="db-label">
+          抖音热搜 · 借势选题
+          <router-link :to="ap('/agent/trending')" class="db-link" @click.stop>全部 →</router-link>
+        </div>
+        <div v-if="briefTrendLoading" class="db-sub">加载中…</div>
+        <div v-else-if="!briefTrending.length" class="db-sub">热搜暂时拿不到，稍后再试</div>
+        <div v-else class="db-trend-list">
+          <div v-for="(item, i) in briefTrending" :key="item.title" class="db-trend-item">
+            <span class="db-rank" :class="{ hot: i === 0 }">{{ i + 1 }}</span>
+            <span class="db-trend-title" :title="item.title">{{ item.title }}</span>
+            <button class="db-trend-btn" @click="useTrendTopic(item.title)">出方案</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-card db-channel" @click="$router.push(ap('/agent/publish'))">
+        <div class="db-label">发布渠道</div>
+        <div class="db-value">{{ connectedCount }}<span class="db-unit">/ {{ channels.length }} 已连接</span></div>
+        <div class="db-sub">{{ connectedCount === 0 ? '还没连接任何平台' : channels.filter(c => c.connected).map(c => c.name).join('、') }}</div>
+      </div>
+    </section>
+
     <!-- ── Captain 指令台 ── -->
     <section class="command-section">
       <div class="command-header">
@@ -242,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref } from 'vue'
+import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useTrendingStore } from '@/stores/agent'
@@ -442,6 +473,34 @@ const departments = [
     outsource: true,
   },
 ]
+
+// ── 今日简报 ──
+// 待审核 = 发布页已拉到本地但没发的 + 服务端还暂存着的（count=1 只数不取，不会把内容从发布页抢走）
+const stagedCount = ref(0)
+const pendingReview = computed(() => agentStore.flowResults.filter(r => !r.published).length + stagedCount.value)
+const briefTrendLoading = ref(false)
+// 接口失败时 store 会塞 MOCK 数据，简报里不展示假热搜
+const briefTrending = computed(() => (agentStore.trending.douyin || []).filter(i => !i.isMock).slice(0, 3))
+
+function useTrendTopic(title: string) {
+  const brand = brandStore.isConfigured ? brandStore.brand.name : '我们品牌'
+  fillCaptain(`结合抖音热搜「${title}」，给${brand}出一条借势推广方案：选题角度、文案和配图建议`)
+}
+
+onMounted(async () => {
+  const token = localStorage.getItem('erp_token') || ''
+  if (token) {
+    fetch(`/api/publish-stage?count=1&_t=${Date.now()}`, { headers: { 'x-erp-token': token }, cache: 'no-store' })
+      .then(r => r.json())
+      .then((d: any) => { stagedCount.value = Number(d?.count) || 0 })
+      .catch(() => {})
+  }
+  if (!briefTrending.value.length) {
+    briefTrendLoading.value = true
+    await agentStore.fetchTrending('douyin').catch(() => {})
+    briefTrendLoading.value = false
+  }
+})
 
 // 今日热搜快览
 const topTrending = computed(() => {
@@ -1023,6 +1082,42 @@ const topTrending = computed(() => {
 @media (max-width: 900px) {
   .flow-guide { flex-direction: column; }
   .fg-arrow { display: none; }
+}
+
+/* ── 今日简报 ── */
+.daily-brief { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 10px; }
+.db-card {
+  background: #ffffff; border: 1px solid rgba(0,0,0,0.07); border-radius: 14px;
+  padding: 14px 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.db-review, .db-channel { cursor: pointer; transition: border-color 0.15s; }
+.db-review:hover, .db-channel:hover { border-color: #0071e3; }
+.db-review.has-todo { border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.04); }
+.db-review.has-todo .db-value { color: #d97706; }
+.db-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: rgba(29,29,31,0.5); }
+.db-link { font-weight: 600; color: #0071e3; text-decoration: none; }
+.db-value { font-size: 26px; font-weight: 800; color: #1d1d1f; letter-spacing: -0.02em; line-height: 1.1; }
+.db-unit { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.4); margin-left: 4px; }
+.db-sub { font-size: 11px; color: rgba(29,29,31,0.45); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-trend-list { display: flex; flex-direction: column; gap: 4px; }
+.db-trend-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.db-rank {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  background: rgba(0,0,0,0.05); color: rgba(29,29,31,0.55);
+  font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.db-rank.hot { background: #ff3b30; color: #fff; }
+.db-trend-title { flex: 1; min-width: 0; font-size: 13px; color: #1d1d1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-trend-btn {
+  flex-shrink: 0; padding: 2px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(0,113,227,0.3); background: rgba(0,113,227,0.06);
+  color: #0071e3; font-size: 11px; font-weight: 700; font-family: inherit;
+}
+.db-trend-btn:hover { background: #0071e3; color: #fff; }
+@media (max-width: 900px) {
+  .daily-brief { grid-template-columns: 1fr 1fr; }
+  .db-trend { grid-column: 1 / -1; order: -1; }
 }
 
 /* ── 更多功能折叠 ── */
