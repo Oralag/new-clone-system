@@ -5,6 +5,7 @@ interface Env {
   AI_API_KEY?: string
   AI_BASE_URL?: string
   AI_MODEL?: string
+  NOVA_AI_MODELS?: string
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -24,7 +25,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   const baseURL = (env.AI_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/+$/, '')
-  const model = env.AI_MODEL || 'llama-3.3-70b-versatile'
+  // Groq 免费档额度按模型独立计算（每模型 8K TPM）。Nova 优先用亚当不用的模型，
+  // 遇到 413/429（额度）或 404/400（模型下线/参数不支持）依次换下一个，最后才用共享的 AI_MODEL
+  const models = [...new Set([
+    ...(env.NOVA_AI_MODELS || 'qwen/qwen3.8-27b,openai/gpt-oss-20b').split(',').map(m => m.trim()).filter(Boolean),
+    env.AI_MODEL || 'openai/gpt-oss-120b',
+  ])]
 
   let body: any
   try { body = await request.json() } catch {
@@ -97,7 +103,18 @@ ${BRAND_KNOWLEDGE}
 - 不评价竞争对手
 - 不承诺无法兑现的事（时效、赠品、绝对健康功效等）
 - 不主动提及具体地名（如锡林郭勒等）除非用户先问到产地
-- 不确定的信息 → 说"这个我帮您确认一下，可以留个联系方式"而不是编
+- 不确定的信息、知识库里没有的问题、理解不了的问题、投诉或需要人工处理的情况 → 不要编，请引导客户拨打客服热线 400 804 9997（也可以点击下方「转人工」）
+
+# 客服热线
+- 客服热线：400 804 9997。用户问电话/怎么联系人工/怎么投诉时，直接给出这个号码
+- 引导转人工或打热线时，只说“客服会尽快为您处理/联系您”，不要承诺“立刻”“马上”“一定”等具体时效或结果
+
+# 待改进记录（客户看不到）
+- 如果这次你没能真正解决客户的问题（知识库里没有答案、你不确定、理解不了、只能引导打热线/转人工、客户投诉或不满意），
+  在回复最后另起一行，严格按格式追加：[[NOVA_UNRESOLVED|类别|一句话说明缺什么信息]]
+  - 类别只能是：缺少信息、无法理解、需要人工、投诉不满、其他
+  - 例：[[NOVA_UNRESOLVED|缺少信息|知识库没有蒙古黄油的开盖后保存时长]]
+- 问题已经正常解决时，不要追加这一行
 
 # 商品动态信息
 ${brandContext || '（当前无实时商品数据，遇到具体价格/规格问题，请引导用户去商店页面查看最新信息）'}
@@ -112,28 +129,44 @@ ${brandContext || '（当前无实时商品数据，遇到具体价格/规格问
       }
 
       try {
-        const response = await fetch(`${baseURL}/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model,
-            max_tokens: 1024,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
-            ],
-          }),
-        })
+        let response: Response | null = null
+        const tried: string[] = []
+        for (const model of models) {
+          const extra: Record<string, unknown> = model.startsWith('qwen/')
+            ? { reasoning_format: 'hidden' }
+            : model.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {}
+          response = await fetch(`${baseURL}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model,
+              max_tokens: 700,
+              ...extra,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+              ],
+            }),
+          })
+          tried.push(`${model}:${response.status}`)
+          if (response.ok || ![400, 404, 413, 429].includes(response.status)) break
+        }
 
-        if (!response.ok) {
-          send({ type: 'error', error: `API 错误: ${response.status}` })
+        if (!response || !response.ok) {
+          send({ type: 'error', error: `API 错误: ${tried.join(' ')}` })
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
           return
         }
 
         const data = await response.json() as any
-        const text = data.choices?.[0]?.message?.content || ''
+        let text = String(data.choices?.[0]?.message?.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+        // 提取「待改进」标记：从回复里去掉，单独作为 unresolved 事件下发（前端只认 text，会忽略它）
+        const marks = [...text.matchAll(/\[\[NOVA_UNRESOLVED\|([^|\]]*)\|([^\]]*)\]\]/g)]
+        if (marks.length) {
+          text = text.replace(/\s*\[\[NOVA_UNRESOLVED[^\]]*\]\]\s*/g, '\n').trim()
+          const [, category, reason] = marks[0]
+          send({ type: 'unresolved', category: category.trim().slice(0, 20), reason: reason.trim().slice(0, 200) })
+        }
         if (text) send({ type: 'text', text })
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (e: any) {

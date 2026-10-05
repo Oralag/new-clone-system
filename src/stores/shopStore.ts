@@ -1,3 +1,4 @@
+import { specText } from '@/utils/goodsSpec'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
@@ -64,7 +65,7 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
     wholesalePrice: brand.wholesalePrice || 0,
     minOrderQuantity: brand.minOrderQuantity || 1,
     // ERP 的 spec 有历史脏数据（存过 JSON 串），以 { 或 [ 开头的一律当空
-    spec: /^\s*[{[]/.test(String(item.spec || '')) ? '' : String(item.spec || ''),
+    spec: specText(item.spec),
     unit: item.unit_name || '',
     erpCategory: item.cate_name || '',
     supplyPrices: (brand as any).supplyPrices || null,

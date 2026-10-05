@@ -26,6 +26,41 @@ function decodeErpToken(token) {
   } catch { return null }
 }
 
+// erp_ 包装 token 本身没有签名，a（账号）和 b（后端）都可以伪造。
+// 写操作必须：按账号从可信来源确定后端（不信 token 里的 b）→ 用 t 去该后端校验登录态，
+// 校验失败或后端不可达一律拒绝（fail-closed）。
+const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
+const TRIAL_BACKEND = 'https://erp-trial.onrender.com'
+const ADMIN_ACCOUNT = '17747344571'
+
+async function trustedBackendFor(kv, account) {
+  if (account === ADMIN_ACCOUNT) return DEFAULT_BACKEND
+  try {
+    const raw = await kv.get(`user:${account}`)
+    if (!raw) return null
+    const user = JSON.parse(raw)
+    if (user.status === 'suspended') return null
+    return (user.backend_url || TRIAL_BACKEND).replace(/\/+$/, '')
+  } catch { return null }
+}
+
+async function verifyWriteToken(kv, payload) {
+  if (!payload?.a || !payload?.t) return false
+  const backend = await trustedBackendFor(kv, String(payload.a))
+  if (!backend) return false
+  try {
+    const res = await fetch(`${backend}/adminapi/setting/admin/index?list_rows=1`, {
+      headers: { token: String(payload.t), 'Content-Type': 'application/json' },
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    // 未登录 / token 无效 → 拒绝；其余（含无权限的业务错误）说明 token 属于该后端的有效会话
+    if (data?.code === -1) return false
+    if (/未登录|token无效|已过期/.test(String(data?.message || ''))) return false
+    return true
+  } catch { return false }
+}
+
 export async function onRequest(context) {
   const { request, env } = context
   const kv = env.USERS_KV
@@ -61,7 +96,7 @@ export async function onRequest(context) {
   if (request.method === 'POST') {
     const erpToken = request.headers.get('x-erp-token') || ''
     const payload = decodeErpToken(erpToken)
-    if (!payload?.a) {
+    if (!payload?.a || !(await verifyWriteToken(kv, payload))) {
       return json({ code: 0, message: '未授权' }, 401)
     }
 
