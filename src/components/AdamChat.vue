@@ -29,25 +29,29 @@
         <p class="chat-empty-text">{{ t('adamChat.emptyText') }}</p>
       </div>
 
-      <div v-for="msg in messages" :key="msg.id" class="msg" :class="msg.role">
+      <template v-for="item in displayItems" :key="item.msg.id">
+      <button v-if="item.foldedCount" class="routine-fold" @click="toggleRoutineGroup(item.msg.id)">
+        {{ expandedRoutine.has(item.msg.id) ? t('adamChat.routineCollapse') : t('adamChat.routineExpand', { n: item.foldedCount }) }}
+      </button>
+      <div v-if="!item.hidden" class="msg" :class="[item.msg.role, { routine: isRoutine(item.msg) }]">
         <div class="msg-header">
-          <span class="msg-avatar" :class="msg.role">
-            <img v-if="msg.role === 'assistant'" :src="adamAvatarUrl" class="adam-msg-img" :alt="t('adamChat.name')" />
+          <span class="msg-avatar" :class="item.msg.role">
+            <img v-if="item.msg.role === 'assistant'" :src="adamAvatarUrl" class="adam-msg-img" :alt="t('adamChat.name')" />
             <template v-else>U</template>
           </span>
-          <span class="msg-sender">{{ msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
-          <span class="msg-time">{{ msg.time }}</span>
+          <span class="msg-sender">{{ item.msg.role === 'user' ? 'OPERATOR' : 'ADAM' }}</span>
+          <span class="msg-time">{{ item.msg.time }}</span>
         </div>
-        <div class="msg-content" v-html="renderMarkdown(splitAiError(msg.content).body)"></div>
-        <div v-if="splitAiError(msg.content).error" class="msg-ai-error" :title="splitAiError(msg.content).error">
+        <div class="msg-content" v-html="renderMarkdown(humanizeTools(splitAiError(item.msg.content).body))"></div>
+        <div v-if="splitAiError(item.msg.content).error" class="msg-ai-error" :title="splitAiError(item.msg.content).error">
           {{ t('adamChat.aiErrorTag') }}
         </div>
-        <div v-if="msg.images?.length" class="msg-images">
-          <img v-for="(url, i) in msg.images" :key="i" :src="url" class="msg-img-thumb" />
+        <div v-if="item.msg.images?.length" class="msg-images">
+          <img v-for="(url, i) in item.msg.images" :key="i" :src="url" class="msg-img-thumb" />
         </div>
 
-        <div v-if="msg.toolCalls?.length" class="tool-calls">
-          <div v-for="call in msg.toolCalls" :key="call.id" class="tool-card" :class="call.status">
+        <div v-if="item.msg.toolCalls?.length" class="tool-calls">
+          <div v-for="call in item.msg.toolCalls" :key="call.id" class="tool-card" :class="call.status">
             <div class="tool-header">
               <span class="tool-status-indicator"></span>
               <span class="tool-fn">{{ call.name }}</span>
@@ -59,6 +63,7 @@
           </div>
         </div>
       </div>
+      </template>
 
       <div v-if="isLoading" class="msg assistant">
         <div class="msg-header">
@@ -110,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAdamStore } from '@/stores/adam'
 import { applyToolResult } from '@/utils/adamToolSync'
 import { marked } from 'marked'
@@ -174,6 +179,50 @@ function sanitizeMessages(raw: any[]): ChatMessage[] {
       content: String(m.content),
       toolCalls: Array.isArray(m.toolCalls) ? m.toolCalls : undefined,
     }))
+}
+
+// ── 例行巡检折叠 ──
+// cron 每 4 小时汇报一次「观察了但没动作」，连续多条只显示最新一条，避免淹没研报/交易/对话
+const ROUTINE_RE = /^\[亚当(观察了但没动作|本轮沉默——系统补汇报)\]/
+function isRoutine(m: ChatMessage) {
+  return m.role === 'assistant' && ROUTINE_RE.test(m.content)
+}
+const expandedRoutine = ref(new Set<string>())
+function toggleRoutineGroup(lastId: string) {
+  const next = new Set(expandedRoutine.value)
+  next.has(lastId) ? next.delete(lastId) : next.add(lastId)
+  expandedRoutine.value = next
+}
+interface DisplayItem { msg: ChatMessage; hidden: boolean; foldedCount: number }
+const displayItems = computed<DisplayItem[]>(() => {
+  const list = messages.value
+  const items: DisplayItem[] = []
+  let i = 0
+  while (i < list.length) {
+    if (!isRoutine(list[i])) { items.push({ msg: list[i], hidden: false, foldedCount: 0 }); i++; continue }
+    let j = i
+    while (j + 1 < list.length && isRoutine(list[j + 1])) j++
+    const lastId = list[j].id
+    const open = expandedRoutine.value.has(lastId)
+    for (let k = i; k < j; k++) items.push({ msg: list[k], hidden: !open, foldedCount: 0 })
+    items.push({ msg: list[j], hidden: false, foldedCount: j - i })
+    i = j + 1
+  }
+  return items
+})
+
+// 汇报里「查了 htx_get_balances, ...」是工具英文名，展示时换成中文
+const TOOL_LABELS: Record<string, string> = {
+  check_htx_account: '交易所账户', htx_get_balances: '账户余额', htx_get_savings: '理财',
+  htx_place_order: '下单', get_crypto_price: '币价', get_market_index: '大盘指数',
+  paper_trade: '模拟盘', close_paper_trade: '模拟平仓', get_paper_stats: '模拟盘战绩',
+  check_template_queue: '模板队列', write_template: '写模板', write_kdp_book: '写书',
+  write_study_note: '学习笔记', dispatch_sub_agents: '派研究员', update_emotion: '情绪',
+  send_message: '发消息', set_next_wakeup: '定闹钟',
+}
+const TOOL_NAME_RE = new RegExp(`\\b(${Object.keys(TOOL_LABELS).join('|')})\\b`, 'g')
+function humanizeTools(text: string) {
+  return text.replace(TOOL_NAME_RE, name => TOOL_LABELS[name] || name)
 }
 
 // cron 汇报末尾会附带 "(AI 异常: ...)" 原始报错，正文里不展示，折成一个小标签
@@ -622,6 +671,13 @@ function removePendingImage(idx: number) {
 .msg-time { font-size: 8px; color: var(--dim); font-family: 'SF Mono', 'Fira Code', monospace; opacity: 0.5; }
 .msg-content { font-size: 13px; line-height: 1.65; color: var(--dark); padding-left: 28px; }
 .msg.user .msg-content { color: var(--mid); }
+.routine-fold {
+  display: block; margin: 0 auto 8px; padding: 3px 12px;
+  font-size: 11px; color: var(--dim); background: transparent;
+  border: 1px dashed var(--border); border-radius: 999px; cursor: pointer; font-family: inherit;
+}
+.routine-fold:hover { color: var(--dark); border-style: solid; }
+.msg.routine .msg-content { opacity: 0.75; font-size: 12px; }
 .msg-ai-error {
   display: inline-block; margin: 6px 0 0 28px; padding: 2px 8px;
   font-size: 10px; color: var(--dim); border: 1px dashed var(--border); border-radius: 999px;

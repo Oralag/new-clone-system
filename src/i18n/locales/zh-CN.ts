@@ -1920,6 +1920,8 @@ export default {
     name: '亚当',
     panelDesc: '投资部门对话框',
     aiErrorTag: '本轮 AI 调用异常（悬停查看详情）',
+    routineExpand: '+{n} 次例行巡检，点开查看',
+    routineCollapse: '收起例行巡检',
     emptyTitle: '通讯通道已就绪',
     emptyText: '亚当是决策者，你是操作手。他会主动找你，你也可以找他。',
     disclaimer: 'AI 分析 · 非投资建议 · 风险自担',

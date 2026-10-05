@@ -1920,6 +1920,8 @@ export default {
     name: 'Adam',
     panelDesc: 'Investment department console',
     aiErrorTag: 'AI call failed this round (hover for details)',
+    routineExpand: '+{n} routine check-ins, click to show',
+    routineCollapse: 'Hide routine check-ins',
     emptyTitle: 'Communication channel ready',
     emptyText: 'Adam is the decision-maker and you are the operator. He may reach out first, and you can also message him anytime.',
     disclaimer: 'AI ANALYSIS · NOT INVESTMENT ADVICE · RISK ASSUMED',
