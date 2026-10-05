@@ -671,7 +671,7 @@ export const searchTools: any[] = [
   },
   {
     name: 'get_trending',
-    description: '获取各平台实时热搜/热榜数据，可用于文案创作方向、选题参考、热点追踪。支持平台：douyin（抖音）、weibo（微博）、bilibili（B站）、zhihu（知乎）、xiaohongshu（小红书/今日头条替代）、kuaishou（快手）',
+    description: '获取各平台实时热搜/热榜数据，可用于文案创作方向、选题参考、热点追踪。支持平台：douyin（抖音）、weibo（微博）、bilibili（B站）、zhihu（知乎）、xiaohongshu（小红书）、kuaishou（快手，今日头条替代）',
     parameters: {
       type: 'object',
       properties: {

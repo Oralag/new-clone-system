@@ -15,13 +15,44 @@ const PEARKTRUE_NAMES: Record<string, string> = {
   weibo: '微博',
   bilibili: '哔哩哔哩',
   zhihu: '知乎',
-  xiaohongshu: '今日头条',  // 小红书无公开API，用头条替代
+  xiaohongshu: '今日头条',  // pearktrue 无小红书，兜底时用头条
   kuaishou: '今日头条',      // 快手不稳定，用头条替代
 }
 
+// 实际数据来源与平台不一致时标注（前端据此提示）
 const PLATFORM_SOURCE: Record<string, string> = {
-  xiaohongshu: '今日头条',
   kuaishou: '今日头条',
+}
+
+// 60s API（开源 vikiboss/60s）—— 2026-10 起 pearktrue/imsyy 均已失效（403/不可达），改为首选
+// 小红书有真实热搜（rednote）；快手仍无公开源，继续用头条替代
+const SIXTY_TYPES: Record<string, string> = {
+  douyin: 'douyin',
+  weibo: 'weibo',
+  zhihu: 'zhihu',
+  xiaohongshu: 'rednote',
+  kuaishou: 'toutiao',
+}
+
+function formatHeat(v: unknown): string {
+  if (typeof v === 'number') return v >= 10000 ? `${Math.round(v / 10000)}万` : String(v)
+  return v ? String(v) : '热门'
+}
+
+async function fetchFrom60s(platform: string): Promise<HotItem[]> {
+  const type = SIXTY_TYPES[platform]
+  if (!type) throw new Error('60s 不支持该平台')
+  const res = await fetch(`https://60s.viki.moe/v2/${type}`, {
+    headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000),
+  })
+  if (!res.ok) throw new Error(`60s 返回 ${res.status}`)
+  const json: any = await res.json()
+  if (json.code !== 200 || !Array.isArray(json.data)) throw new Error(json.message || '数据格式异常')
+  return json.data.slice(0, 30).map((item: any) => ({
+    title: item.title || '',
+    heat: formatHeat(item.hot_value ?? item.hot_value_desc ?? item.score),
+    url: item.link || item.url || '',
+  })).filter((i: HotItem) => i.title)
 }
 
 // 平台名到 imsyy hot API 的 type 映射
@@ -91,11 +122,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request }) => {
 
   try {
     let items: HotItem[] = []
-    try {
-      items = await fetchFromPearktrue(platformTitle)
-    } catch {
-      items = await fetchFromImsyy(platformTitle)
+    const errors: string[] = []
+    for (const fetcher of [
+      () => fetchFrom60s(platform),
+      () => fetchFromPearktrue(platformTitle),
+      () => fetchFromImsyy(platformTitle),
+    ]) {
+      try {
+        items = await fetcher()
+        if (items.length) break
+      } catch (e: any) {
+        errors.push(e.message)
+      }
     }
+    if (!items.length) throw new Error(errors.join('；') || '无数据')
     return Response.json(
       {
         code: 200,
