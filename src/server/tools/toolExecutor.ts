@@ -1,4 +1,5 @@
 import { isNaiDoufuAliasName, NAIDOUFU_CANONICAL } from '../../utils/goodsAlias'
+import { composeSpec, specMeta, specText } from '../../utils/goodsSpec'
 
 const ERP_BASE = 'https://erp-server-xsji.onrender.com/adminapi'
 
@@ -23,6 +24,41 @@ async function erpPost(path: string, body: Record<string, any>, token: string) {
     body: JSON.stringify(body),
   })
   return res.json()
+}
+
+type SpecAttr = { name: string; values: string[] }
+
+// 读商品 goods.spec：可能是纯文字（如「110克」），也可能是 JSON（attrs/skus/unit_linked_goods/text）
+async function readGoodsSpec(goodsId: number, token: string) {
+  if (!goodsId) return null
+  const res = await erpGet('/goods/ShopGoods/read', { id: goodsId }, token)
+  const g = res?.data
+  if (!g?.id) return null
+  const raw = String(g.spec ?? '')
+  const meta = specMeta(raw)
+  const attrs: SpecAttr[] = (Array.isArray(meta.attrs) ? meta.attrs : [])
+    .map((a: any) => ({ name: String(a?.name ?? ''), values: (a?.values ?? []).map((v: any) => String(v)) }))
+    .filter((a: SpecAttr) => a.name && a.values.length)
+  return { name: String(g.goods_name ?? ''), raw, text: specText(raw), attrs }
+}
+
+// 只改 attrs，保留规格文字 / 多单位关联 / 仍然有效的 SKU 价格
+async function writeGoodsSpec(goodsId: number, raw: string, attrs: SpecAttr[], token: string) {
+  const meta = specMeta(raw)
+  let combos: string[] = attrs.length ? [''] : []
+  for (const a of attrs) combos = combos.flatMap(c => a.values.map(v => (c ? `${c}|${v}` : v)))
+  // SKU 价格按值继承：新增维度时「甜味」→「甜味|250克」沿用原价，删维度时反过来
+  const oldSkus: Record<string, any> = meta.skus && typeof meta.skus === 'object' ? meta.skus : {}
+  const oldKeys = Object.keys(oldSkus)
+  const skus: Record<string, any> = {}
+  for (const k of combos) {
+    if (oldSkus[k]) { skus[k] = oldSkus[k]; continue }
+    const vals = k.split('|')
+    const from = oldKeys.find(o => { const ov = o.split('|'); return ov.every(v => vals.includes(v)) || vals.every(v => ov.includes(v)) })
+    if (from) skus[k] = { ...oldSkus[from] }
+  }
+  const spec = composeSpec(specText(raw), { ...meta, attrs, skus })
+  return erpPost('/goods/ShopGoods/edit', { id: goodsId, spec, multi_spec: attrs.length ? 1 : 0 }, token)
 }
 
 async function resolveGoodsIds(items: any[], token: string): Promise<any[]> {
@@ -854,35 +890,46 @@ export async function executeTool(name: string, input: Record<string, any>, toke
         result = res?.code === 1 ? `供应商编辑成功！` : `编辑失败：${res?.msg || JSON.stringify(res)}`
         break
       }
+      // 商品规格存在商品自己的 goods.spec JSON（attrs/skus）里。
+      // 不能用 /goods/ShopSpec：那是全店共用的模板表，后端不按 goods_id 过滤，删它会删到别的商品
       case 'add_goods_spec': {
-        // 先启用商品的多规格标记
-        if (input.goods_id) {
-          try {
-            await erpPost('/goods/ShopGoods/edit', { id: input.goods_id, multi_spec: 1 }, token)
-          } catch { /* ignore */ }
-        }
-        const res = await erpPost('/goods/ShopSpec/add', {
-          goods_id: input.goods_id,
-          goods_name: input.goods_name || '',
-          spec_name: input.spec_name,
-          spec_value: input.spec_value,
-        }, token)
-        result = res?.code === 1 ? `规格"${input.spec_name}"添加成功！值：${input.spec_value}` : `添加失败：${res?.msg || JSON.stringify(res)}`
+        const goodsId = Number(input.goods_id)
+        const values = String(input.spec_value || '').split(/[,，、]/).map((v: string) => v.trim()).filter(Boolean)
+        if (!goodsId || !input.spec_name || !values.length) { result = '缺少商品ID、规格名或规格值'; break }
+        const cur = await readGoodsSpec(goodsId, token)
+        if (!cur) { result = `找不到商品 ${goodsId}`; break }
+        const attrs = [...cur.attrs]
+        const hit = attrs.find(a => a.name === input.spec_name)
+        if (hit) hit.values = [...new Set([...hit.values, ...values])]
+        else attrs.push({ name: input.spec_name, values })
+        const res = await writeGoodsSpec(goodsId, cur.raw, attrs, token)
+        result = res?.code === 1 ? `规格"${input.spec_name}"已保存，当前值：${(hit ?? attrs[attrs.length - 1]).values.join('、')}` : `添加失败：${res?.msg || JSON.stringify(res)}`
         break
       }
       case 'query_goods_spec': {
-        const res = await erpGet('/goods/ShopSpec/index', { goods_id: input.goods_id, list_rows: 200 }, token)
-        const rows = res?.data?.rows || []
-        if (rows.length === 0) {
-          result = '该商品暂无规格信息。'
-        } else {
-          result = `共 ${rows.length} 个规格：${JSON.stringify(rows.map((r: any) => ({ id: r.id, 规格名: r.spec_name, 规格值: r.spec_value })))}`
-        }
+        const cur = await readGoodsSpec(Number(input.goods_id), token)
+        if (!cur) { result = `找不到商品 ${input.goods_id}`; break }
+        result = cur.attrs.length
+          ? `「${cur.name}」共 ${cur.attrs.length} 个规格：${cur.attrs.map(a => `${a.name}（${a.values.join('、')}）`).join('；')}`
+          : `「${cur.name}」没有设置多规格${cur.text ? `，规格文字为：${cur.text}` : ''}。`
         break
       }
       case 'delete_goods_spec': {
-        const res = await erpPost('/goods/ShopSpec/del', { id: input.id }, token)
-        result = res?.code === 1 ? `规格已删除！` : `删除失败：${res?.msg || JSON.stringify(res)}`
+        const goodsId = Number(input.goods_id)
+        const cur = await readGoodsSpec(goodsId, token)
+        if (!cur) { result = `找不到商品 ${input.goods_id}`; break }
+        const hit = cur.attrs.find(a => a.name === input.spec_name)
+        if (!hit) { result = `该商品没有规格"${input.spec_name}"，现有：${cur.attrs.map(a => a.name).join('、') || '无'}`; break }
+        let attrs = cur.attrs
+        if (input.spec_value) {
+          const drop = String(input.spec_value).split(/[,，、]/).map((v: string) => v.trim())
+          hit.values = hit.values.filter(v => !drop.includes(v))
+          attrs = attrs.filter(a => a.values.length > 0)
+        } else {
+          attrs = attrs.filter(a => a !== hit)
+        }
+        const res = await writeGoodsSpec(goodsId, cur.raw, attrs, token)
+        result = res?.code === 1 ? `已删除。剩余规格：${attrs.map(a => `${a.name}（${a.values.join('、')}）`).join('；') || '无'}` : `删除失败：${res?.msg || JSON.stringify(res)}`
         break
       }
 

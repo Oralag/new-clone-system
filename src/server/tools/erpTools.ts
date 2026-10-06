@@ -645,13 +645,15 @@ export const editTools: any[] = [
   },
   {
     name: 'delete_goods_spec',
-    description: '删除商品的某个规格',
+    description: '删除商品的某个规格，或删除规格里的某几个值',
     parameters: {
       type: 'object',
       properties: {
-        id: { type: 'number', description: '规格ID（必填，先用 query_goods_spec 查到）' },
+        goods_id: { type: 'number', description: '商品ID（必填）' },
+        spec_name: { type: 'string', description: '规格名称（必填，先用 query_goods_spec 查到，如：口味）' },
+        spec_value: { type: 'string', description: '只删这些值（可选，逗号分隔）；不填则删除整个规格' },
       },
-      required: ['id'],
+      required: ['goods_id', 'spec_name'],
     },
   },
 ]
