@@ -1079,11 +1079,10 @@ import { BrowserMultiFormatReader } from '@zxing/browser'
 import ScTable from '@/components/ScTable.vue'
 import http from '@/api/http'
 import {
-  getGoodsList, createGoods, updateGoods, deleteGoods,
+  getGoodsList, readGoods, createGoods, updateGoods, deleteGoods,
   getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate,
   getBrandList, createBrand,
   getUnitList, createUnit,
-  getSpecList, createSpec, deleteSpec,
   getBomByGoods, getBomList, updateBom,
   getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
@@ -1638,17 +1637,10 @@ async function autoSyncAllLocalSpecs() {
     if (!goodsIds.length) return
     for (const gid of goodsIds) {
       try {
-        // 检查后端是否已有数据，没有就同步
-        const existing = await getSpecList({ goods_id: Number(gid), list_rows: 1 })
-        if ((existing.data?.total ?? 0) > 0) continue
+        // 后端 goods.spec 只要有内容（规格 JSON 或「110克」这类文字）就不覆盖，空的才把本机规格同步上去
+        const cur: any = await readGoods(Number(gid))
+        if (String(cur.data?.spec ?? '').trim()) continue
         const attrs = attrsMap[gid]
-        // 删旧记录（理论上是空的，但防御性清一下）
-        // 写入规格属性
-        for (const attr of attrs) {
-          if (attr.name && attr.values?.length > 0) {
-            await createSpec({ goods_id: Number(gid), name: attr.name, values: attr.values.join(',') })
-          }
-        }
         // 同时把 sku 价格写入 goods.spec 字段
         const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')[gid] ?? {}
         // 先读当前 spec 再合并，保留规格文字和多单位关联
@@ -2776,17 +2768,8 @@ async function persistSpecData(goodsId: number) {
 
 async function syncSpecToBackend(goodsId: number) {
   try {
-    // Get existing specs
-    const existing = await getSpecList({ goods_id: goodsId, list_rows: 200 })
-    const rows: any[] = existing.data?.rows ?? []
-    // Delete all existing
-    for (const r of rows) await deleteSpec(r.id)
-    // Re-create from specAttrs
-    for (const attr of specAttrs.value) {
-      if (attr.name && attr.values.length > 0) {
-        await createSpec({ goods_id: goodsId, name: attr.name, values: attr.values.join(',') })
-      }
-    }
+    // 商品规格只存 goods.spec JSON。不要再写 ShopSpec：那是全店共用的规格模板表，
+    // 后端不按 goods_id 过滤，之前这里「按商品删旧规格」实际会删光全店模板
     // Write full spec+sku JSON to goods.spec field so all devices can read it
     const skuMap: Record<string, any> = {}
     for (const row of skuList.value) {

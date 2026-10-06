@@ -426,7 +426,8 @@ import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getProcurePlanList, createProcurePlan, deleteProcurePlan, getSupplierList, createSupplier, auditProcurePlan } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getSpecList } from '@/api/goods'
+import { readGoods } from '@/api/goods'
+import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import { getStaffList } from '@/api/personnel'
 import StaffSelect from '@/components/StaffSelect.vue'
 import http from '@/api/http'
@@ -453,19 +454,18 @@ function parseItems(goodsInfo: any): any[] {
 }
 
 const goodsSpecMap = reactive<Record<number, string[]>>({})
-async function fetchGoodsSpecs(goodsId: number) {
+async function fetchGoodsSpecs(goodsId: number, goodsSpec?: string) {
   if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
   goodsSpecMap[goodsId] = []
-  try {
-    const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
-    const specs: any[] = res.data?.rows ?? []
-    const options: string[] = []
-    for (const s of specs) {
-      const vals = (s.spec_value || s.values || '').split(/[,，]/).map((v: string) => v.trim()).filter(Boolean)
-      options.push(...vals)
-    }
-    goodsSpecMap[goodsId] = [...new Set(options)]
-  } catch { /* ignore */ }
+  // 只取该商品自己的规格（goods.spec JSON），不能用全店共用的 ShopSpec 模板表
+  let opts = parseGoodsSpecOptions(goodsSpec)
+  if (!opts.length) {
+    try {
+      const res: any = await readGoods(goodsId)
+      opts = parseGoodsSpecOptions(res.data?.spec)
+    } catch { /* ignore */ }
+  }
+  goodsSpecMap[goodsId] = opts
 }
 const searchForm = reactive<any>({ plan_no: '', supplier_name: '', status: '', not_status: 3 })
 const showForm = ref(false)
