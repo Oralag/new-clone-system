@@ -324,7 +324,8 @@ import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList, getUnitConvert, getGoodsList } from '@/api/goods'
+import { getUnitConvert, getGoodsList, readGoods } from '@/api/goods'
+import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import StaffSelect from '@/components/StaffSelect.vue'
@@ -356,31 +357,17 @@ function parseRemark(remark: string): string {
 
 const goodsSpecMap = reactive<Record<number, string[]>>({})
 async function fetchGoodsSpecs(goodsId: number, goodsSpec?: string) {
-  if (!goodsId) return
-  // 已有数据不重复拉；空数组允许重试（数据可能后来才写入后端）
-  if (goodsSpecMap[goodsId]?.length > 0) return
+  if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
   goodsSpecMap[goodsId] = []
-  try {
-    const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
-    const specs: any[] = res.data?.rows ?? []
-    const options: string[] = []
-    for (const s of specs) {
-      const vals = (s.spec_value || s.values || '').split(/[,，]/).map((v: string) => v.trim()).filter(Boolean)
-      options.push(...vals)
-    }
-    // 降级：从 goods.spec JSON 字段解析（跨设备兼容）
-    if (options.length === 0 && goodsSpec) {
-      try {
-        const parsed = JSON.parse(goodsSpec)
-        if (Array.isArray(parsed.attrs)) {
-          for (const attr of parsed.attrs) {
-            options.push(...(attr.values ?? []))
-          }
-        }
-      } catch {}
-    }
-    goodsSpecMap[goodsId] = [...new Set(options)]
-  } catch {}
+  // 只取该商品自己的规格（goods.spec JSON），不能用全店共用的 ShopSpec 模板表
+  let opts = parseGoodsSpecOptions(goodsSpec)
+  if (!opts.length) {
+    try {
+      const res: any = await readGoods(goodsId)
+      opts = parseGoodsSpecOptions(res.data?.spec)
+    } catch { /* ignore */ }
+  }
+  goodsSpecMap[goodsId] = opts
 }
 
 const goodsUnitMap = reactive<Record<number, string[]>>({})

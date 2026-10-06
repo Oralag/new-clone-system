@@ -682,7 +682,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Search, Delete, CircleCheckFilled, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList, getBomList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getBomList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
 import { createProcureOrder, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getSupplierList, createSupplier } from '@/api/procure'
@@ -824,19 +824,7 @@ async function openSpecSelect(g: any) {
     } catch {}
   }
 
-  if (!loaded) {
-    // 兜底2：从 ShopSpec 结构化表读规格属性（不含SKU价格）
-    try {
-      const specRes = await getSpecList({ goods_id: g.id, list_rows: 100 })
-      const specRows: any[] = specRes.data?.rows ?? []
-      if (specRows.length > 0) {
-        ssSpecAttrs.value = specRows.map((r: any) => ({
-          name: r.name,
-          values: typeof r.values === 'string' ? r.values.split(',').map((v: string) => v.trim()).filter(Boolean) : (r.values ?? []),
-        })).filter((a: any) => a.values.length > 0)
-      }
-    } catch {}
-  }
+  // 不再用 ShopSpec 兜底：那是全店共用的规格模板表，不按商品区分
 
   ssSelectedVals.value = ssSpecAttrs.value.map(() => '')
 }

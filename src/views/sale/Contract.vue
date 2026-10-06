@@ -1415,9 +1415,10 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut, deleteSaleOut, createSaleExchange, auditSaleExchange, getSaleExchangeList } from '@/api/sale'
-import { getUnitConvert } from '@/api/goods'
+import { getUnitConvert, readGoods } from '@/api/goods'
+import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getSpecList, getGoodsList, getBomList } from '@/api/goods'
+import { getGoodsList, getBomList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, updateCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import http from '@/api/http'
@@ -1614,19 +1615,18 @@ function confirmWC() {
   wcVisible.value = false
 }
 
-async function fetchGoodsSpecs(goodsId: number) {
-  if (!goodsId || goodsSpecMap[goodsId]?.length > 0) return
+async function fetchGoodsSpecs(goodsId: number, goodsSpec?: string) {
+  if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
   goodsSpecMap[goodsId] = []
-  try {
-    const res = await getSpecList({ goods_id: goodsId, list_rows: 100 })
-    const specs: any[] = res.data?.rows ?? []
-    const options: string[] = []
-    for (const s of specs) {
-      const vals = (s.spec_value || s.values || '').split(/[,，]/).map((v: string) => v.trim()).filter(Boolean)
-      options.push(...vals)
-    }
-    goodsSpecMap[goodsId] = [...new Set(options)]
-  } catch { /* ignore */ }
+  // 只取该商品自己的规格（goods.spec JSON），不能用全店共用的 ShopSpec 模板表
+  let opts = parseGoodsSpecOptions(goodsSpec)
+  if (!opts.length) {
+    try {
+      const res: any = await readGoods(goodsId)
+      opts = parseGoodsSpecOptions(res.data?.spec)
+    } catch { /* ignore */ }
+  }
+  goodsSpecMap[goodsId] = opts
 }
 
 // spec 字段兼作 unit_linked_goods JSON 存储，显示时过滤掉 JSON 字符串
