@@ -1117,7 +1117,7 @@ import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
+import { getBomList, getBomByGoods, readGoods, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import { getDefaultExpenseFund } from '@/utils/defaultFundAccount'
@@ -2223,10 +2223,10 @@ async function fetchGoodsSpecs(goodsId: number) {
   if (!goodsId || goodsSpecMap[goodsId] !== undefined) return
   goodsSpecMap[goodsId] = []
   try {
-    const res = await getGoodsList({ id: goodsId, list_rows: 1 })
-    const rows = res.data?.rows ?? []
-    const g = rows[0]
-    if (!g || !g.multi_spec) return
+    // index 接口不认 id 参数（会返回最新商品），单个商品必须用 detail
+    const res: any = await readGoods(goodsId)
+    const g = res.data
+    if (!g || Number(g.id) !== Number(goodsId) || !g.multi_spec) return
     const { options, skus } = parseSpecJson(String(g.spec || ''))
     goodsSpecMap[goodsId] = options
     goodsSkuDataMap[goodsId] = skus

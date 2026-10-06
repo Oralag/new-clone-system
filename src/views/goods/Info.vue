@@ -1624,8 +1624,9 @@ onMounted(() => {
   })()
   loadBomView()
   window.addEventListener('resize', handleMobileResize)
-  // 后台自动同步：把本地 localStorage 里的规格数据推送到后端
-  autoSyncAllLocalSpecs()
+  // 后台自动同步（本机 localStorage 规格 → 后端）停用：它依赖的 readGoods 以前一直 404，从没真正写过；
+  // readGoods 修好后若开启会静默改商品数据，需用户确认后再启用
+  // autoSyncAllLocalSpecs()
 })
 
 async function autoSyncAllLocalSpecs() {

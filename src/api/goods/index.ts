@@ -1,7 +1,8 @@
 import http from '../http'
 
 export const getGoodsList = (params?: any) => http.get('/goods/ShopGoods/index', { params })
-export const readGoods = (id: number) => http.get('/goods/ShopGoods/read', { params: { id } })
+// 后端没有 ShopGoods/read 路由，单个商品用 detail
+export const readGoods = (id: number) => http.get('/goods/ShopGoods/detail', { params: { id } })
 export const createGoods = (data: any) => http.post('/goods/ShopGoods/add', data)
 export const updateGoods = (data: any) => http.post('/goods/ShopGoods/edit', data)
 export const deleteGoods = (id: number) => http.post('/goods/ShopGoods/del', { id })
