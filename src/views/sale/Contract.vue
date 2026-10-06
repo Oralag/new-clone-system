@@ -1431,13 +1431,14 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getContractList, createContract, updateContract, deleteContract, auditContract, getContractDetail, getOfferList, getOfferDetail, auditOffer, getSaleReturnList, getSaleOutList, createSaleOut, auditSaleOut, deleteSaleOut, createSaleExchange, auditSaleExchange, getSaleExchangeList } from '@/api/sale'
-import { getUnitConvert, readGoods } from '@/api/goods'
+import { readGoods } from '@/api/goods'
 import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, updateCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
 import { getDefaultIncomeFund } from '@/utils/defaultFundAccount'
+import { loadGoodsUnitRows } from '@/utils/goodsUnits'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
@@ -1553,9 +1554,8 @@ async function fetchGoodsUnits(goodsId: number) {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
-    const res = await getUnitConvert(goodsId)
-    const rows: any[] = res.data?.rows ?? res.data ?? []
-    if (rows.length > 1) goodsUnitMap[goodsId] = rows.map((r: any) => ({ unit_name: r.unit_name, ratio: Number(r.ratio) }))
+    const rows = await loadGoodsUnitRows(goodsId)
+    if (rows.length > 1) goodsUnitMap[goodsId] = rows
   } catch { /* ignore */ }
 }
 

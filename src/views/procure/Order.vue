@@ -1117,10 +1117,11 @@ import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
 import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
-import { getBomList, getBomByGoods, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
+import { getBomList, getBomByGoods, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
 import { getDefaultExpenseFund } from '@/utils/defaultFundAccount'
+import { loadGoodsUnitRows } from '@/utils/goodsUnits'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
@@ -2253,20 +2254,9 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
-    const res = await getUnitConvert(goodsId)
-    const rows: any[] = res.data?.rows ?? []
+    const rows = await loadGoodsUnitRows(goodsId, baseUnitName)
     const savedPrices = readUnitCostPrices(goodsId)
-    if (rows.length) {
-      goodsUnitMap[goodsId] = rows.map(r => ({
-        unit_name: r.unit_name,
-        ratio: Number(r.ratio),
-        cost_price: savedPrices[r.unit_name] ?? 0,
-      }))
-    } else {
-      goodsUnitMap[goodsId] = baseUnitName
-        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: savedPrices[baseUnitName] ?? 0 }]
-        : []
-    }
+    goodsUnitMap[goodsId] = rows.map(r => ({ ...r, cost_price: savedPrices[r.unit_name] ?? 0 }))
   } catch { /* ignore */ }
 }
 const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '', goods_name: '', start_date: '', end_date: '' })

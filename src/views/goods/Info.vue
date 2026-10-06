@@ -1086,6 +1086,7 @@ import {
   getBomByGoods, getBomList, updateBom,
   getUnitConvert, saveUnitConvert,
 } from '@/api/goods'
+import { normalizeUnitRows } from '@/utils/goodsUnits'
 import { getStockList } from '@/api/warehouse'
 import { useImageUpload } from '@/composables/useImageUpload'
 import { specText, specMeta, composeSpec, type SpecMeta } from '@/utils/goodsSpec'
@@ -2533,7 +2534,17 @@ function onCateChange(v: any) {
   syncMiniCategoryFromGoodsCate(false)
 }
 function onBrandChange(v: any) { fd.brand_name = brandOptions.value.find(x => x.id === v)?.name ?? '' }
-function onUnitChange(v: any) { fd.unit_name = unitOptions.value.find(x => x.id === v)?.name ?? '' }
+function onUnitChange(v: any) {
+  fd.unit_name = unitOptions.value.find(x => x.id === v)?.name ?? ''
+  // 改了基础单位，多单位表里隐藏的基础行要跟着改，否则会把旧单位当基础单位存进换算表
+  const baseRow = multiUnitRows.value[0]
+  if (baseRow) {
+    baseRow.unit_id = fd.unit_id
+    baseRow.unit_name = fd.unit_name
+    baseRow.ratio = 1
+    multiUnitRows.value = [baseRow, ...multiUnitRows.value.slice(1).filter(r => r.unit_name !== fd.unit_name)]
+  }
+}
 
 // ── 快速新增（分类/品牌/单位） ────────────────────────────────────────────────
 const quickDialogVisible = ref(false)
@@ -2849,8 +2860,9 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
   try {
     if (unitOptionsReady) await unitOptionsReady
     const res = await getUnitConvert(goodsId)
-    const rows: any[] = res.data?.rows ?? []
-    if (!rows.length) return []
+    const rawRows: any[] = res.data?.rows ?? []
+    if (!rawRows.length) return []
+    const rows = normalizeUnitRows(rawRows, fd.unit_name)
     // 从 goods.spec 读关联BOM成品
     let unitLinked: Record<string, { id: number; name: string }> = {}
     unitLinked = specMetaRef.value.unit_linked_goods || {}
@@ -2895,7 +2907,11 @@ function saveUnitCostPrices(goodsId: number, prices: Record<string, number>) {
 
 async function saveMultiUnitsToServer(goodsId: number) {
   try {
-    const units = multiUnitRows.value.map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))
+    // 基础行以商品档案的基础单位为准，去重、去空
+    const units = normalizeUnitRows(
+      [{ unit_name: fd.unit_name, ratio: 1 }, ...multiUnitRows.value.slice(1).map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))],
+      fd.unit_name,
+    )
     await saveUnitConvert({ goods_id: goodsId, units })
     // Save unit-specific cost prices to localStorage
     const prices: Record<string, number> = {}

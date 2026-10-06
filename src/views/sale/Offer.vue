@@ -324,7 +324,8 @@ import { useReconcile } from '@/composables/useReconcile'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getOfferList, createOffer, updateOffer, deleteOffer, auditOffer } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getUnitConvert, getGoodsList, readGoods } from '@/api/goods'
+import { getGoodsList, readGoods } from '@/api/goods'
+import { loadGoodsUnitRows } from '@/utils/goodsUnits'
 import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, type LevelItem } from '@/utils/customerLevel'
@@ -375,10 +376,8 @@ async function fetchGoodsUnits(goodsId: number, baseUnit: string) {
   if (!goodsId || goodsUnitMap[goodsId]?.length > 1) return
   goodsUnitMap[goodsId] = []
   try {
-    const res = await getUnitConvert(goodsId)
-    const rows: any[] = res.data?.rows ?? []
-    const units = [baseUnit, ...rows.map((r: any) => r.unit_name).filter(Boolean)]
-    goodsUnitMap[goodsId] = [...new Set(units)]
+    const rows = await loadGoodsUnitRows(goodsId, baseUnit)
+    goodsUnitMap[goodsId] = rows.map(r => r.unit_name)
   } catch {}
 }
 const searchForm = reactive<any>({ offer_no: '', customer_name: '', status: '' })
