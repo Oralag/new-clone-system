@@ -730,7 +730,7 @@ function onGoodsConfirm(goods: any[]) {
       price: levelPrice,
       remark: '',
     })
-    if (g.multi_spec === 1) fetchGoodsSpecs(g.id, g.spec)
+    if (g.multi_spec) fetchGoodsSpecs(g.id, g.spec)
     else goodsSpecMap[g.id] = []  // 规格未开启，清空缓存避免误显示
     if (g.multi_unit) fetchGoodsUnits(g.id, g.unit_name || '')
   }

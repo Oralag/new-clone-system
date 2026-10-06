@@ -4657,7 +4657,7 @@ function onGoodsConfirm(goods: any[]) {
       item.price_no_tax = 0
       item.tax_rate = 0
       fd.items.push(item)
-      if (g.multi_spec === 1) fetchGoodsSpecs(item.goods_id)
+      if (g.multi_spec) fetchGoodsSpecs(item.goods_id, g.spec)
       else goodsSpecMap[item.goods_id] = []
       fetchGoodsUnits(item.goods_id)
     } else {
@@ -4674,7 +4674,7 @@ function onGoodsConfirm(goods: any[]) {
         }
       }
       fd.items.push(item)
-      if (g.multi_spec === 1) fetchGoodsSpecs(item.goods_id)
+      if (g.multi_spec) fetchGoodsSpecs(item.goods_id, g.spec)
       else goodsSpecMap[item.goods_id] = []  // 规格未开启，清空缓存避免误显示
       fetchGoodsUnits(item.goods_id)
     }
