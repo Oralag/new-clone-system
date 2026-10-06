@@ -1639,13 +1639,11 @@ async function autoSyncAllLocalSpecs() {
       try {
         // 后端 goods.spec 只要有内容（规格 JSON 或「110克」这类文字）就不覆盖，空的才把本机规格同步上去
         const cur: any = await readGoods(Number(gid))
-        if (String(cur.data?.spec ?? '').trim()) continue
+        const curSpec = cur?.data?.spec
+        if (String(curSpec ?? '').trim()) continue
         const attrs = attrsMap[gid]
         // 同时把 sku 价格写入 goods.spec 字段
         const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')[gid] ?? {}
-        // 先读当前 spec 再合并，保留规格文字和多单位关联
-        const cur = await http.get('/goods/ShopGoods/read', { params: { id: Number(gid) } })
-        const curSpec = (cur as any)?.data?.spec
         const specJson = composeSpec(specText(curSpec), {
           ...specMeta(curSpec),
           attrs: attrs.map((a: any) => ({ name: a.name, values: a.values })),
