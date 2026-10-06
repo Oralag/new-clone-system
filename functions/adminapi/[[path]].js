@@ -4,6 +4,7 @@
 
 const DEFAULT_BACKEND = 'https://erp-server-xsji.onrender.com'
 const TRIAL_BACKEND = 'https://erp-trial.onrender.com'
+const PROTECTED_FUND_IDS = [7, 58]
 
 // Paths that trial users MUST be able to call (auth / user info)
 const TRIAL_PASSTHROUGH = [
@@ -2363,6 +2364,17 @@ const agentRegistry = [
 
   const backend = decoded?.backend || DEFAULT_BACKEND
   const realToken = decoded?.realToken || (decoded ? null : wrappedToken)
+
+  // 系统资金账户（7=公司支出账户，58=公司收入账户）只能改名，不能删除
+  if (backend === DEFAULT_BACKEND && request.method === 'POST'
+      && (pathname === '/adminapi/finance/Fund/del' || pathname === '/adminapi/finance/Fund/batchDel')) {
+    let delBody = {}
+    try { delBody = await request.clone().json() } catch { /* ignore */ }
+    const delIds = [delBody?.id, ...(Array.isArray(delBody?.ids) ? delBody.ids : [])].map(Number)
+    if (delIds.some(id => PROTECTED_FUND_IDS.includes(id))) {
+      return errRes('公司支出账户 / 公司收入账户是系统默认账户，只能改名，不能删除')
+    }
+  }
 
   const targetUrl = backend + pathname + url.search
   const headers = new Headers(request.headers)

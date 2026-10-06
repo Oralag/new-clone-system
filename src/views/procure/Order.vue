@@ -1120,6 +1120,7 @@ import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getFundList, createFund, getPayReceiptList, createPayReceipt, deletePayReceipt, createExpense } from '@/api/finance'
+import { getDefaultExpenseFund } from '@/utils/defaultFundAccount'
 import http from '@/api/http'
 import StaffSelect from '@/components/StaffSelect.vue'
 import { getStaffList } from '@/api/personnel'
@@ -1679,8 +1680,9 @@ function openBatchPayDialog(auditedRows: any[]) {
   if (!items.length) return
   batchPayItems.value = items
   batchPayDate.value = new Date().toISOString().slice(0, 10)
-  batchPayFundId.value = null
-  batchPayFundName.value = ''
+  const batchFund = getDefaultExpenseFund(fundOptions.value)
+  batchPayFundId.value = batchFund?.id ?? null
+  batchPayFundName.value = batchFund?.name || ''
   batchPayVisible.value = true
 }
 
@@ -1749,8 +1751,9 @@ function openPayDialog(row: any) {
   payForm.supplierName = row.supplier_name || ''
   payForm.unpaid = unpaid
   payForm.amount = unpaid
-  payForm.fund_id = null
-  payForm.fund_name = ''
+  const payFund = fundOptions.value.find((f: any) => f.id === Number(row.fund_id)) || getDefaultExpenseFund(fundOptions.value)
+  payForm.fund_id = payFund?.id ?? null
+  payForm.fund_name = payFund?.name || ''
   payForm.pay_date = new Date().toISOString().slice(0, 10)
   payForm.remark = ''
   payDialogVisible.value = true
@@ -2078,8 +2081,9 @@ function openFeePayDialog(row: any, idx: number) {
   feePayForm.feeIndex = idx
   feePayForm.amount = Number(fee.amount)
   feePayForm.bearer = fee.bearer || 'buyer'
-  feePayForm.fund_id = null
-  feePayForm.fund_name = ''
+  const feeFund = getDefaultExpenseFund(fundOptions.value)
+  feePayForm.fund_id = feeFund?.id ?? null
+  feePayForm.fund_name = feeFund?.name || ''
   feePayForm.contact_name = ''
   feePayForm.pay_date = new Date().toISOString().slice(0, 10)
   feePayForm.remark = ''
@@ -2632,6 +2636,10 @@ async function openCreate() {
     const wh = warehouseOptions.value.find((w: any) => w.id === defaultWhId)
     if (wh) { fd.warehouse_id = wh.id; fd.warehouse_name = wh.name }
   }
+  // 默认付款账户：公司支出账户
+  if (!fundOptions.value.length) await loadFunds()
+  const expenseFund = getDefaultExpenseFund(fundOptions.value)
+  if (expenseFund) { fd.fund_id = expenseFund.id; onFundChange(expenseFund.id) }
   isReadonly.value = false
   showForm.value = true
 }

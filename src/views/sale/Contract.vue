@@ -1437,6 +1437,7 @@ import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
 import { getGoodsList, getBomList } from '@/api/goods'
 import { getStaffList } from '@/api/personnel'
 import { getFundList, createCollectReceipt, updateCollectReceipt, getCollectReceiptList, getPayReceiptList, createPayReceipt, deletePayReceipt, getExpenseList, createExpense, deleteExpense } from '@/api/finance'
+import { getDefaultIncomeFund } from '@/utils/defaultFundAccount'
 import http from '@/api/http'
 import { loadLevels, loadLevelMap, getLevelPrice, setLevelPrice, hasCustomLevelPrice, type LevelItem } from '@/utils/customerLevel'
 import { getCommissionRate } from '@/utils/commission'
@@ -2392,8 +2393,9 @@ function openCollectDialog(row: any) {
   collectForm.customerId = row.customer_id || 0
   collectForm.unpaid = unpaid
   collectForm.amount = unpaid
-  collectForm.fund_id = null
-  collectForm.fund_name = ''
+  const collectFund = fundOptions.value.find((f: any) => String(f?.name || '').trim() === String(row.receive_account || '').trim()) || getDefaultIncomeFund(fundOptions.value)
+  collectForm.fund_id = collectFund?.id ?? null
+  collectForm.fund_name = collectFund?.name || ''
   collectForm.collect_date = String(row.sign_date || row.order_date || row.contract_date || row.create_time || row.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10)
   collectForm.remark = ''
   collectDialogVisible.value = true
@@ -3111,8 +3113,16 @@ function onLevelChange() {
   ElMessage.info(t('sale.contract.msgLevelRefreshed'))
 }
 
+// 默认收款账户：公司收入账户（下拉按名称存值）
+async function applyDefaultReceiveAccount() {
+  if (!fundOptions.value.length) await loadFunds()
+  const incomeFund = getDefaultIncomeFund(fundOptions.value)
+  if (incomeFund && !fd.receive_account) fd.receive_account = incomeFund.name
+}
+
 async function openCreate() {
   Object.assign(fd, defaultFd())
+  applyDefaultReceiveAccount()
   isReadonly.value = false
   showExchangeGroup.value = false
   showForm.value = true
@@ -4106,6 +4116,7 @@ async function handleRouteFromOffer() {
       fd.contract_no = `HT${ymd}001`
     }
     isReadonly.value = false
+    applyDefaultReceiveAccount()
     showForm.value = true
     sessionStorage.removeItem(DRAFT_KEY)
     ElMessage.success(draft.source_offer_no

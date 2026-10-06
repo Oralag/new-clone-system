@@ -71,7 +71,7 @@
     <template v-else>
       <el-card>
         <ScTable ref="tableRef" :api-obj="getFundListWithRefund"
-            del-path="/finance/Fund/batchDel"
+            :batch-del-api="batchDeleteFunds"
             :export-file-name="$t('finance.fund.exportFileName')" :params="searchForm"
             :export-columns="{ name: $t('finance.fund.colName'), type_name: $t('finance.fund.colTypeName'), refund_amount: $t('finance.fund.colRefundAmount'), balance: $t('finance.fund.colBalanceAmount'), remark: $t('finance.fund.colRemarkList') }">
           <template #search>
@@ -88,7 +88,12 @@
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openForm()">{{ $t('finance.fund.btnAdd') }}</el-button>
           </template>
-          <el-table-column prop="name" :label="$t('finance.fund.colName')" min-width="140" />
+          <el-table-column :label="$t('finance.fund.colName')" min-width="140">
+            <template #default="{ row }">
+              {{ row.name }}
+              <el-tag v-if="isProtectedFund(row.id)" size="small" type="info" style="margin-left:6px">系统默认</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="type_name" :label="$t('finance.fund.colTypeName')" min-width="120" />
           <el-table-column :label="$t('finance.fund.colRefundAmount')" min-width="120" align="right">
             <template #default="{ row }">
@@ -107,7 +112,7 @@
             <template #default="{ row }">
               <el-button type="success" link @click="openView(row)">{{ $t('finance.fund.btnView') }}</el-button>
               <el-button type="primary" link @click="openForm(row)">{{ $t('finance.fund.btnEdit') }}</el-button>
-              <el-button type="danger" link @click="handleDelete(row)">{{ $t('finance.fund.btnDelete') }}</el-button>
+              <el-button v-if="!isProtectedFund(row.id)" type="danger" link @click="handleDelete(row)">{{ $t('finance.fund.btnDelete') }}</el-button>
             </template>
           </el-table-column>
         </ScTable>
@@ -210,6 +215,7 @@ import http from '@/api/http'
 import { getFundList, createFund, updateFund, deleteFund, getPayReceiptList, getCollectReceiptList } from '@/api/finance'
 import { applyProcureReturnsToFundRows, normalizeProcureReturnFinanceRows } from '@/utils/procureReturnFinance'
 import { fmtDt } from '@/utils/date'
+import { isProtectedFund } from '@/utils/defaultFundAccount'
 
 const { t } = useI18n()
 
@@ -412,7 +418,15 @@ async function handleSubmit(data: any) {
   }
 }
 
+const PROTECTED_FUND_MSG = '公司支出账户 / 公司收入账户是系统默认账户，只能改名，不能删除'
+
+async function batchDeleteFunds(data: { ids: number[] }) {
+  if (data.ids.some(id => isProtectedFund(id))) throw new Error(PROTECTED_FUND_MSG)
+  return http.post('/finance/Fund/batchDel', data)
+}
+
 async function handleDelete(row: any) {
+  if (isProtectedFund(row.id)) { ElMessage.warning(PROTECTED_FUND_MSG); return }
   const fundId = Number(row.id)
   const [payRes, collectRes] = await Promise.all([
     getPayReceiptList({ list_rows: 2000 }),
