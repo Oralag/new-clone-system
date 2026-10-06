@@ -3263,6 +3263,7 @@ function buildContractHtml() {
       <td>${item.spec || ''}</td>
       <td style="text-align:center">${item.unit_name || ''}</td>
       <td style="text-align:right">${Number(item.num || 0).toFixed(2)}</td>
+      <td style="text-align:right;color:#86868b">${retailPriceText(item)}</td>
       <td style="text-align:right">${Number(item.price_no_tax || 0).toFixed(4)}</td>
       <td style="text-align:center">${item.tax_rate || 0}%</td>
       <td style="text-align:right;color:#dc2626">${((item.num||0)*(item.price_no_tax||0)*(item.tax_rate||0)/100).toFixed(2)}</td>
@@ -3307,6 +3308,7 @@ function buildContractHtml() {
       <th>规格</th>
       <th style="text-align:center">单位</th>
       <th style="text-align:right">数量</th>
+      <th style="text-align:right">零售价</th>
       <th style="text-align:right">未税单价</th>
       <th style="text-align:center">税率</th>
       <th style="text-align:right">税额</th>
@@ -3794,6 +3796,7 @@ async function handleContractPrint() {
       fd.prepay_amount = rows.reduce((s: number, r: any) => s + Number(r.amount || 0), 0)
     }
   } catch { /* ignore */ }
+  await loadRetailPrices()
   const w = window.open('', '_blank', 'width=900,height=700')
   if (!w) { ElMessage.warning(t('sale.contract.msgAllowPopup')); return }
   w.document.write(buildContractHtml())
@@ -3806,7 +3809,8 @@ async function handleContractPrint() {
   }, 600)
 }
 
-function handleContractExport() {
+async function handleContractExport() {
+  await loadRetailPrices()
   const blob = new Blob([buildContractHtml()], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
