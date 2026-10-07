@@ -139,7 +139,13 @@
           <div v-for="row in tableData" :key="row.id" :class="['mobile-stock-card', bomGoodsSet.has(row.goods_sn) ? 'is-bom' : '']">
             <div class="mobile-stock-card__head">
               <div class="mobile-stock-card__title-wrap">
-                <div class="mobile-stock-card__title">{{ row.goods_name || '—' }}</div>
+                <div class="mobile-stock-card__title">
+                  <template v-if="mergeIndex.parentOf.has(row.id)">
+                    <span style="color:#909399">└ 规格 </span>{{ mergeIndex.parentOf.get(row.id)!.label }}
+                    <span style="color:#909399;font-size:12px;font-weight:400">· {{ mergeAdjacent.has(row.id) ? row.goods_name : '属于 ' + mergeIndex.parentOf.get(row.id)!.parentName }}</span>
+                  </template>
+                  <template v-else>{{ row.goods_name || '—' }}<el-tag v-if="mergeIndex.childrenOf.has(row.id)" size="small" type="primary" style="margin-left:6px">含{{ mergeIndex.childrenOf.get(row.id)!.length + 1 }}个规格</el-tag></template>
+                </div>
                 <div class="mobile-stock-card__meta">
                   <span>{{ row.goods_sn || $t('warehouse.stockAll.colNoCode') }}</span>
                   <span v-if="row.cate_name">{{ row.cate_name }}</span>
@@ -173,7 +179,14 @@
           <el-table-column type="index" :label="$t('warehouse.stockAll.colIndex')" width="55" align="center" />
           <el-table-column prop="goods_name" :label="$t('warehouse.stockAll.colGoodsName')" min-width="120" sortable="custom">
             <template #default="{ row }">
-              <span>{{ row.goods_name }}</span>
+              <template v-if="mergeIndex.parentOf.has(row.id)">
+                <span style="color:#909399;margin-right:4px">└ 规格</span>
+                <span style="font-weight:500">{{ mergeIndex.parentOf.get(row.id)!.label }}</span>
+                <span style="color:#909399;font-size:12px;margin-left:6px">{{ row.goods_name }}</span>
+                <el-tag v-if="!mergeAdjacent.has(row.id)" size="small" type="info" style="margin-left:6px">属于 {{ mergeIndex.parentOf.get(row.id)!.parentName }}</el-tag>
+              </template>
+              <span v-else>{{ row.goods_name }}</span>
+              <el-tag v-if="mergeIndex.childrenOf.has(row.id)" size="small" type="primary" style="margin-left:6px;vertical-align:middle">含{{ mergeIndex.childrenOf.get(row.id)!.length + 1 }}个规格</el-tag>
               <el-tag v-if="bomGoodsSet.has(row.goods_sn)" size="small" style="margin-left:6px;vertical-align:middle;background:#e6a23c;color:#fff;border-color:#e6a23c">BOM</el-tag>
             </template>
           </el-table-column>
@@ -377,6 +390,7 @@
 
 <script setup lang="ts">
 import { computed, onActivated, onMounted, onUnmounted, ref, reactive, watch } from 'vue'
+import { buildMergeIndex } from '@/utils/goodsMerge'
 import { useI18n } from 'vue-i18n'
 import { fmtDt } from '@/utils/date'
 import { useRouter } from 'vue-router'
@@ -726,6 +740,28 @@ function getCateIds(id: number): number[] {
 }
 
 // Filtered list (client-side after loading all goods)
+// 合并同款：并入别的商品的规格，排在主商品下面（数量各算各的，不合计）
+const mergeIndex = computed(() => buildMergeIndex(allGoods.value))
+const mergeAdjacent = ref<Set<number>>(new Set())   // 紧跟在主商品下面的规格行
+function groupMergedRows(rows: any[]) {
+  const idx = mergeIndex.value
+  if (!idx.parentOf.size) { mergeAdjacent.value = new Set(); return rows }
+  const byId = new Map(rows.map(r => [Number(r.id), r]))
+  const out: any[] = []
+  const adjacent = new Set<number>()
+  for (const r of rows) {
+    const p = idx.parentOf.get(Number(r.id))
+    if (p && byId.has(p.parentId)) continue   // 跟着主商品走
+    out.push(r)
+    for (const c of idx.childrenOf.get(Number(r.id)) ?? []) {
+      const child = byId.get(c.id)
+      if (child) { out.push(child); adjacent.add(c.id) }
+    }
+  }
+  mergeAdjacent.value = adjacent
+  return out
+}
+
 const filteredGoods = computed(() => {
   let rows = allGoods.value
 
@@ -776,7 +812,7 @@ const filteredGoods = computed(() => {
     })
   }
 
-  return rows
+  return groupMergedRows(rows)
 })
 
 const totalQty = computed(() => filteredGoods.value.reduce((s, r) => s + getStockQty(r), 0))
