@@ -111,7 +111,7 @@
 
       <!-- 右侧商品列表 -->
       <div class="goods-list-wrap">
-        <ScTable ref="tableRef" :api-obj="getGoodsList"
+        <ScTable ref="tableRef" :api-obj="goodsListApi"
           del-path="/goods/ShopGoods/batchDel"
           export-file-name="goods-list" :params="searchForm" :row-filter="rowFilter"
           :export-columns="exportColumns">
@@ -135,6 +135,9 @@
               <el-option :label="$t('goods.info.typeAux')" :value="4" />
               <el-option :label="$t('goods.info.typeBulk')" :value="5" />
             </el-select>
+            <el-checkbox v-if="mergeIndex.parentOf.size" v-model="showMerged" @change="tableRef?.refresh()">
+              显示已并入的规格商品（{{ mergeIndex.parentOf.size }}）
+            </el-checkbox>
           </template>
           <template #toolbar>
             <el-button type="primary" :icon="Plus" @click="openCreate">{{ $t('goods.info.addGoods') }}</el-button>
@@ -164,6 +167,8 @@
               <div v-for="row in rows" :key="row.id" class="goods-card" @click="openEdit(row)">
                 <div class="goods-card-title">
                   <span>{{ row.goods_name }}</span>
+                  <el-tag v-if="mergeIndex.childrenOf.has(row.id)" size="small" type="primary">含{{ mergeIndex.childrenOf.get(row.id)!.length + 1 }}个规格</el-tag>
+                  <el-tag v-if="mergeIndex.parentOf.has(row.id)" size="small" type="info">已并入：{{ mergeIndex.parentOf.get(row.id)!.parentName }}</el-tag>
                   <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 2" type="warning" size="small">{{ $t('goods.info.typeSemi') }}</el-tag>
                   <el-tag v-else-if="getGoodsType(row) === 3" type="info" size="small">{{ $t('goods.info.typeRaw') }}</el-tag>
@@ -192,7 +197,18 @@
           </template>
           <el-table-column v-if="!isMobileList" type="index" :label="$t('goods.info.seqNo')" width="60" align="center" />
           <el-table-column v-if="!isMobileList" prop="goods_sn" :label="$t('goods.info.goodsSn')" min-width="120" />
-          <el-table-column prop="goods_name" :label="$t('goods.info.goodsName')" :min-width="isMobileList ? 140 : 150" />
+          <el-table-column prop="goods_name" :label="$t('goods.info.goodsName')" :min-width="isMobileList ? 140 : 150">
+            <template #default="{ row }">
+              <span>{{ row.goods_name }}</span>
+              <el-tooltip v-if="mergeIndex.childrenOf.has(row.id)" placement="top"
+                :content="'并入的同款：' + mergeIndex.childrenOf.get(row.id)!.map(c => c.label).join('、')">
+                <el-tag size="small" type="primary" style="margin-left:6px">含{{ mergeIndex.childrenOf.get(row.id)!.length + 1 }}个规格</el-tag>
+              </el-tooltip>
+              <el-tag v-if="mergeIndex.parentOf.has(row.id)" size="small" type="info" style="margin-left:6px">
+                已并入：{{ mergeIndex.parentOf.get(row.id)!.parentName }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column :label="$t('goods.info.typeCol')" width="80" align="center">
             <template #default="{ row }">
               <el-tag v-if="bomProductSns.has(row.goods_sn)" type="danger" size="small">BOM</el-tag>
@@ -291,6 +307,12 @@
 
           <!-- ① 基本信息 -->
           <div class="form-section" ref="secBase" data-sec="base">
+            <el-alert v-if="fd.id && mergeIndex.parentOf.has(fd.id)" type="warning" :closable="false" show-icon style="margin-bottom:12px"
+              :title="`本商品已并入「${mergeIndex.parentOf.get(fd.id)!.parentName}」，作为它的规格「${mergeIndex.parentOf.get(fd.id)!.label}」销售`">
+              <div>这里改的价格、库存会直接影响那个规格。要改规格名、移除合并，请到主商品里改。
+                <el-button type="primary" link size="small" @click="openMergeParent">打开主商品</el-button>
+              </div>
+            </el-alert>
             <div class="sec-title">{{ $t('goods.info.secBase') }}</div>
             <el-row :gutter="24">
               <el-col :span="12">
@@ -575,6 +597,42 @@
 
             <!-- 多规格模式 -->
             <div v-else class="spec-editor">
+              <!-- 合并同款：一行一个商品，名字直接改 -->
+              <div v-if="mergeMode">
+                <el-table :data="skuList" border size="small" style="width:100%">
+                  <el-table-column label="商品" min-width="180">
+                    <template #default="{ row }">
+                      <el-tag v-if="!row.goods_id || row.goods_id === fd.id" size="small" type="success" style="margin-right:6px">本商品</el-tag>
+                      <span>{{ (!row.goods_id || row.goods_id === fd.id) ? fd.goods_name : skuGoodsName(row) }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="显示为（顾客选的名字）" min-width="160">
+                    <template #default="{ row }">
+                      <el-input v-if="!isView" :model-value="row.vals[0]" size="small" maxlength="20"
+                        @change="(v: string) => renameMergeLabel(row, v)" />
+                      <span v-else>{{ row.vals[0] }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column :label="$t('goods.info.skuSellPrice')" width="90">
+                    <template #default="{ row }">¥{{ skuGoodsField(row, 'sell_price').toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column :label="$t('goods.info.skuCostPrice')" width="90">
+                    <template #default="{ row }">¥{{ skuGoodsField(row, 'cost_price').toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column :label="$t('goods.info.skuStock')" width="80">
+                    <template #default="{ row }">{{ skuStockMap[row.goods_id || fd.id] ?? '…' }}</template>
+                  </el-table-column>
+                  <el-table-column v-if="!isView" label="" width="70" align="center">
+                    <template #default="{ row }">
+                      <el-button v-if="row.goods_id && row.goods_id !== fd.id" type="danger" link size="small" @click="removeMergeRow(row)">移除</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <div style="margin-top:8px;font-size:12px;color:#999">
+                  用右上角「添加同款商品」继续加。顾客选哪个，就按那个商品的价格收钱、扣那个商品的库存；改价或调库存请改对应的商品。
+                </div>
+              </div>
+              <template v-else>
               <!-- 规格属性行 -->
               <div v-for="(attr, aIdx) in specAttrs" :key="aIdx" class="spec-attr-row">
                 <div class="spec-attr-header">
@@ -675,6 +733,7 @@
                   本商品自己就是一个规格（对应商品选「本商品」）。用上面「添加同款商品」把其他同款并进来。保存后小程序点开本商品就能选这些规格。每个规格的售价、成本和库存都跟着「对应商品」走，改价或调库存请改对应的那个商品。同款的其他商品选进来以后，保存时可以一并从商城隐藏，商品、库存和单据都会保留。
                 </div>
               </div>
+              </template>
             </div>
           </div>
 
@@ -1108,6 +1167,7 @@ import { normalizeUnitRows } from '@/utils/goodsUnits'
 import { getStockList } from '@/api/warehouse'
 import { useImageUpload } from '@/composables/useImageUpload'
 import { specText, specMeta, composeSpec, type SpecMeta } from '@/utils/goodsSpec'
+import { buildMergeIndex, foldMergedRows } from '@/utils/goodsMerge'
 
 const { t } = useI18n()
 
@@ -1838,7 +1898,36 @@ function openCopy(row: any) {
 function backToList() {
   showForm.value = false
   isView.value = false
-  tableRef.value?.refresh()
+  loadMergeIndex().then(() => tableRef.value?.refresh())
+}
+
+// ── 合并同款：列表折叠 ───────────────────────────────────────────────────────
+const showMerged = ref(false)
+const mergeAllGoods = ref<any[]>([])
+const mergeIndex = computed(() => buildMergeIndex(mergeAllGoods.value))
+let mergeLoading: Promise<void> | null = null
+function loadMergeIndex() {
+  mergeLoading = getGoodsList({ list_rows: 5000 })
+    .then((res: any) => { mergeAllGoods.value = res.data?.rows ?? [] })
+    .catch(() => {})
+  return mergeLoading
+}
+loadMergeIndex()
+// 被并入的商品不单独出现在列表里；搜到它时显示主商品
+async function goodsListApi(params: any) {
+  const res: any = await getGoodsList(params)
+  if (showMerged.value) return res
+  await mergeLoading
+  const d = res?.data
+  if (d && Array.isArray(d.rows) && mergeIndex.value.parentOf.size) {
+    d.rows = foldMergedRows(d.rows, mergeIndex.value, mergeAllGoods.value)
+  }
+  return res
+}
+function openMergeParent() {
+  const p = mergeIndex.value.parentOf.get(fd.id)
+  const row = p && mergeAllGoods.value.find((g: any) => Number(g.id) === p.parentId)
+  if (row) openEdit(row)
 }
 
 // ── BOM核算成本 ───────────────────────────────────────────────────────────────
@@ -2671,6 +2760,28 @@ function uniqueLabel(values: string[], label: string) {
   while (values.includes(l)) l = `${label}${n++}`
   return l
 }
+// 只有一个规格名、且有规格挂了别的商品 = 合并同款，用简单列表展示
+const mergeMode = computed(() =>
+  specAttrs.value.length === 1 && skuList.value.some(r => r.goods_id && r.goods_id !== fd.id))
+function renameMergeLabel(row: SkuRow, v: string) {
+  const attr = specAttrs.value[0]
+  const old = row.vals[0]
+  const label = (v || '').trim()
+  if (!attr || !label || label === old) return
+  if (attr.values.includes(label)) { ElMessage.warning(`已经有叫「${label}」的了`); return }
+  const i = attr.values.indexOf(old)
+  if (i >= 0) attr.values[i] = label
+  row.vals = [label]   // 同一行改名，对应商品跟着走
+  if (fd.id) saveSpecAttrs(fd.id)
+}
+function removeMergeRow(row: SkuRow) {
+  const attr = specAttrs.value[0]
+  const i = attr?.values.indexOf(row.vals[0]) ?? -1
+  if (i < 0) return
+  attr.values.splice(i, 1)
+  rebuildSkuList()
+  if (fd.id) saveSpecAttrs(fd.id)
+}
 function addSameGoods(id: number) {
   sameGoodsPick.value = null
   const g = bomAllGoods.value.find((x: any) => x.id === id)
@@ -2678,7 +2789,7 @@ function addSameGoods(id: number) {
   fd.multi_spec = true
   if (!specAttrs.value.length) addSpecAttr()
   const attr = specAttrs.value[0]
-  if (!attr.name) attr.name = '规格'
+  attr.name = '规格'
   if (!skuList.value.some(r => !r.goods_id)) {
     attr.values.push(uniqueLabel(attr.values, specText(fd.spec) || fd.goods_name))
   }
@@ -2704,6 +2815,7 @@ function ensureSelfSpec() {
 
 async function syncSpecToBrandFd() {
   ensureSelfSpec()
+  if (mergeMode.value) specAttrs.value[0].name = '规格'
   if (!fd.multi_spec || !skuList.value.length || !fd.id) return
   // 品牌中心里有手工配的规格（不是这里生成的）时先问，别静默覆盖
   if (brandFd.skuCombos?.length && brandFd.specSource !== 'erp') {
@@ -2801,6 +2913,7 @@ async function loadSpecs() {
   if (specAttrs.value.filter(a => a.values.length > 0).length > 0) {
     await syncSpecToBackend(fd.id)
   }
+  ensureSelfSpec()
   // Load multi-unit：优先从服务端取，没有再降级到 localStorage
   const serverUnits = await loadMultiUnitsFromServer(fd.id)
   const saved = serverUnits.length ? serverUnits : loadMultiUnits(fd.id)

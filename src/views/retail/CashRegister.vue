@@ -406,7 +406,7 @@
           </div>
 
           <div class="cr-goods-grid" v-loading="goodsLoading">
-            <div v-for="g in goodsList" :key="g.id" class="cr-goods-card"
+            <div v-for="g in visibleGoods" :key="g.id" class="cr-goods-card"
               @click="selectGoods(g)">
               <div class="cr-goods-name">{{ g.goods_name }}</div>
               <div class="cr-goods-prices">
@@ -419,7 +419,7 @@
                 </span>
               </div>
             </div>
-            <div v-if="!goodsLoading && goodsList.length === 0" class="cr-goods-empty">
+            <div v-if="!goodsLoading && visibleGoods.length === 0" class="cr-goods-empty">
               <div>{{ $t('retail.cashRegister.noGoods') }}</div>
               <div class="cr-goods-empty-add" @click="openQuickAdd">
                 <el-icon><Plus /></el-icon> {{ $t('retail.cashRegister.addNewGoods') }}
@@ -692,6 +692,7 @@ import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { usePermissionStore } from '@/stores/permission'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
 import { specText } from '@/utils/goodsSpec'
+import { buildMergeIndex, foldMergedRows } from '@/utils/goodsMerge'
 
 const { t } = useI18n()
 
@@ -702,6 +703,12 @@ const keyword = ref('')
 const activeCate = ref<any>('hot')
 const activePCate = ref<any>('')  // 当前选中的父分类 ID
 const goodsList = ref<any[]>([])
+// 合并同款：并入别的商品的同款不单独显示（扫码仍按 goodsList 找得到），点主商品选规格
+const mergeAllGoods = ref<any[]>([])
+const mergeIndex = computed(() => buildMergeIndex(mergeAllGoods.value))
+getGoodsList({ list_rows: 5000 }).then((res: any) => { mergeAllGoods.value = res.data?.rows ?? [] }).catch(() => {})
+const visibleGoods = computed(() =>
+  mergeIndex.value.parentOf.size ? foldMergedRows(goodsList.value, mergeIndex.value, mergeAllGoods.value) : goodsList.value)
 const stockRefreshStore = useStockRefreshStore()
 const goodsLoading = ref(false)
 const selectedGoods = ref<any>(null)
