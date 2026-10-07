@@ -43,7 +43,7 @@
             <el-table-column label="附加费用" width="125"><template #default="{row}">¥{{ fmt(exhibitionOrderFees(row)) }}</template></el-table-column>
             <el-table-column label="状态" width="95"><template #default="{row}"><el-tag :type="Number(row.status) === 1 ? 'success' : 'warning'">{{ Number(row.status) === 1 ? '已审核' : '未审核' }}</el-tag></template></el-table-column>
             <el-table-column label="备注" prop="remark" min-width="150" show-overflow-tooltip />
-            <el-table-column label="操作" width="155"><template #default="{row}"><el-button link type="primary" @click="viewOrder(row)">查看</el-button><el-button link @click="removeOrder(row)">移出展会</el-button></template></el-table-column>
+            <el-table-column label="操作" width="230"><template #default="{row}"><template v-if="Number(row.status) !== 1"><el-button link type="primary" :loading="auditingId===Number(row.id)" @click="auditOrder(row,1)">审核</el-button><el-button link type="success" @click="editOrder(row)">编辑</el-button></template><el-button v-else link type="warning" :loading="auditingId===Number(row.id)" @click="auditOrder(row,0)">反审核</el-button><el-button link @click="viewOrder(row)">查看</el-button><el-button link @click="removeOrder(row)">移出展会</el-button></template></el-table-column>
           </el-table>
         </el-tab-pane>
         <el-tab-pane label="费用明细" name="expenses">
@@ -92,6 +92,7 @@
       </el-table>
       <template #footer><span>已选 {{ candidateSelection.length }} 张，销售净额 ¥{{ fmt(candidateSelection.reduce((sum,row)=>sum+exhibitionSaleAmount(row),0)) }}</span><el-button @click="candidatesVisible=false">取消</el-button><el-button type="primary" :loading="saving" :disabled="!candidateSelection.length" @click="submitCandidates">归入当前展会</el-button></template>
     </el-dialog>
+    <RetailOrderForm ref="orderFormRef" @saved="onOrderSaved" />
     <el-dialog v-model="expenseCandidatesVisible" title="关联已有费用" width="900px">
       <p>在「财务 → 费用」里已经录过的费用，勾选后归入本场展会，计入展会费用和盈亏。费用金额和付款记录不变。</p>
       <el-table v-loading="expenseCandidatesLoading" :data="expenseCandidates" max-height="420" row-key="id" border @selection-change="expenseCandidateSelection=$event">
@@ -129,6 +130,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExhibitions, saveExhibition, getExhibitionDetail, getExhibitionCandidates, assignExhibition, payExhibitionExpense, undoExhibitionExpensePayment } from '@/api/retail/exhibition'
 import { getRetailReturnList } from '@/api/retail'
+import http from '@/api/http'
+import { useStockRefreshStore } from '@/stores/stockRefresh'
+import RetailOrderForm from './components/RetailOrderForm.vue'
 import { getFundList, createExpense, getExpenseList } from '@/api/finance'
 import { calculateExhibitionFinance, exhibitionSaleAmount, exhibitionOrderCost, exhibitionOrderFees } from '@/utils/exhibitionFinance'
 
@@ -176,7 +180,20 @@ async function loadDetail(){
 }
 function openEvent(row?:any){Object.assign(eventForm,{id:null,name:'',start_date:today(),end_date:today(),location:'',owner_name:'',remark:''},row||{});eventForm.start_date=date(eventForm.start_date);eventForm.end_date=date(eventForm.end_date);eventVisible.value=true}
 async function submitEvent(){if(!await eventFormRef.value.validate().catch(()=>false))return;if(eventForm.end_date<eventForm.start_date){ElMessage.warning('结束日期不能早于开始日期');return}saving.value=true;try{const r=await saveExhibition(eventForm);selectedId.value=Number(r.data.id);eventVisible.value=false;await loadAll();ElMessage.success('展会已保存')}finally{saving.value=false}}
-function newOrder(){router.push({path:'/retail/order',query:{exhibition_id:selectedId.value,create:'1'}})}
+const orderFormRef=ref<InstanceType<typeof RetailOrderForm>>(),auditingId=ref(0),stockRefreshStore=useStockRefreshStore()
+function newOrder(){
+  // 默认日期落在展会期间内：今天在展期内用今天，否则用开展日
+  const start=date(detail.value.exhibition?.start_date),end=date(detail.value.exhibition?.end_date),d=today()
+  orderFormRef.value?.open(undefined,{exhibition_id:Number(selectedId.value),order_date:start&&end&&(d<start||d>end)?start:d})
+}
+function editOrder(row:any){orderFormRef.value?.open(row)}
+async function onOrderSaved(){activeTab.value='orders';await loadDetail()}
+async function auditOrder(row:any,status:number){
+  if(status===0){try{await ElMessageBox.confirm('反审核会把这张零售单扣掉的库存加回去，并从零售收款账户扣回这笔收款，单据变回未审核。','反审核')}catch{return}}
+  auditingId.value=Number(row.id)
+  try{await http.post('/retail/order/audit',{id:row.id,status});stockRefreshStore.trigger();ElMessage.success(status===1?'已审核：库存已出库，收款已入零售收款账户':'已反审核：库存和收款已恢复');await loadDetail()}
+  catch(e:any){ElMessage.error(e?.message||'操作失败')}finally{auditingId.value=0}
+}
 function viewOrder(row:any){router.push({path:'/retail/order',query:{exhibition_id:selectedId.value,order_no:row.order_sn}})}
 function newExpense(){Object.assign(expenseForm,{name:'',amount:0,expense_date:today(),remark:''});expenseVisible.value=true}
 async function submitExpense(){
