@@ -21,6 +21,7 @@
             <el-button type="primary" @click="newOrder">新增零售单</el-button>
             <el-button @click="openCandidates">关联已有零售单</el-button>
             <el-button @click="newExpense">录入展会费用</el-button>
+            <el-button @click="openExpenseCandidates">关联已有费用</el-button>
           </div>
         </div>
         <el-alert v-if="returnsError || stats.missingCosts" type="warning" :closable="false" show-icon :title="[returnsError, stats.missingCosts ? `${stats.missingCosts} 项商品成本缺失，当前利润仅为暂估` : ''].filter(Boolean).join('；')" />
@@ -54,7 +55,7 @@
             <el-table-column label="金额" width="120"><template #default="{row}">¥{{ fmt(row.amount) }}</template></el-table-column>
             <el-table-column label="付款状态" width="115"><template #default="{row}"><el-tag :type="isPaid(row) ? 'success' : 'warning'">{{ isPaid(row) ? '已付款' : '待付款' }}</el-tag></template></el-table-column>
             <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
-            <el-table-column label="操作" width="170"><template #default="{row}"><el-button v-if="!isPaid(row)" link type="primary" @click="openPayment(row)">登记付款</el-button><el-button v-if="Number(row.exhibition_payment_id)" link type="warning" @click="undoPayment(row)">撤销付款</el-button><el-button link @click="viewExpense(row)">查看</el-button></template></el-table-column>
+            <el-table-column label="操作" width="210"><template #default="{row}"><el-button v-if="!isPaid(row)" link type="primary" @click="openPayment(row)">登记付款</el-button><el-button v-if="Number(row.exhibition_payment_id)" link type="warning" @click="undoPayment(row)">撤销付款</el-button><el-button link @click="viewExpense(row)">查看</el-button><el-button v-if="!Number(row.exhibition_payment_id)" link type="danger" @click="removeExpense(row)">移出</el-button></template></el-table-column>
           </el-table>
         </el-tab-pane>
         <el-tab-pane label="费用分类" name="categories">
@@ -91,6 +92,19 @@
       </el-table>
       <template #footer><span>已选 {{ candidateSelection.length }} 张，销售净额 ¥{{ fmt(candidateSelection.reduce((sum,row)=>sum+exhibitionSaleAmount(row),0)) }}</span><el-button @click="candidatesVisible=false">取消</el-button><el-button type="primary" :loading="saving" :disabled="!candidateSelection.length" @click="submitCandidates">归入当前展会</el-button></template>
     </el-dialog>
+    <el-dialog v-model="expenseCandidatesVisible" title="关联已有费用" width="900px">
+      <p>在「财务 → 费用」里已经录过的费用，勾选后归入本场展会，计入展会费用和盈亏。费用金额和付款记录不变。</p>
+      <el-table v-loading="expenseCandidatesLoading" :data="expenseCandidates" max-height="420" row-key="id" border @selection-change="expenseCandidateSelection=$event">
+        <el-table-column type="selection" :selectable="(row:any) => !Number(row.exhibition_id)" />
+        <el-table-column label="费用单号" prop="expense_no" min-width="160" />
+        <el-table-column label="费用类别" prop="name" min-width="180" show-overflow-tooltip />
+        <el-table-column label="日期" width="115"><template #default="{row}">{{ date(row.expense_date) }}</template></el-table-column>
+        <el-table-column label="金额" width="110"><template #default="{row}">¥{{ fmt(row.amount) }}</template></el-table-column>
+        <el-table-column label="当前归属" min-width="140"><template #default="{row}">{{ Number(row.exhibition_id) ? eventName(row.exhibition_id) : '未归属展会' }}</template></el-table-column>
+        <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
+      </el-table>
+      <template #footer><span>已选 {{ expenseCandidateSelection.length }} 笔，合计 ¥{{ fmt(expenseCandidateSelection.reduce((sum,row)=>sum+Number(row.amount||0),0)) }}</span><el-button @click="expenseCandidatesVisible=false">取消</el-button><el-button type="primary" :loading="saving" :disabled="!expenseCandidateSelection.length" @click="submitExpenseCandidates">归入当前展会</el-button></template>
+    </el-dialog>
     <el-dialog v-model="paymentVisible" title="登记展会费用付款" width="460px">
       <el-form label-width="90px"><el-form-item label="费用金额">¥{{ fmt(paymentExpense?.amount) }}</el-form-item><el-form-item label="付款账户"><el-select v-model="payment.fund_id" filterable><el-option v-for="fund in funds" :key="fund.id" :value="Number(fund.id)" :label="fund.name" /></el-select></el-form-item><el-form-item label="付款日期"><el-date-picker v-model="payment.pay_date" value-format="YYYY-MM-DD" /></el-form-item></el-form>
       <p>确认后生成付款单，并扣减所选资金账户余额。</p>
@@ -115,7 +129,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExhibitions, saveExhibition, getExhibitionDetail, getExhibitionCandidates, assignExhibition, payExhibitionExpense, undoExhibitionExpensePayment } from '@/api/retail/exhibition'
 import { getRetailReturnList } from '@/api/retail'
-import { getFundList, createExpense } from '@/api/finance'
+import { getFundList, createExpense, getExpenseList } from '@/api/finance'
 import { calculateExhibitionFinance, exhibitionSaleAmount, exhibitionOrderCost, exhibitionOrderFees } from '@/utils/exhibitionFinance'
 
 const router = useRouter(), route = useRoute()
@@ -130,6 +144,7 @@ const eventVisible = ref(false), eventFormRef = ref(), eventForm = reactive<any>
 const rules = {name:[{required:true,message:'请填写展会名称',trigger:'blur'}],start_date:[{required:true,message:'请选择开始日期',trigger:'change'}],end_date:[{required:true,message:'请选择结束日期',trigger:'change'}]}
 const candidatesVisible=ref(false),candidatesLoading=ref(false),candidateDates=ref<string[]>([]),candidates=ref<any[]>([]),candidateSelection=ref<any[]>([]),candidateTable=ref()
 const paymentVisible=ref(false),paymentExpense=ref<any>(),funds=ref<any[]>([]),payment=reactive({fund_id:undefined as number|undefined,pay_date:today()})
+const expenseCandidatesVisible=ref(false),expenseCandidatesLoading=ref(false),expenseCandidates=ref<any[]>([]),expenseCandidateSelection=ref<any[]>([])
 const expenseVisible=ref(false),expenseForm=reactive({name:'',amount:0,expense_date:today(),remark:''})
 const eventName=(id:any)=>Number(id) ? events.value.find(e=>Number(e.id)===Number(id))?.name || '其他展会' : '日常零售'
 const isPaid=(row:any)=>Number(row.exhibition_payment_id)>0 || /【已付款】|\[已付款\]/.test(row.remark||'')
@@ -170,6 +185,16 @@ async function submitExpense(){
   try{await createExpense({...expenseForm,exhibition_id:Number(selectedId.value)});expenseVisible.value=false;await loadDetail();ElMessage.success('展会费用已保存')}finally{saving.value=false}
 }
 function viewExpense(row:any){router.push({path:'/finance/expense',query:{exhibition_id:selectedId.value,expense_no:row.expense_no}})}
+async function openExpenseCandidates(){
+  expenseCandidatesVisible.value=true;expenseCandidatesLoading.value=true;expenseCandidates.value=[];expenseCandidateSelection.value=[]
+  try{
+    const rows=(await getExpenseList({page:1,list_rows:1000})).data?.rows||[]
+    // Unassigned first; within each group, newest first.
+    expenseCandidates.value=rows.filter((r:any)=>Number(r.exhibition_id)!==Number(selectedId.value)).sort((a:any,b:any)=>(Number(!!Number(a.exhibition_id))-Number(!!Number(b.exhibition_id)))||String(b.expense_date).localeCompare(String(a.expense_date)))
+  }finally{expenseCandidatesLoading.value=false}
+}
+async function submitExpenseCandidates(){saving.value=true;try{await assignExhibition(selectedId.value!,expenseCandidateSelection.value,'expense');expenseCandidatesVisible.value=false;activeTab.value='expenses';await loadDetail();ElMessage.success('费用已归入展会')}finally{saving.value=false}}
+async function removeExpense(row:any){try{await ElMessageBox.confirm('将此费用移出展会？费用本身和付款记录不会改变，只是不再计入本场展会盈亏。','移出展会')}catch{return}await assignExhibition(0,[row],'expense');await loadDetail()}
 async function openCandidates(){candidateDates.value=[date(detail.value.exhibition.start_date),date(detail.value.exhibition.end_date)];candidatesVisible.value=true;await loadCandidates()}
 async function loadCandidates(){if(candidateDates.value?.length!==2)return;candidatesLoading.value=true;candidates.value=[];candidateSelection.value=[];try{candidates.value=(await getExhibitionCandidates(...candidateDates.value as [string,string])).data?.rows||[]}finally{candidatesLoading.value=false}}
 async function submitCandidates(){saving.value=true;try{await assignExhibition(selectedId.value!,candidateSelection.value);candidatesVisible.value=false;await loadDetail();ElMessage.success('已归入展会，原单据及库存保持原样')}finally{saving.value=false}}

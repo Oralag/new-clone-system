@@ -80,6 +80,12 @@
         <el-form-item :label="$t('finance.expense.formApplyDate')" prop="apply_date">
           <el-date-picker v-model="form.apply_date" type="date" :placeholder="$t('finance.expense.formApplyDatePlaceholder')" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
+        <el-form-item label="归属展会" prop="exhibition_id">
+          <el-select v-model="form.exhibition_id" :disabled="Number(form.exhibition_payment_id) > 0" style="width:100%">
+            <el-option :value="0" label="不属于展会" />
+            <el-option v-for="e in exhibitions" :key="e.id" :value="Number(e.id)" :label="`${e.name} · ${String(e.start_date || '').slice(0, 10)}`" />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="$t('finance.expense.formRemark')" prop="remark">
           <el-input v-model="form.remark" type="textarea" :placeholder="$t('finance.expense.formRemarkPlaceholder')" />
         </el-form-item>
@@ -124,6 +130,7 @@ import ScTable from '@/components/ScTable.vue'
 import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
+import { getExhibitions } from '@/api/retail/exhibition'
 import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
@@ -136,6 +143,7 @@ const formRef = ref<InstanceType<typeof ScForm>>()
 const formTitle = ref('')
 const searchForm = reactive<any>({ expense_no: '', type_name: '', payment_status: '', reconcile_filter: '' })
 const fundOptions = ref<any[]>([])
+const exhibitions = ref<any[]>([])
 const payVisible = ref(false)
 const paySubmitting = ref(false)
 const payRow = ref<any>(null)
@@ -188,7 +196,7 @@ function openView(row?: any) {
 
 function openForm(row?: any) {
   formTitle.value = row ? t('finance.expense.editTitle') : t('finance.expense.addTitle')
-  formRef.value?.open(row ? { ...row, remark: row.remark_clean ?? row.remark ?? '' } : {
+  formRef.value?.open(row ? { ...row, remark: row.remark_clean ?? row.remark ?? '', exhibition_id: Number(row.exhibition_id || 0) } : {
     apply_date: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     payment_status: 'pending',
     remark: '',
@@ -291,6 +299,7 @@ async function handleBatchDel({ ids }: { ids: number[] }) {
 
 onMounted(() => {
   loadFunds().catch(() => {})
+  getExhibitions().then(r => { exhibitions.value = r.data?.rows || [] }).catch(() => {})
   if (route.query.create === '1') openForm()
 })
 </script>

@@ -62,7 +62,8 @@ function buildExpensePayload(data: any) {
     expense_date: expenseDate,
     remark,
     order_sn: payload.order_sn || payload.expense_no || '',
-    exhibition_id: Number(payload.exhibition_id || 0),
+    // Omit when the caller didn't touch attribution, so edits/payments keep the existing exhibition link.
+    ...(payload.exhibition_id !== undefined ? { exhibition_id: Number(payload.exhibition_id || 0) } : {}),
   }
 }
 
