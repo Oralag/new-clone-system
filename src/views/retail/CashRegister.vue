@@ -1651,7 +1651,8 @@ async function submitQuickAdd() {
 
 onMounted(async () => {
   const [, mc] = await Promise.all([loadHotGoods(), getGoodsCateList({ list_rows: 200 }), loadBomCosts()])
-  cateList.value = mc.data?.rows ?? []
+  // 跟 ERP「商品分类」页同一顺序：按排序字段从小到大，相同的保持原顺序
+  cateList.value = [...(mc.data?.rows ?? [])].sort((a: any, b: any) => (Number(a.sort) || 0) - (Number(b.sort) || 0))
   const [mr, sr] = await Promise.all([
     getMemberList({ list_rows: 500 }),
     getStoreList({ list_rows: 100 }),
@@ -2125,8 +2126,14 @@ onMounted(async () => {
     justify-content: center; flex-shrink: 0;
   }
 
-  .cr-member-select { width: 120px; flex-shrink: 0; }
-  .cr-search-box { flex: 1; width: auto; min-width: 0; }
+  /* 搜索框最常用：独占第一行（右侧只留「新增商品」），门店/会员挪到第二行 */
+  .cr-top-right { flex-wrap: wrap; }
+  .cr-search-box { order: 1; flex: 1 1 0; width: auto; min-width: 0; height: 40px; }
+  .cr-search-input { font-size: 16px; } /* <16px 时 iOS 聚焦会自动放大页面 */
+  .cr-new-goods-btn { order: 2; width: 40px; height: 40px; }
+  .cr-calc-btn { order: 3; }
+  .cr-member-select { order: 4; flex: 1 1 0; width: auto; min-width: 0; }
+  .cr-top-right::after { content: ''; order: 2; flex-basis: 100%; height: 0; }
 
   /* 主体：留出底部悬浮栏高度 */
   .cr-body { padding: 0; padding-bottom: 68px; }
