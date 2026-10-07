@@ -560,6 +560,11 @@
                 </el-checkbox>
               </div>
               <el-button v-if="fd.multi_spec && !isView" size="small" type="primary" @click="addSpecAttr">{{ $t('goods.info.addSpecAttr') }}</el-button>
+              <el-select v-if="!isView && fd.id && specAttrs.length <= 1" v-model="sameGoodsPick" filterable size="small"
+                placeholder="+ 添加同款商品（合并为规格）" style="width:240px" @visible-change="(v: boolean) => v && ensureBomGoods()" @change="addSameGoods">
+                <el-option v-for="g in bomAllGoods.filter((x: any) => x.id !== fd.id && !skuList.some(r => r.goods_id === x.id))" :key="g.id" :value="g.id"
+                  :label="`${g.goods_name}${specText(g.spec) ? ' · ' + specText(g.spec) : ''} ¥${Number(g.sell_price) || 0}`" />
+              </el-select>
               <el-button v-if="fd.multi_spec && fd.id && specAttrs.filter(a=>a.values.length>0).length>0" size="small" type="success" :loading="specSyncing" @click="manualSyncSpec">{{ $t('goods.info.syncToCloud') }}</el-button>
             </div>
 
@@ -667,7 +672,7 @@
                   </el-table-column>
                 </el-table>
                 <div style="margin-top:8px;font-size:12px;color:#999">
-                  保存后小程序点开本商品就能选这些规格。每个规格的售价、成本和库存都跟着「对应商品」走，改价或调库存请改对应的那个商品。同款的其他商品选进来以后，保存时可以一并从商城隐藏，商品、库存和单据都会保留。
+                  本商品自己就是一个规格（对应商品选「本商品」）。用上面「添加同款商品」把其他同款并进来。保存后小程序点开本商品就能选这些规格。每个规格的售价、成本和库存都跟着「对应商品」走，改价或调库存请改对应的那个商品。同款的其他商品选进来以后，保存时可以一并从商城隐藏，商品、库存和单据都会保留。
                 </div>
               </div>
             </div>
@@ -2659,6 +2664,33 @@ function skuGoodsName(row: SkuRow): string {
 }
 function onSkuGoodsChange() { loadSkuStocks() }
 
+// 合并同款：本商品自动算第一个规格，再把选中的同款商品加成一个规格并挂上它
+const sameGoodsPick = ref<number | null>(null)
+function uniqueLabel(values: string[], label: string) {
+  let l = label.trim() || '规格', n = 2
+  while (values.includes(l)) l = `${label}${n++}`
+  return l
+}
+function addSameGoods(id: number) {
+  sameGoodsPick.value = null
+  const g = bomAllGoods.value.find((x: any) => x.id === id)
+  if (!g || specAttrs.value.length > 1) return
+  fd.multi_spec = true
+  if (!specAttrs.value.length) addSpecAttr()
+  const attr = specAttrs.value[0]
+  if (!attr.name) attr.name = '规格'
+  if (!skuList.value.some(r => !r.goods_id)) {
+    attr.values.push(uniqueLabel(attr.values, specText(fd.spec) || fd.goods_name))
+  }
+  const label = uniqueLabel(attr.values, specText(g.spec) || g.goods_name)
+  attr.values.push(label)
+  rebuildSkuList()
+  const row = skuList.value.find(r => r.vals[0] === label)
+  if (row) row.goods_id = id
+  if (fd.id) saveSpecAttrs(fd.id)
+  loadSkuStocks()
+}
+
 // 规格设置 → 品牌中心规格（小程序只读 __brand__.skuVariants），保存前调用
 async function syncSpecToBrandFd() {
   if (!fd.multi_spec || !skuList.value.length || !fd.id) return
@@ -2781,10 +2813,12 @@ function rebuildSkuList() {
   const combos = cartesian(validAttrs.map(a => a.values))
   const localData = fd.id ? loadSkuData(fd.id) : {}
   const metaData = specMetaRef.value.skus || {}
+  // 还没保存的改动（刚选的对应商品等）优先，避免加/删规格值时丢掉
+  const current = new Map(skuList.value.map(r => [r.vals.join('|'), r]))
 
   skuList.value = combos.map(vals => {
     const key = vals.join('|')
-    const saved = { ...(localData[key] ?? {}), ...(metaData[key] ?? {}) }
+    const saved = { ...(localData[key] ?? {}), ...(metaData[key] ?? {}), ...(current.get(key) ?? {}) }
     return {
       vals,
       sku_sn: saved.sku_sn ?? '',

@@ -833,31 +833,41 @@ function ssSelectVal(attrIdx: number, val: string) {
   ssSelectedVals.value[attrIdx] = val
 }
 
-function addSpecItemToCart() {
+async function addSpecItemToCart() {
   const sku = ssCurrentSku.value
-  const g = ssGoods.value
+  let g = ssGoods.value
   if (!g) return
+  // 规格挂了别的商品（合并同款）：按那个商品下单、扣它的库存
+  const linkedId = Number(sku?.goods_id) || 0
+  if (linkedId && linkedId !== Number(g.id)) {
+    let linked = goodsList.value.find((x: any) => Number(x.id) === linkedId)
+    if (!linked) { try { linked = (await readGoods(linkedId)).data } catch {} }
+    if (!linked?.id) { ElMessage.error('这个规格对应的商品找不到了，请到商品资料里检查规格设置'); return }
+    g = linked
+  }
+  // 挂了别的商品就用那个商品的现价（会员价也按它），不用规格里存的旧价
+  const priceSku = g === ssGoods.value ? sku : null
   const specLabel = ssSpecLabel.value
   specSelectVisible.value = false
 
   // 散装+规格：选完规格后进入称重弹窗，把规格标签带进去
   if (ssWeighAfter.value) {
     ssWeighAfter.value = false
-    const price = sku?.sell_price != null ? Number(sku.sell_price) : Number(g.sell_price) || 0
+    const price = priceSku?.sell_price != null ? Number(priceSku.sell_price) : Number(g.sell_price) || 0
     openWeightCalc(g, specLabel, price)
     return
   }
 
-  const price = sku?.sell_price != null ? Number(sku.sell_price) : (selectedMemberId.value && Number(g.member_price) > 0 ? Number(g.member_price) : Number(g.sell_price) || 0)
+  const price = priceSku?.sell_price != null ? Number(priceSku.sell_price) : (selectedMemberId.value && Number(g.member_price) > 0 ? Number(g.member_price) : Number(g.sell_price) || 0)
   const goodsName = specLabel ? `${g.goods_name} · ${specLabel}` : g.goods_name
   const skuKey = ssSelectedVals.value.join('|')
   cartItems.push({
     goods_id: g.id,
     goods_name: goodsName,
-    goods_sn: sku?.sku_sn || g.goods_sn || '',
+    goods_sn: priceSku?.sku_sn || g.goods_sn || '',
     unit_name: g.unit_name || '',
     price: Math.round(price * 100) / 100,
-    cost_price: sku?.cost_price != null ? Number(sku.cost_price) : Number(g.cost_price || 0),
+    cost_price: priceSku?.cost_price != null ? Number(priceSku.cost_price) : Number(g.cost_price || 0),
     num: 1,
     _sku_key: skuKey,
   } as any)
