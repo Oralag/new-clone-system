@@ -926,16 +926,33 @@ function applyBomCosts() {
   }
 }
 
+// 所选分类 + 全部下级分类（同商品资料页的筛法）
+function cateWithDescendants(id: number) {
+  const ids = new Set<number>()
+  const queue = [id]
+  while (queue.length) {
+    const cur = queue.shift()!
+    ids.add(cur)
+    cateList.value.filter((c: any) => Number(c.parent_id) === cur).forEach((c: any) => queue.push(Number(c.id)))
+  }
+  return ids
+}
+
 async function loadGoods() {
   goodsLoading.value = true
   try {
+    // 后端会忽略 cate_id，选了分类就拉全量在前端按分类树筛
+    const cateId = Number(activeCate.value) || 0
     const res = await getGoodsList({
       keyword: keyword.value || undefined,
-      cate_id: activeCate.value || undefined,
       status: 1,
-      list_rows: 60,
+      list_rows: cateId ? 5000 : 60,
     })
-    const rows: any[] = res.data?.rows ?? []
+    let rows: any[] = res.data?.rows ?? []
+    if (cateId) {
+      const ids = cateWithDescendants(cateId)
+      rows = rows.filter((g: any) => ids.has(Number(g.cate_id)))
+    }
     // 按热销排序，成品(type=1)优先，散装(type=5)最后
     const typeOrder = (t: number) => t === 1 ? 0 : t === 5 ? 2 : 1
     rows.sort((a, b) => {
