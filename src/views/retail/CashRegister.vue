@@ -2139,14 +2139,14 @@ onMounted(async () => {
     justify-content: center; flex-shrink: 0;
   }
 
-  /* 搜索框最常用：独占第一行（右侧只留「新增商品」），门店/会员挪到第二行 */
-  .cr-top-right { flex-wrap: wrap; }
-  .cr-search-box { order: 1; flex: 1 1 0; width: auto; min-width: 0; height: 40px; }
+  /* 一行：搜索框最常用放最左、占满剩余宽度；门店/会员缩成小框放右边 */
+  .cr-search-box { order: 1; flex: 1 1 0; width: auto; min-width: 0; padding: 0 10px; }
   .cr-search-input { font-size: 16px; } /* <16px 时 iOS 聚焦会自动放大页面 */
-  .cr-new-goods-btn { order: 2; width: 40px; height: 40px; }
+  .cr-scan-icon { display: none; }
+  .cr-member-select { order: 2; width: 72px; flex: 0 0 72px; }
+  :deep(.cr-member-select .el-input__wrapper) { padding: 0 6px; }
   .cr-calc-btn { order: 3; }
-  .cr-member-select { order: 4; flex: 1 1 0; width: auto; min-width: 0; }
-  .cr-top-right::after { content: ''; order: 2; flex-basis: 100%; height: 0; }
+  .cr-new-goods-btn { order: 4; }
 
   /* 主体：留出底部悬浮栏高度 */
   .cr-body { padding: 0; padding-bottom: 68px; }
