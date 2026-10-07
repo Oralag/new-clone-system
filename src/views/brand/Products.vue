@@ -15,9 +15,9 @@
           </template>
         </p>
       </div>
-      <!-- 申请下载入口：没解锁前都要显示（批发页也要），解锁后才出选择框 -->
+      <!-- 申请下载入口：只给批发页（产品资料是给批发商的），零售顾客不需要；解锁后才出选择框 -->
       <button
-        v-if="!downloadUnlocked && !brandEdit.editMode && !isDeliveryView"
+        v-if="shopStore.isWholesale && !downloadUnlocked && !brandEdit.editMode && !isDeliveryView"
         class="bp-apply-btn"
         @click="applyDialogVisible = true"
       >
