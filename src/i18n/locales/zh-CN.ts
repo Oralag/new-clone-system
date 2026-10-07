@@ -2970,6 +2970,7 @@ export default {
       'setting-print': '打印模板',
       'setting-operation-log': '操作日志',
       'setting-company': '企业信息',
+      'setting-pay': '收款设置',
       'personnel-salary': '薪资管理',
       'personnel-job-change': '异动记录',
       'personnel-resign': '离职管理',

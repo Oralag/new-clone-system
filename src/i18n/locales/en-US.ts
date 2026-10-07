@@ -2970,6 +2970,7 @@ export default {
       'setting-print': 'Print Templates',
       'setting-operation-log': 'Audit Log',
       'setting-company': 'Company Info',
+      'setting-pay': 'Payment Settings',
       'personnel-salary': 'Payroll',
       'personnel-job-change': 'Job Changes',
       'personnel-resign': 'Resignations',

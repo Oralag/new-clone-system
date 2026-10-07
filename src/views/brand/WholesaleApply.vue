@@ -52,6 +52,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { submitWebLead } from '@/api/brandWebOrder'
 const form = reactive({ company: '', contact: '', mobile: '', email: '', category: '', volume: '', remark: '' })
 const submitting = ref(false)
 const submitted = ref(false)
@@ -70,26 +71,29 @@ async function submit() {
     alert('请填写必填项')
     return
   }
+  if (!/^1[3-9]\d{9}$/.test(form.mobile.trim())) {
+    alert('请输入正确的11位手机号')
+    return
+  }
   submitting.value = true
   try {
-    const res = await fetch('https://nomaderp.pages.dev/adminapi/shop/ShopCustomer/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: form.company,
-        mobile: form.mobile,
-        email: form.email || '',
-        remark: `【采购商申请】联系人:${form.contact} 主营:${form.category || '-'} 月采购量:${form.volume || '-'} 备注:${form.remark || '-'}`,
-      }),
+    // 以前直接调要登录的 ERP 接口，访客提交永远失败；改走官网留言，存库并推送给老板
+    await submitWebLead({
+      type: 'wholesale_apply',
+      name: form.contact,
+      mobile: form.mobile.trim(),
+      company: form.company,
+      email: form.email || '',
+      content: [
+        `主营品类：${form.category || '-'}`,
+        `月采购量：${form.volume || '-'}`,
+        form.remark ? `备注：${form.remark}` : '',
+        fileData.value ? '（附件未上传：请在电话沟通时补发营业执照）' : '',
+      ].filter(Boolean).join('\n'),
     })
-    const json = await res.json()
-    if (json.code === 1) {
-      submitted.value = true
-    } else {
-      alert(json.message || '提交失败，请稍后重试')
-    }
-  } catch {
-    alert('网络错误，请稍后重试')
+    submitted.value = true
+  } catch (e: any) {
+    alert(e?.message || '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }

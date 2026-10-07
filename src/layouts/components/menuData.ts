@@ -222,6 +222,7 @@ export const menuData: TopMenuItem[] = [
       { key: 'setting-print', title: 'menu.item.setting-print', path: '/setting/print' },
       { key: 'setting-operation-log', title: 'menu.item.setting-operation-log', path: '/setting/operation-log' },
       { key: 'setting-company', title: 'menu.item.setting-company', path: '/setting/company' },
+      { key: 'setting-pay', title: 'menu.item.setting-pay', path: '/setting/pay' },
     ],
   },
   {

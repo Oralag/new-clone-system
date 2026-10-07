@@ -23,3 +23,8 @@ export const getOperationLogList = (params?: any) => http.get('/setting/operatio
 export const getCompanyInfo = () => http.get('/setting/company/detail')
 export const updateCompanyInfo = (data: any) => http.post('/setting/company/edit', data)
 export const getPrintList = (params?: any) => http.get('/setting/print/index', { params })
+
+// 收款设置（微信支付商户配置，仅老板账号）
+export const getPaySettings = () => http.get('/system/PaySettings/index')
+export const savePaySettings = (data: any) => http.post('/system/PaySettings/save', data)
+export const testPaySettings = () => http.post('/system/PaySettings/test', {})

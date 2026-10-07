@@ -26,14 +26,23 @@
           @keyup.enter="searchOrders"
         />
         <el-button type="primary" @click="searchOrders">{{ t('sale.miniOrders.queryBtn') }}</el-button>
+        <el-badge :value="leadsUnhandled" :hidden="!leadsUnhandled" class="leads-badge">
+          <el-button @click="leadsOpen = true">官网留言</el-button>
+        </el-badge>
       </div>
     </el-card>
 
     <!-- 表格 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="list" v-loading="loading" border stripe height="calc(100vh - 270px)">
-        <el-table-column :label="t('sale.miniOrders.colOrderNo')" prop="order_no" width="152" show-overflow-tooltip />
-        <el-table-column :label="t('sale.miniOrders.colUserPhone')" prop="user_phone" width="112" show-overflow-tooltip />
+        <el-table-column :label="t('sale.miniOrders.colOrderNo')" width="164" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="row.source === 'web'" size="small" type="warning" class="src-tag">官网</el-tag>{{ row.order_no }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('sale.miniOrders.colUserPhone')" width="112" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.user_phone || (row.source === 'web' ? '未注册' : '') }}</template>
+        </el-table-column>
         <el-table-column :label="t('sale.miniOrders.colDelivery')" width="84" align="center">
           <template #default="{ row }">
             <el-tag :type="deliveryTagType(row.delivery_type)" size="small">{{ deliveryLabel(row.delivery_type) }}</el-tag>
@@ -313,6 +322,7 @@
       </div>
       <template #footer><el-button @click="viewTracking(current)">刷新物流</el-button></template>
     </el-dialog>
+    <WebLeadsDrawer v-model="leadsOpen" @changed="leadsUnhandled = $event" />
   </div>
 </template>
 
@@ -321,6 +331,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import http from '@/api/http'
+import WebLeadsDrawer from './components/WebLeadsDrawer.vue'
 
 const { t, locale } = useI18n()
 
@@ -630,9 +641,19 @@ function fmtTime(value: string) {
   return new Date(value).toLocaleString(locale.value === 'en-US' ? 'en-US' : 'zh-CN', { hour12: false }).replace(/\//g, '-')
 }
 
+const leadsOpen = ref(false)
+const leadsUnhandled = ref(0)
+async function loadLeadsCount() {
+  try {
+    const res: any = await http.get('/mini/orders/web-leads', { params: { handled: 0, list_rows: 1, _t: Date.now() }, silent: true } as any)
+    leadsUnhandled.value = Number(res.data?.unhandled || 0)
+  } catch { /* 后端没升级时静默，不影响订单列表 */ }
+}
+
 const onMiniOrderArrived = () => { void load() }
 onMounted(() => {
   void load()
+  void loadLeadsCount()
   window.addEventListener('mini-order-arrived', onMiniOrderArrived)
 })
 onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderArrived))
@@ -642,6 +663,8 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .mini-order-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .mini-order-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .page-container { padding: 16px; }
+.leads-badge { margin-left: 8px; }
+.src-tag { margin-right: 4px; }
 .order-hub-card { margin-bottom: 0; border-radius: 16px; }
 .order-hub-card :deep(.el-card__body) { padding: 18px 20px; }
 .order-status-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }

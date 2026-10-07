@@ -113,6 +113,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { submitWebLead } from '@/api/brandWebOrder'
 import { useBrandEditStore } from '@/stores/brandEdit'
 
 const brandEdit = useBrandEditStore()
@@ -143,19 +144,17 @@ async function sendMsg() {
   }
   msgSending.value = true
   try {
-    await fetch('https://nomaderp.pages.dev/adminapi/shop/ShopCustomer/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: msgForm.value.name,
-        mobile: msgForm.value.mobile || '',
-        email: msgForm.value.email || '',
-        remark: `【支持留言】类型:${msgForm.value.type || '其他'} 内容:${msgForm.value.content}`,
-      }),
+    // 以前失败也提示成功，留言全丢；现在存进后端并推送给老板，失败就如实提示
+    await submitWebLead({
+      type: 'support',
+      name: msgForm.value.name,
+      mobile: (msgForm.value.mobile || '').trim(),
+      email: msgForm.value.email || '',
+      content: `类型：${msgForm.value.type || '其他'}\n${msgForm.value.content}`,
     })
     msgSent.value = true
-  } catch {
-    msgSent.value = true // 即使失败也提示成功
+  } catch (e: any) {
+    alert(e?.message || '发送失败，请稍后重试，或直接拨打客服电话')
   } finally {
     msgSending.value = false
   }

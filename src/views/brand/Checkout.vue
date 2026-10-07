@@ -81,13 +81,14 @@
                 <span>¥{{ totalAmount.toFixed(2) }}</span>
               </div>
             </div>
-            <button class="bc-submit-btn" :disabled="submitting" @click="submitOrder">
+            <button class="bc-submit-btn" :disabled="submitting || !shopStore.cart.length" @click="submitOrder">
               <svg v-if="!submitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span>{{ submitting ? '提交中...' : '确认下单' }}</span>
+              <span>{{ !shopStore.cart.length ? '购物车是空的' : submitting ? '正在生成支付码...' : '确认下单并付款' }}</span>
             </button>
+            <p v-if="submitError" class="bc-submit-err">{{ submitError }}</p>
             <p class="bc-secure-tip">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-              安全加密支付
+              微信扫码支付 · 付款后自动确认
             </p>
           </div>
         </div>
@@ -162,27 +163,41 @@
                 <p class="bc-item-price" v-if="item.wholesalePrice">¥{{ item.wholesalePrice }}/件</p>
               </div>
             </div>
-            <button class="bc-submit-btn bc-wholesale-btn" :disabled="submitting" @click="submitInquiry">
-              {{ submitting ? '提交中...' : '提交询价单' }}
+            <button class="bc-submit-btn bc-wholesale-btn" :disabled="submitting || !shopStore.cart.length" @click="submitInquiry">
+              {{ !shopStore.cart.length ? '询价清单是空的' : submitting ? '提交中...' : '提交询价单' }}
             </button>
+            <p v-if="submitError" class="bc-submit-err">{{ submitError }}</p>
             <p class="bc-secure-tip">提交后商务人员将在 1-2 个工作日内与您联系</p>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- 成功状态 -->
+    <!-- 零售：微信扫码付款 + 倒计时确认 -->
+    <BrandWebPayDialog
+      v-if="payOrder"
+      :order-no="payOrder.order_no"
+      :token="payOrder.token"
+      :code-url="payOrder.code_url"
+      :amount="payOrder.total_amount"
+      :expires-at="payOrder.expires_at"
+      @paid="handlePaid"
+      @close="payOrder = null"
+      @done="handlePayDone('/brand/products')"
+      @view-orders="handlePayDone('/brand/orders')"
+    />
+
+    <!-- 批发询价提交成功 -->
     <div v-if="success" class="bc-success-overlay">
       <div class="bc-success-card">
         <div class="bc-success-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <h3 class="bc-success-title">{{ shopStore.shopMode === 'wholesale' ? '询价单已提交！' : '订单提交成功！' }}</h3>
-        <p class="bc-success-sub">{{ shopStore.shopMode === 'wholesale' ? '商务团队将在 1-2 工作日内联系您。' : '我们将尽快安排发货，感谢您的购买！' }}</p>
-        <div v-if="orderNo" class="bc-order-no">订单号：{{ orderNo }}</div>
+        <h3 class="bc-success-title">询价单已提交！</h3>
+        <p class="bc-success-sub">商务团队将在 1-2 工作日内联系您。</p>
+        <div v-if="orderNo" class="bc-order-no">询价编号：{{ orderNo }}</div>
         <div class="bc-success-btns">
-          <button class="bc-success-btn-outline" @click="$router.push('/brand/orders')">查询订单</button>
-          <button class="bc-success-btn-primary" @click="$router.push('/brand/products')">继续购物</button>
+          <button class="bc-success-btn-primary" @click="goBrand('/brand/products')">继续浏览</button>
         </div>
       </div>
     </div>
@@ -193,14 +208,14 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useRouter } from 'vue-router'
+import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
+import { createWebOrder, rememberWebOrder, submitWebLead, brandShopCode, type WebOrderCreated } from '@/api/brandWebOrder'
 
 const shopStore = useShopStore()
 const router = useRouter()
 const submitting = ref(false)
 const success = ref(false)
 const orderNo = ref('')
-
-const ERP_BASE = 'https://nomaderp.pages.dev/adminapi'
 
 const shippingFee = computed(() => shopStore.totalAmount >= 500 ? 0 : 25)
 const totalAmount = computed(() => shopStore.totalAmount + shippingFee.value)
@@ -232,81 +247,96 @@ onMounted(() => {
   } catch { /* ignore */ }
 })
 
-async function erpPost(path: string, body: any) {
-  const res = await fetch(`${ERP_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  return res.json()
+const submitError = ref('')
+const payOrder = ref<WebOrderCreated | null>(null)
+
+// 官网链接里带了 ?shop=店铺码 的，跳转时要带着，不然到下一页就分不清是哪家店了
+function goBrand(path: string, query: Record<string, string> = {}) {
+  const shop = brandShopCode()
+  router.push({ path, query: shop ? { ...query, shop } : query })
 }
 
 async function submitOrder() {
+  submitError.value = ''
+  if (!shopStore.cart.length) { submitError.value = '购物车是空的，先去挑几样吧'; return }
   if (!form.name || !form.mobile || !form.region || !form.address) {
-    alert('请填写必填项（姓名、手机号、地址）')
+    submitError.value = '请填写必填项（姓名、手机号、省市区、详细地址）'
     return
   }
   if (!/^1[3-9]\d{9}$/.test(form.mobile)) {
-    alert('请输入正确的11位手机号')
+    submitError.value = '请输入正确的11位手机号'
+    return
+  }
+  const missing = shopStore.cart.filter(i => !i.erpId)
+  if (missing.length) {
+    submitError.value = `「${missing[0].name}」商品信息不完整，请从购物车删掉后重新加入`
     return
   }
   submitting.value = true
   try {
-    const goods_info = shopStore.cart.map(item => ({
-      goods_id: item.erpId || 0,
-      goods_name: item.name,
-      num: item.quantity,
-      price: item.price,
-    }))
-    const fullAddress = `${form.region} ${form.address}${form.postcode ? ' ' + form.postcode : ''}`
-    const data = await erpPost('/shop/ContractOrder/add', {
-      customer_name: form.name,
-      customer_id: 0,
-      total_amount: totalAmount.value,
-      pay_amount: totalAmount.value,
-      goods_info,
-      remark: `收货人:${form.name} 手机:${form.mobile} 地址:${fullAddress}${form.remark ? ' 备注:' + form.remark : ''}`,
+    // 价格、运费以服务端为准（按商品现价重算），这里只传商品和数量
+    const order = await createWebOrder({
+      items: shopStore.cart.map(i => ({ goods_id: i.erpId, qty: i.quantity })),
+      contact: { name: form.name, mobile: form.mobile, region: form.region, address: form.address, postcode: form.postcode },
+      remark: form.remark,
     })
-    orderNo.value = data.data?.order_no || ('ND' + Date.now().toString().slice(-8))
-    shopStore.clearCart()
-    success.value = true
+    rememberWebOrder(order.order_no, order.token, form.mobile)
+    payOrder.value = order
   } catch (e: any) {
-    alert('提交失败：' + (e.message || '网络错误'))
+    submitError.value = e?.message || '下单失败，请稍后再试'
   } finally {
     submitting.value = false
   }
 }
 
+// 付款确认后才清购物车；没付成功购物车原样保留
+function handlePaid() {
+  shopStore.clearCart()
+}
+
+function handlePayDone(path: string) {
+  const mobile = form.mobile
+  payOrder.value = null
+  goBrand(path, path === '/brand/orders' ? { mobile } : {})
+}
+
 async function submitInquiry() {
+  submitError.value = ''
+  if (!shopStore.cart.length) { submitError.value = '询价清单是空的'; return }
   if (!wForm.company || !wForm.contact || !wForm.mobile) {
-    alert('请填写必填项（公司名称、联系人、手机号）')
+    submitError.value = '请填写必填项（公司名称、联系人、手机号）'
     return
   }
   if (!/^1[3-9]\d{9}$/.test(wForm.mobile)) {
-    alert('请输入正确的11位手机号')
+    submitError.value = '请输入正确的11位手机号'
     return
   }
   submitting.value = true
   try {
-    const goods_info = shopStore.cart.map(item => ({
-      goods_id: item.erpId || 0,
-      goods_name: item.name,
-      num: item.quantity,
-      price: item.wholesalePrice || item.price,
-    }))
-    const data = await erpPost('/shop/ContractOrder/add', {
-      customer_name: wForm.company,
-      customer_id: 0,
-      total_amount: shopStore.totalAmount,
-      pay_amount: shopStore.totalAmount,
-      goods_info,
-      remark: `批发询价 联系人:${wForm.contact} 手机:${wForm.mobile}${wForm.address ? ' 地址:' + wForm.address : ''}${wForm.volume ? ' 月采购量:' + wForm.volume : ''}${wForm.payment ? ' 付款方式:' + wForm.payment : ''}${wForm.remark ? ' 备注:' + wForm.remark : ''}`,
+    const content = [
+      wForm.address ? `收货地址：${wForm.address}` : '',
+      wForm.volume ? `预计月采购量：${wForm.volume}` : '',
+      wForm.payment ? `期望付款方式：${wForm.payment}` : '',
+      wForm.remark ? `补充说明：${wForm.remark}` : '',
+    ].filter(Boolean).join('\n')
+    const lead = await submitWebLead({
+      type: 'inquiry',
+      name: wForm.contact,
+      mobile: wForm.mobile,
+      company: wForm.company,
+      content,
+      items: shopStore.cart.map(item => ({
+        goods_id: item.erpId || 0,
+        goods_name: item.name,
+        qty: item.quantity,
+        price: item.wholesalePrice || item.price,
+      })),
     })
-    orderNo.value = data.data?.order_no || ('INQ' + Date.now().toString().slice(-8))
+    orderNo.value = lead.no
     shopStore.clearCart()
     success.value = true
   } catch (e: any) {
-    alert('提交失败：' + (e.message || '网络错误'))
+    submitError.value = e?.message || '提交失败，请稍后再试'
   } finally {
     submitting.value = false
   }
@@ -362,6 +392,7 @@ async function submitInquiry() {
 }
 .bc-submit-btn:hover:not(:disabled) { background: #0071e3; }
 .bc-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.bc-submit-err { margin: 10px 0 0; font-size: 13px; color: #dc2626; line-height: 1.5; text-align: center; }
 .bc-wholesale-btn:hover:not(:disabled) { background: #d97706 !important; }
 .bc-secure-tip { font-size: 11px; color: rgba(29,29,31,0.35); text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
 

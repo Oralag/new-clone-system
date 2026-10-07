@@ -164,6 +164,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'setting/print', name: 'SettingPrint', component: () => import('@/views/setting/Print.vue'), meta: { title: '打印模板' } },
       { path: 'setting/operation-log', name: 'SettingOperationLog', component: () => import('@/views/setting/OperationLog.vue'), meta: { title: '操作日志' } },
       { path: 'setting/company', name: 'SettingCompany', component: () => import('@/views/setting/Company.vue'), meta: { title: '企业信息' } },
+      { path: 'setting/pay', name: 'SettingPay', component: () => import('@/views/setting/PaySettings.vue'), meta: { title: '收款设置' } },
 
       // Personnel
       { path: 'personnel/salary', name: 'PersonnelSalary', component: () => import('@/views/personnel/Salary.vue'), meta: { title: '薪资管理' } },
