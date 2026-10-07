@@ -59,7 +59,7 @@ function erpGoodsToShopProduct(item: any): ShopProduct {
   return {
     id: String(item.id),
     erpId: item.id,
-    name: item.goods_name || item.name || '',
+    name: (typeof brand.displayName === 'string' && brand.displayName.trim()) || item.goods_name || item.name || '',
     description: brand.description || item.goods_memo || '',
     price: parseFloat(item.sell_price) || 0,
     wholesalePrice: brand.wholesalePrice || 0,

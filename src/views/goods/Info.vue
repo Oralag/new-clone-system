@@ -638,23 +638,26 @@
                       <span v-else>{{ row.sku_sn || '—' }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column :label="$t('goods.info.skuSellPrice')" width="110">
+                  <!-- 每个规格挂一个 ERP 商品：小程序选这个规格就按该商品下单、扣它的库存、收它的售价 -->
+                  <el-table-column label="对应商品（库存/价格来源）" min-width="220">
                     <template #default="{ row }">
-                      <el-input-number v-if="!isView" v-model="row.sell_price" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" />
-                      <span v-else>¥{{ row.sell_price?.toFixed(2) ?? '0.00' }}</span>
+                      <el-select v-if="!isView" v-model="row.goods_id" filterable size="small" style="width:100%"
+                        placeholder="本商品" @visible-change="(v: boolean) => v && ensureBomGoods()" @change="onSkuGoodsChange">
+                        <el-option :value="0" :label="`本商品（${fd.goods_name || '当前'}）`" />
+                        <el-option v-for="g in bomAllGoods.filter((x: any) => x.id !== fd.id)" :key="g.id" :value="g.id"
+                          :label="`${g.goods_name}${specText(g.spec) ? ' · ' + specText(g.spec) : ''} ¥${Number(g.sell_price) || 0}`" />
+                      </el-select>
+                      <span v-else>{{ skuGoodsName(row) }}</span>
                     </template>
                   </el-table-column>
-                  <el-table-column :label="$t('goods.info.skuCostPrice')" width="110">
-                    <template #default="{ row }">
-                      <el-input-number v-if="!isView" v-model="row.cost_price" :min="0" :precision="2" controls-position="right" size="small" style="width:100%" />
-                      <span v-else>¥{{ row.cost_price?.toFixed(2) ?? '0.00' }}</span>
-                    </template>
+                  <el-table-column :label="$t('goods.info.skuSellPrice')" width="90">
+                    <template #default="{ row }">¥{{ skuGoodsField(row, 'sell_price').toFixed(2) }}</template>
                   </el-table-column>
-                  <el-table-column :label="$t('goods.info.skuStock')" width="90">
-                    <template #default="{ row }">
-                      <el-input-number v-if="!isView" v-model="row.stock" :min="0" :precision="0" controls-position="right" size="small" style="width:100%" />
-                      <span v-else>{{ row.stock ?? 0 }}</span>
-                    </template>
+                  <el-table-column :label="$t('goods.info.skuCostPrice')" width="90">
+                    <template #default="{ row }">¥{{ skuGoodsField(row, 'cost_price').toFixed(2) }}</template>
+                  </el-table-column>
+                  <el-table-column :label="$t('goods.info.skuStock')" width="80">
+                    <template #default="{ row }">{{ skuStockMap[row.goods_id || fd.id] ?? '…' }}</template>
                   </el-table-column>
                   <el-table-column :label="$t('goods.info.skuBarcode')" min-width="130">
                     <template #default="{ row }">
@@ -663,8 +666,8 @@
                     </template>
                   </el-table-column>
                 </el-table>
-                <div style="margin-top:8px;display:flex;gap:8px" v-if="!isView">
-                  <el-button size="small" type="primary" @click="batchFillSkuPrice">{{ $t('goods.info.batchFillPrice') }}</el-button>
+                <div style="margin-top:8px;font-size:12px;color:#999">
+                  保存后小程序点开本商品就能选这些规格。每个规格的售价、成本和库存都跟着「对应商品」走，改价或调库存请改对应的那个商品。同款的其他商品选进来以后，保存时可以一并从商城隐藏，商品、库存和单据都会保留。
                 </div>
               </div>
             </div>
@@ -719,6 +722,13 @@
               <span class="brand-sec-badge">{{ $t('goods.info.brandBadge') }}</span>
             </div>
             <el-row :gutter="24">
+              <el-col :span="24">
+                <el-form-item label="小程序商品名">
+                  <el-input v-model="brandFd.displayName" :disabled="isView" clearable maxlength="60"
+                    :placeholder="`留空就用商品名称：${fd.goods_name || ''}`" />
+                  <div style="font-size:12px;color:#999;margin-top:4px">只改小程序和品牌商城里显示的名字，ERP 单据、库存里还是用原商品名称</div>
+                </el-form-item>
+              </el-col>
               <el-col :span="24">
                 <el-form-item :label="$t('goods.info.miniCategory')">
                   <div class="brand-mini-category-row">
@@ -802,6 +812,9 @@
               </el-col>
               <el-col :span="24">
                 <el-form-item :label="$t('goods.info.specOptions')">
+                  <div v-if="fd.multi_spec && skuList.length" style="font-size:12px;color:#0071e3;margin-bottom:6px">
+                    已开启「规格设置」多规格，保存时这里会按规格设置自动生成，不用在这里填
+                  </div>
                   <div style="width:100%">
                     <!-- 规格分组 -->
                     <div v-for="(group, gi) in brandFd.specGroups" :key="gi" class="spec-brand-group">
@@ -1746,6 +1759,8 @@ function openEdit(row: any) {
         if (b.minOrderQuantity) brandFd.minOrderQuantity = b.minOrderQuantity
         if (b.baseSales !== undefined) brandFd.baseSales = b.baseSales
         if (b.category !== undefined) brandFd.category = b.category
+        brandFd.displayName = typeof b.displayName === 'string' ? b.displayName : ''
+        brandFd.specSource = b.specSource || ''
         if (b.specGroups) {
           brandFd.specGroups = b.specGroups
           if (b.skuCombos) brandFd.skuCombos = b.skuCombos
@@ -1888,6 +1903,7 @@ async function handleSave() {
       const res = await createGoods(payload)
       fd.id = res.data?.id ?? 0
     }
+    await syncSpecToBrandFd()
     // Atomically merge brand fields into __brand__ via patchBrand (DB-level jsonb merge, never overwrites other fields)
     if (fd.id) {
       await http.post('/goods/ShopGoods/patchBrand', {
@@ -1898,11 +1914,13 @@ async function handleSave() {
           detailImage: brandFd.detailImage,
           tags: brandFd.tags,
           category: brandFd.category,
+          displayName: (brandFd.displayName || '').trim(),
           wholesalePrice: brandFd.wholesalePrice,
           minOrderQuantity: brandFd.minOrderQuantity,
           baseSales: brandFd.baseSales,
           specGroups: brandFd.specGroups,
           skuCombos: brandFd.skuCombos,
+          specSource: brandFd.specSource || '',
           skuVariants: brandFd.skuCombos
             .filter((c: any) => c.combo?.length)
             .map((c: any) => {
@@ -1934,6 +1952,7 @@ async function handleSave() {
     if (fd.id) saveBrandFd(fd.id)
     // Persist spec data (localStorage + backend sync)
     if (fd.id) await persistSpecData(fd.id)
+    await hideMergedGoods()
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message ?? t('goods.info.msgSaveFailed'))
@@ -1998,6 +2017,7 @@ async function handleSaveAndNew() {
           detailImage: brandFd.detailImage,
           tags: brandFd.tags,
           category: brandFd.category,
+          displayName: (brandFd.displayName || '').trim(),
           wholesalePrice: brandFd.wholesalePrice,
           minOrderQuantity: brandFd.minOrderQuantity,
           baseSales: brandFd.baseSales,
@@ -2610,8 +2630,80 @@ interface SkuRow {
   cost_price: number
   stock: number
   barcode: string
+  goods_id: number   // 对应的 ERP 商品，0 = 本商品；小程序选这个规格就按它下单扣库存
 }
 const skuList = ref<SkuRow[]>([])
+
+// 规格「对应商品」的实时库存（按 goods_id 汇总所有仓库）
+const skuStockMap = reactive<Record<number, number>>({})
+async function loadSkuStocks() {
+  const ids = [...new Set(skuList.value.map(r => r.goods_id || fd.id).filter(Boolean))]
+  await Promise.all(ids.map(async id => {
+    try {
+      const res = await getStockList({ goods_id: id, list_rows: 200 })
+      const rows = res?.data?.rows ?? res?.data ?? []
+      skuStockMap[id] = rows.reduce((sum: number, r: any) => sum + (Number(r.stock_num) || Number(r.stock) || 0), 0)
+    } catch {}
+  }))
+}
+function skuGoods(row: SkuRow) {
+  return row.goods_id ? bomAllGoods.value.find((g: any) => g.id === row.goods_id) : null
+}
+function skuGoodsField(row: SkuRow, key: 'sell_price' | 'cost_price'): number {
+  if (!row.goods_id) return Number(fd[key]) || 0
+  return Number(skuGoods(row)?.[key]) || 0
+}
+function skuGoodsName(row: SkuRow): string {
+  if (!row.goods_id) return `本商品（${fd.goods_name}）`
+  return skuGoods(row)?.goods_name ?? `#${row.goods_id}`
+}
+function onSkuGoodsChange() { loadSkuStocks() }
+
+// 规格设置 → 品牌中心规格（小程序只读 __brand__.skuVariants），保存前调用
+async function syncSpecToBrandFd() {
+  if (!fd.multi_spec || !skuList.value.length || !fd.id) return
+  // 品牌中心里有手工配的规格（不是这里生成的）时先问，别静默覆盖
+  if (brandFd.skuCombos?.length && brandFd.specSource !== 'erp') {
+    try {
+      await ElMessageBox.confirm('品牌中心里已经有手工设置的规格选项，要用「规格设置」里的规格替换掉吗？', '规格来源',
+        { confirmButtonText: '替换', cancelButtonText: '保留品牌中心的', type: 'warning' })
+    } catch { return }
+  }
+  brandFd.specSource = 'erp'
+  await ensureBomGoods()
+  const oldPrice = new Map((brandFd.skuCombos || []).map((c: any) => [c.combo.join('|'), c.price]))
+  const validAttrs = specAttrs.value.filter(a => a.values.length > 0)
+  const oldImg = new Map<string, string>()
+  for (const g of brandFd.specGroups || []) for (const v of g.values || []) if (v.image) oldImg.set(v.label, v.image)
+  brandFd.specGroups = validAttrs.map(a => ({ name: a.name, values: a.values.map(label => ({ label, image: oldImg.get(label) || '' })) }))
+  brandFd.skuCombos = skuList.value.map(r => ({
+    combo: [...r.vals],
+    // 对应商品没在列表里（极少）就沿用旧价，绝不写成 0
+    price: (r.goods_id && !skuGoods(r)) ? (oldPrice.get(r.vals.join('|')) ?? 0) : skuGoodsField(r, 'sell_price'),
+    erpId: r.goods_id || fd.id,
+  }))
+}
+
+// 被合并进来的同款商品：问一次是否从商城隐藏（只关 __brand__.show，商品/库存/单据都不动）
+async function hideMergedGoods() {
+  if (!fd.multi_spec || !fd.id) return
+  const ids = [...new Set(skuList.value.map(r => r.goods_id).filter(id => id && id !== fd.id))]
+  const shown = bomAllGoods.value.filter((g: any) => {
+    if (!ids.includes(g.id)) return false
+    try { return JSON.parse(g.remark || '{}').__brand__?.show === true } catch { return false }
+  })
+  if (!shown.length) return
+  try {
+    await ElMessageBox.confirm(
+      `${shown.map((g: any) => '「' + g.goods_name + '」').join('、')} 已作为「${fd.goods_name}」的规格。要把它们在小程序商城里单独下架吗？（商品、库存、单据都保留，下单仍扣它们的库存）`,
+      '合并同款', { confirmButtonText: '下架', cancelButtonText: '保留上架', type: 'info' })
+  } catch { return }
+  for (const g of shown) {
+    await http.post('/goods/ShopGoods/patchBrand', { id: g.id, brand_fields: { show: false } })
+  }
+  bomAllGoods.value = []
+  ElMessage.success(`已下架 ${shown.length} 个同款商品`)
+}
 
 function loadSkuData(goodsId: number) {
   try {
@@ -2626,7 +2718,7 @@ function saveSkuData(goodsId: number) {
     const skuData: Record<string, any> = {}
     for (const row of skuList.value) {
       const key = row.vals.join('|')
-      skuData[key] = { sku_sn: row.sku_sn, sell_price: row.sell_price, cost_price: row.cost_price, stock: row.stock, barcode: row.barcode }
+      skuData[key] = { sku_sn: row.sku_sn, barcode: row.barcode, goods_id: row.goods_id, sell_price: skuGoodsField(row, 'sell_price'), cost_price: skuGoodsField(row, 'cost_price') }
     }
     map[goodsId] = skuData
     localStorage.setItem(SKU_KEY, JSON.stringify(map))
@@ -2655,6 +2747,10 @@ async function loadSpecs() {
   if (!fd.id) { specAttrs.value = []; skuList.value = []; multiUnitRows.value = []; return }
   // Load from localStorage first (source of truth for our multi-spec)
   specAttrs.value = loadSpecAttrs(fd.id)
+  // 换了电脑/手机本地没有时，用 goods.spec 里存的
+  if (!specAttrs.value.length && Array.isArray(specMetaRef.value.attrs)) {
+    specAttrs.value = specMetaRef.value.attrs.map((a: any) => ({ name: a.name, values: a.values || [], _inputVisible: false, _inputVal: '', _inputRef: null }))
+  }
   // Auto-enable multi_spec if saved spec attrs exist
   if (specAttrs.value.length > 0) fd.multi_spec = true
   rebuildSkuList()
@@ -2683,11 +2779,12 @@ function rebuildSkuList() {
 
   // Cartesian product of all spec value arrays
   const combos = cartesian(validAttrs.map(a => a.values))
-  const savedData = fd.id ? loadSkuData(fd.id) : {}
+  const localData = fd.id ? loadSkuData(fd.id) : {}
+  const metaData = specMetaRef.value.skus || {}
 
   skuList.value = combos.map(vals => {
     const key = vals.join('|')
-    const saved = savedData[key] ?? {}
+    const saved = { ...(localData[key] ?? {}), ...(metaData[key] ?? {}) }
     return {
       vals,
       sku_sn: saved.sku_sn ?? '',
@@ -2695,8 +2792,11 @@ function rebuildSkuList() {
       cost_price: saved.cost_price ?? fd.cost_price ?? 0,
       stock: saved.stock ?? 0,
       barcode: saved.barcode ?? '',
+      goods_id: Number(saved.goods_id) || 0,
     }
   })
+  if (skuList.value.some(r => r.goods_id)) ensureBomGoods()
+  loadSkuStocks()
 }
 
 function cartesian(arrays: string[][]): string[][] {
@@ -2783,7 +2883,8 @@ async function syncSpecToBackend(goodsId: number) {
     // Write full spec+sku JSON to goods.spec field so all devices can read it
     const skuMap: Record<string, any> = {}
     for (const row of skuList.value) {
-      skuMap[row.vals.join('|')] = { sell_price: row.sell_price, cost_price: row.cost_price, sku_sn: row.sku_sn, barcode: row.barcode }
+      // 收银台/采购单读 sell_price/cost_price，取对应商品的价
+      skuMap[row.vals.join('|')] = { sku_sn: row.sku_sn, barcode: row.barcode, goods_id: row.goods_id, sell_price: skuGoodsField(row, 'sell_price'), cost_price: skuGoodsField(row, 'cost_price') }
     }
     // 保留 unit_linked_goods 和用户填的规格文字不被覆盖
     const specJson = composeSpec(fd.spec, {
@@ -3104,6 +3205,8 @@ interface SpecValue { label: string; image?: string }
 interface SpecGroup { name: string; values: SpecValue[] }
 interface SkuCombo { combo: string[]; price: number; erpId: number }
 interface BrandCenterItem {
+  displayName?: string
+  specSource?: string   // 'erp' = 品牌中心规格由「规格设置」生成
   wholesalePrice: number
   minOrderQuantity: number
   baseSales: number
@@ -3126,6 +3229,7 @@ function saveBrandMap(map: Record<string, BrandCenterItem>) {
 }
 
 const defaultBrandFd = (): BrandCenterItem => ({
+  displayName: '',
   wholesalePrice: 0,
   minOrderQuantity: 1,
   baseSales: 0,
