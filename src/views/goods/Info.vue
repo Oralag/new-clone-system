@@ -2692,7 +2692,18 @@ function addSameGoods(id: number) {
 }
 
 // 规格设置 → 品牌中心规格（小程序只读 __brand__.skuVariants），保存前调用
+// 有规格挂了别的商品、却没有本商品自己那一项时，自动补上（排第一）
+function ensureSelfSpec() {
+  if (!fd.multi_spec || specAttrs.value.length !== 1 || !skuList.value.length) return
+  const isSelf = (r: SkuRow) => !r.goods_id || r.goods_id === fd.id
+  if (skuList.value.some(isSelf) || !skuList.value.some(r => r.goods_id)) return
+  const attr = specAttrs.value[0]
+  attr.values.unshift(uniqueLabel(attr.values, specText(fd.spec) || fd.goods_name))
+  rebuildSkuList()
+}
+
 async function syncSpecToBrandFd() {
+  ensureSelfSpec()
   if (!fd.multi_spec || !skuList.value.length || !fd.id) return
   // 品牌中心里有手工配的规格（不是这里生成的）时先问，别静默覆盖
   if (brandFd.skuCombos?.length && brandFd.specSource !== 'erp') {

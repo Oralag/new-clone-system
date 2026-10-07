@@ -691,6 +691,7 @@ import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { usePermissionStore } from '@/stores/permission'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
+import { specText } from '@/utils/goodsSpec'
 
 const { t } = useI18n()
 
@@ -826,7 +827,19 @@ async function openSpecSelect(g: any) {
 
   // 不再用 ShopSpec 兜底：那是全店共用的规格模板表，不按商品区分
 
-  ssSelectedVals.value = ssSpecAttrs.value.map(() => '')
+  // 合并同款：规格全挂在别的商品上时，本商品自己也补成一个规格（排第一）
+  if (ssSpecAttrs.value.length === 1) {
+    const vals: string[] = ssSpecAttrs.value[0].values
+    const isSelf = (v: string) => { const id = Number(ssSkuMap.value[v]?.goods_id) || 0; return !id || id === Number(g.id) }
+    if (vals.length && !vals.some(isSelf)) {
+      let label = specText(specSource) || g.goods_name
+      while (vals.includes(label)) label += '·本品'
+      ssSpecAttrs.value = [{ ...ssSpecAttrs.value[0], values: [label, ...vals] }]
+      ssSkuMap.value = { ...ssSkuMap.value, [label]: { goods_id: Number(g.id) } }
+    }
+  }
+  // 默认选中每个规格的第一个值，点开直接能加购物车
+  ssSelectedVals.value = ssSpecAttrs.value.map(a => a.values[0] ?? '')
 }
 
 function ssSelectVal(attrIdx: number, val: string) {
