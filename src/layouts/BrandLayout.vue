@@ -65,7 +65,7 @@
         </div>
 
         <!-- 采购单汇总（批发）：件数 + 合计，点开看明细 -->
-        <button v-if="shopStore.isWholesale" class="topnav-bag" :class="{ filled: bagPieces > 0 }" @click="bagOpen = true">
+        <button v-if="shopStore.isWholesale" class="topnav-bag" :class="{ filled: bagPieces > 0, bump: bagBump }" @click="bagOpen = true">
           <span class="topnav-bag-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6a1 1 0 011 1v1h2a1 1 0 011 1v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6a1 1 0 011-1h2V4a1 1 0 011-1z"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
             <span v-if="bagPieces > 0" class="topnav-bag-badge">{{ bagPieces }}</span>
@@ -77,10 +77,14 @@
           <span v-else class="topnav-bag-text topnav-bag-empty">采购单</span>
         </button>
         <!-- 零售：购物车 -->
-        <router-link v-else to="/brand/cart" class="topnav-bag">
+        <router-link v-else to="/brand/cart" class="topnav-bag" :class="{ filled: bagPieces > 0, bump: bagBump }">
           <span class="topnav-bag-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L4 6v14a2 2 0 002 2h12a2 2 0 002-2V6l-2-4z"/><line x1="4" y1="6" x2="20" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-            <span v-if="shopStore.cartCount > 0" class="topnav-bag-badge">{{ shopStore.cartCount }}</span>
+            <span v-if="bagPieces > 0" class="topnav-bag-badge">{{ bagPieces }}</span>
+          </span>
+          <span v-if="bagPieces > 0" class="topnav-bag-text">
+            <span class="topnav-bag-pieces">{{ bagPieces }} 件 ·</span>
+            <span class="topnav-bag-amt">¥{{ fmtAmount(shopStore.totalAmount) }}</span>
           </span>
         </router-link>
 
@@ -327,6 +331,18 @@ const mobileMenuOpen = ref(false)
 const bagOpen = ref(false)
 // cartCount 是行数，顶栏要的是件数
 const bagPieces = computed(() => shopStore.cart.reduce((n, i) => n + i.quantity, 0))
+// 加购时顶栏入口弹一下，让人知道东西进去了（只在件数变多时触发）
+const bagBump = ref(false)
+let bagBumpTimer: ReturnType<typeof setTimeout> | undefined
+watch(bagPieces, (n, o) => {
+  if (n <= o) return
+  bagBump.value = false
+  clearTimeout(bagBumpTimer)
+  nextTick(() => {
+    bagBump.value = true
+    bagBumpTimer = setTimeout(() => { bagBump.value = false }, 650)
+  })
+})
 
 // 三套规则的门槛各算各的，混批时每套单独提示还差多少
 const bagGaps = computed(() => {
@@ -729,6 +745,22 @@ function doSearch() {
 .topnav-bag.filled .topnav-bag-badge { display: none; }
 .topnav-bag-text { display: flex; align-items: baseline; gap: 4px; }
 .topnav-bag-amt { font-variant-numeric: tabular-nums; }
+.topnav-bag.bump { animation: bag-bump 0.6s cubic-bezier(.3,1.6,.5,1); box-shadow: 0 0 0 4px rgba(124,58,237,0.18); }
+.topnav-bag.bump .topnav-bag-badge { animation: bag-badge-pop 0.6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes bag-bump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.22); }
+  60% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+@keyframes bag-badge-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.6); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topnav-bag.bump, .topnav-bag.bump .topnav-bag-badge { animation: none; }
+}
 
 /* ── 采购单明细面板 ─────────────────────────────── */
 /* align-items: flex-start —— 不然面板会被拉满整屏高，底部按钮撞上客服浮窗 */
