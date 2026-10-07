@@ -27,11 +27,6 @@
         <span class="cr-brand-name">{{ $t('retail.cashRegister.title') }}</span>
       </div>
       <div class="cr-top-right">
-        <!-- 克重计算器按钮 -->
-        <div class="cr-calc-btn" @click="openWeightCalc()" :title="$t('retail.cashRegister.weightCalcBtn')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 3"/></svg>
-          <span class="cr-calc-text">{{ $t('retail.cashRegister.weightCalcBtn') }}</span>
-        </div>
         <el-select
           v-model="selectedStoreId"
           :placeholder="$t('retail.cashRegister.storePlaceholder')"
@@ -2141,11 +2136,11 @@ onMounted(async () => {
 
   /* 一行：搜索框最常用放最左、占满剩余宽度；门店/会员缩成小框放右边 */
   .cr-search-box { order: 1; flex: 1 1 0; width: auto; min-width: 0; padding: 0 10px; }
-  .cr-search-input { font-size: 16px; } /* <16px 时 iOS 聚焦会自动放大页面 */
+  /* <16px 时 iOS 聚焦会自动放大页面；min-width/width 防止 input 默认宽度撑出框外压住门店 */
+  .cr-search-input { font-size: 16px; min-width: 0; width: 100%; }
   .cr-scan-icon { display: none; }
   .cr-member-select { order: 2; width: 72px; flex: 0 0 72px; }
   :deep(.cr-member-select .el-input__wrapper) { padding: 0 6px; }
-  .cr-calc-btn { order: 3; }
   .cr-new-goods-btn { order: 4; }
 
   /* 主体：留出底部悬浮栏高度 */
