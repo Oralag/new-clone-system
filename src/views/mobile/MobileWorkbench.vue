@@ -179,18 +179,43 @@
         <div class="wb-perf-card">
           <div class="wb-perf-label">今日销售</div>
           <div class="wb-perf-value">¥{{ fmt(myKpi.todaySale) }}</div>
+          <div class="wb-perf-split">零售 ¥{{ fmt(myKpi.todayRetail) }} · 批发 ¥{{ fmt(myKpi.todayContract) }}</div>
         </div>
         <div class="wb-perf-card">
           <div class="wb-perf-label">今日订单</div>
           <div class="wb-perf-value">{{ myKpi.todayOrders }}<span class="wb-perf-unit">单</span></div>
+          <div class="wb-perf-split">零售 {{ myKpi.todayRetailCount }} · 批发 {{ myKpi.todayContractCount }}</div>
         </div>
         <div class="wb-perf-card">
           <div class="wb-perf-label">本月销售</div>
           <div class="wb-perf-value">¥{{ fmt(myKpi.monthSale) }}</div>
+          <div class="wb-perf-split">零售 ¥{{ fmt(myKpi.monthRetail) }} · 批发 ¥{{ fmt(myKpi.monthContract) }}</div>
         </div>
         <div class="wb-perf-card">
           <div class="wb-perf-label">本月订单</div>
           <div class="wb-perf-value">{{ myKpi.monthOrders }}<span class="wb-perf-unit">单</span></div>
+          <div class="wb-perf-split">零售 {{ myKpi.monthRetailCount }} · 批发 {{ myKpi.monthContractCount }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 支出（付款单：采购付款 + 其他费用，全公司口径） -->
+    <div v-if="canQuickPay" class="wb-section wb-perf-section">
+      <div class="wb-section-hd">
+        <span class="wb-section-dot" style="background: #ef4444"></span>
+        <span class="wb-section-title">支出</span>
+        <span class="wb-perf-range">{{ perfTodayLabel }}</span>
+      </div>
+      <div class="wb-perf-grid">
+        <div class="wb-perf-card" @click="go('/mobile/expense/today')">
+          <div class="wb-perf-label">今日支出</div>
+          <div class="wb-perf-value wb-perf-value--out">¥{{ fmt(expenseKpi.today) }}</div>
+          <div class="wb-perf-split">采购 ¥{{ fmt(expenseKpi.todayPurchase) }} · 费用 ¥{{ fmt(expenseKpi.todayOther) }}</div>
+        </div>
+        <div class="wb-perf-card">
+          <div class="wb-perf-label">本月支出</div>
+          <div class="wb-perf-value wb-perf-value--out">¥{{ fmt(expenseKpi.month) }}</div>
+          <div class="wb-perf-split">采购 ¥{{ fmt(expenseKpi.monthPurchase) }} · 费用 ¥{{ fmt(expenseKpi.monthOther) }}</div>
         </div>
       </div>
     </div>
@@ -339,7 +364,14 @@ function parseGoodsInfo(g: any) {
 const kpi = ref({ todaySale: '0', todayOrders: 0, customerTotal: 0, stockWarn: 0 })
 
 // 我的业绩（店员场景：零售单为主，同门店/店员的销售出库按 admin_name 精确匹配）
-const myKpi = ref({ todaySale: 0, todayOrders: 0, monthSale: 0, monthOrders: 0 })
+const myKpi = ref({
+  todaySale: 0, todayRetail: 0, todayContract: 0,
+  todayOrders: 0, todayRetailCount: 0, todayContractCount: 0,
+  monthSale: 0, monthRetail: 0, monthContract: 0,
+  monthOrders: 0, monthRetailCount: 0, monthContractCount: 0,
+})
+// 支出：付款单（采购付款 + 其他费用），全公司口径
+const expenseKpi = ref({ today: 0, todayPurchase: 0, todayOther: 0, month: 0, monthPurchase: 0, monthOther: 0 })
 const perfTodayLabel = computed(() => {
   const d = new Date()
   return `${d.getMonth() + 1}月${d.getDate()}日`
@@ -566,16 +598,18 @@ async function loadQuickData() {
 
 onMounted(async () => {
   loadQuickData()
-  const todayStr = new Date().toISOString().slice(0, 10)
+  // 用本地日期，toISOString 是 UTC，北京时间早上 8 点前会算成昨天
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-  const [saleRes, retailRes, custRes, goodsRes, procureRes, contractRes, purchaseRes] = await Promise.allSettled([
+  const [saleRes, retailRes, custRes, goodsRes, procureRes, contractRes, payRes] = await Promise.allSettled([
     http.get('/stock/SaleOutOrder/index', { params: { list_rows: 2000 } }),
     http.get('/retail/order/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ShopCustomer/index', { params: { list_rows: 1 } }),
     http.get('/goods/ShopGoods/index', { params: { list_rows: 2000, status: 1 } }),
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 2000 } }),
     http.get('/shop/ContractOrder/index', { params: { list_rows: 2000 } }),
-    http.get('/stock/PurchaseOrder/index', { params: { list_rows: 2000 } }),
+    canQuickPay.value ? http.get('/finance/PayReceipt/index', { params: { list_rows: 2000 } }) : Promise.resolve(null),
   ])
 
   const getRows = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' ? (r.value?.data?.rows ?? r.value?.rows ?? []) : []
@@ -585,7 +619,7 @@ onMounted(async () => {
   const goodsRows = getRows(goodsRes)
   const procureRows = getRows(procureRes)
   const contractRows = getRows(contractRes)
-  const purchaseRows = getRows(purchaseRes)
+  const payRows = getRows(payRes)
 
   const todaySales = saleRows.filter((r: any) => Number(r.status) === 1 && (r.out_date || '').slice(0, 10) === todayStr)
   const todayRetail = retailRows.filter((r: any) => Number(r.status) === 1 && (r.order_date || '').slice(0, 10) === todayStr)
@@ -594,7 +628,7 @@ onMounted(async () => {
   const totalRetail = todayRetail.reduce((s: number, r: any) => s + Number(r.pay_amount || r.total_amount || 0), 0)
   kpi.value.todaySale = fmt(totalSale + totalRetail)
 
-  // ── 我的业绩：按 admin_id 精确到本人（零售单 + 销售单 + 采购单） ──
+  // ── 我的业绩：按 admin_id 精确到本人（零售单 + 批发销售合同）；采购单归到「支出」 ──
   const monthPrefix = todayStr.slice(0, 7) // YYYY-MM
   const myId = Number((authStore.userInfo as any)?.id || (authStore.userInfo as any)?.admin_id || 0)
   const myName = authStore.userInfo?.name || ''
@@ -603,21 +637,45 @@ onMounted(async () => {
   const isToday = (r: any) => dateOf(r).slice(0, 10) === todayStr
   const isThisMonth = (r: any) => dateOf(r).slice(0, 7) === monthPrefix
   const amtRetail = (r: any) => Number(r.pay_amount || r.total_amount || 0)
-  const amtOrder = (r: any) => Number(r.total_amount || r.after_discount || 0)
+  // 同 calcSaleAmt：after_discount 有效（>0 且 ≤ 总额）才用，否则回退 total_amount
+  const amtContract = (r: any) => {
+    const total = Number(r.total_amount || 0)
+    const afterDisc = Number(r.after_discount)
+    return (Number.isFinite(afterDisc) && afterDisc > 0 && afterDisc <= total) ? afterDisc : total
+  }
   const sum = (rows: any[], fn: (r: any) => number) => rows.reduce((s, r) => s + fn(r), 0)
 
-  const myRetailToday = retailRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
-  const myRetailMonth = retailRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
-  const myContractToday = contractRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
-  const myContractMonth = contractRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
-  const myPurchaseToday = purchaseRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isToday(r))
-  const myPurchaseMonth = purchaseRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+  const myRetail = retailRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+  const myContract = contractRows.filter((r: any) => Number(r.status) === 1 && isMine(r) && isThisMonth(r))
+  const myRetailToday = myRetail.filter(isToday)
+  const myContractToday = myContract.filter(isToday)
 
+  const myTodayRetail = sum(myRetailToday, amtRetail)
+  const myTodayContract = sum(myContractToday, amtContract)
+  const myMonthRetail = sum(myRetail, amtRetail)
+  const myMonthContract = sum(myContract, amtContract)
   myKpi.value = {
-    todaySale: sum(myRetailToday, amtRetail) + sum(myContractToday, amtOrder),
-    todayOrders: myRetailToday.length + myContractToday.length + myPurchaseToday.length,
-    monthSale: sum(myRetailMonth, amtRetail) + sum(myContractMonth, amtOrder),
-    monthOrders: myRetailMonth.length + myContractMonth.length + myPurchaseMonth.length,
+    todaySale: myTodayRetail + myTodayContract, todayRetail: myTodayRetail, todayContract: myTodayContract,
+    todayOrders: myRetailToday.length + myContractToday.length,
+    todayRetailCount: myRetailToday.length, todayContractCount: myContractToday.length,
+    monthSale: myMonthRetail + myMonthContract, monthRetail: myMonthRetail, monthContract: myMonthContract,
+    monthOrders: myRetail.length + myContract.length,
+    monthRetailCount: myRetail.length, monthContractCount: myContract.length,
+  }
+
+  // ── 支出：已审核付款单，供应商 = 采购付款，其他 = 费用 ──
+  const payDate = (r: any) => String(r.pay_date || r.created_at || '').slice(0, 10)
+  const payMonth = payRows.filter((r: any) => Number(r.status) === 1 && payDate(r).slice(0, 7) === monthPrefix)
+  const payToday = payMonth.filter((r: any) => payDate(r) === todayStr)
+  const isPurchasePay = (r: any) => r.contact_type === 'supplier'
+  const payAmt = (r: any) => Math.abs(Number(r.amount || 0))
+  const todayPurchase = sum(payToday.filter(isPurchasePay), payAmt)
+  const todayOther = sum(payToday.filter((r: any) => !isPurchasePay(r)), payAmt)
+  const monthPurchase = sum(payMonth.filter(isPurchasePay), payAmt)
+  const monthOther = sum(payMonth.filter((r: any) => !isPurchasePay(r)), payAmt)
+  expenseKpi.value = {
+    today: todayPurchase + todayOther, todayPurchase, todayOther,
+    month: monthPurchase + monthOther, monthPurchase, monthOther,
   }
 
   if (custRes.status === 'fulfilled') {
@@ -707,6 +765,17 @@ onMounted(async () => {
   color: #111827;
   line-height: 1.1;
   letter-spacing: -0.5px;
+}
+.wb-perf-split {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wb-perf-value--out {
+  color: #dc2626;
 }
 .wb-perf-unit {
   font-size: 12px;
