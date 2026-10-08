@@ -47,6 +47,17 @@
             :placeholder="info.has_platform_public_key ? '已填写（不改就留空）' : '粘贴 pub_key.pem 的全部内容（用来确认付款通知真的是微信发的）'" />
           <div v-if="!info.has_platform_public_key && info.env_fallback?.platform_public_key" class="ps-hint">当前在用服务器配置的公钥</div>
         </el-form-item>
+        <el-divider content-position="left">官网运费</el-divider>
+        <el-form-item label="运费">
+          <el-input-number v-model="form.ship_fee" :min="0" :max="9999" :precision="2" :step="5" controls-position="right" />
+          <span class="ps-unit">元 / 单</span>
+          <div class="ps-hint">填 0 就是全部包邮（默认）</div>
+        </el-form-item>
+        <el-form-item label="满额包邮">
+          <el-input-number v-model="form.ship_free_threshold" :min="0" :max="9999" :precision="2" :step="50" controls-position="right" :disabled="!form.ship_fee" />
+          <span class="ps-unit">元</span>
+          <div class="ps-hint">商品金额满这个数就免运费；填 0 = 不设满额包邮。小程序目前不收运费</div>
+        </el-form-item>
         <el-form-item label="付款通知地址">
           <span class="ps-mono">{{ info.notify_url }}</span>
           <div class="ps-hint">系统自动填给微信的，不用去商户平台设置</div>
@@ -76,6 +87,7 @@ const testResult = ref<{ type: 'success' | 'warning' | 'error'; text: string } |
 const form = reactive({
   wx_mchid: '', wx_appid: '', wx_cert_serial: '', wx_pub_key_id: '',
   wx_private_key: '', wx_apiv3_key: '', wx_platform_public_key: '',
+  ship_fee: 0, ship_free_threshold: 0,
 })
 
 function fmtTime(v: string) {
@@ -91,6 +103,8 @@ async function loadData() {
     form.wx_appid = info.value.wx_appid || ''
     form.wx_cert_serial = info.value.wx_cert_serial || ''
     form.wx_pub_key_id = info.value.wx_pub_key_id || ''
+    form.ship_fee = Number(info.value.ship_fee || 0)
+    form.ship_free_threshold = Number(info.value.ship_free_threshold || 0)
     form.wx_private_key = ''
     form.wx_apiv3_key = ''
     form.wx_platform_public_key = ''
@@ -103,7 +117,9 @@ async function handleSave() {
   saving.value = true
   try {
     // 密钥类字段留空 = 不改，后端只更新传了值的
-    const payload: Record<string, string> = {
+    const payload: Record<string, string | number> = {
+      ship_fee: form.ship_fee || 0,
+      ship_free_threshold: form.ship_fee ? (form.ship_free_threshold || 0) : 0,
       wx_mchid: form.wx_mchid.trim(),
       wx_appid: form.wx_appid.trim(),
       wx_cert_serial: form.wx_cert_serial.trim(),
@@ -148,4 +164,5 @@ onMounted(loadData)
 .ps-inline { width: auto; margin: 0 0 0 12px; }
 .ps-mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; }
 .ps-alert { margin-bottom: 16px; }
+.ps-unit { margin-left: 8px; font-size: 13px; color: var(--el-text-color-secondary); }
 </style>

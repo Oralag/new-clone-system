@@ -121,3 +121,8 @@ export function submitWebLead(payload: {
 }) {
   return call<{ id: number; no: string }>('POST', '/web/lead', payload)
 }
+
+// 官网运费规则（ERP 收款设置里配，默认包邮）
+export function getWebShipping() {
+  return call<{ fee: number; free_threshold: number }>('GET', `/web/shipping?_t=${Date.now()}`)
+}

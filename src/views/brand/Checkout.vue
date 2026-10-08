@@ -73,8 +73,8 @@
               </div>
               <div class="bc-summary-row">
                 <span>运费</span>
-                <span class="bc-free-shipping" v-if="shopStore.totalAmount >= 500">免运费</span>
-                <span v-else>¥25.00</span>
+                <span class="bc-free-shipping" v-if="shippingFee === 0">包邮</span>
+                <span v-else>¥{{ shippingFee.toFixed(2) }}</span>
               </div>
               <div class="bc-summary-row bc-total-row">
                 <span>合计</span>
@@ -209,7 +209,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useRouter } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
-import { createWebOrder, rememberWebOrder, submitWebLead, brandShopCode, type WebOrderCreated } from '@/api/brandWebOrder'
+import { createWebOrder, getWebShipping, rememberWebOrder, submitWebLead, brandShopCode, type WebOrderCreated } from '@/api/brandWebOrder'
 
 const shopStore = useShopStore()
 const router = useRouter()
@@ -217,7 +217,13 @@ const submitting = ref(false)
 const success = ref(false)
 const orderNo = ref('')
 
-const shippingFee = computed(() => shopStore.totalAmount >= 500 ? 0 : 25)
+// 运费规则在 ERP「收款设置」里配，默认包邮；实际收多少以服务端下单时算的为准
+const shipRule = ref({ fee: 0, free_threshold: 0 })
+const shippingFee = computed(() => {
+  const { fee, free_threshold } = shipRule.value
+  if (!(fee > 0)) return 0
+  return free_threshold > 0 && shopStore.totalAmount >= free_threshold ? 0 : fee
+})
 const totalAmount = computed(() => shopStore.totalAmount + shippingFee.value)
 
 const form = reactive({
@@ -231,6 +237,7 @@ const wForm = reactive({
 })
 
 onMounted(() => {
+  getWebShipping().then(r => { shipRule.value = r }).catch(() => { /* 读不到按包邮显示，下单时以服务端为准 */ })
   try {
     const stored = localStorage.getItem('brand_user_settings')
     if (stored) {
