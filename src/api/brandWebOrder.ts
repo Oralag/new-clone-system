@@ -1,5 +1,5 @@
-// 官网（品牌站）零售下单 / 扫码付款 / 订单查询。
-// 顾客不登录，所以不走 http.ts（那个会带 ERP token、401 会跳登录页）。
+// 官网（品牌站）零售下单 / 扫码付款 / 我的订单。
+// 顾客账号是小程序会员（扫小程序码登录），不走 http.ts（那个带 ERP token、401 会跳 ERP 登录页）。
 // 走 /miniapi 代理：带 x-mini-shop 头时代理会转到这家店自己的后端，订单数据各家隔离。
 
 export interface WebOrderItem { goods_name: string; qty: number; price: number }
@@ -36,6 +36,7 @@ export interface WebOrderRow {
   express_company: string
   items: WebOrderItem[]
   refund?: WebRefundInfo | null
+  pay_token?: string      // 自己的待付款官网单才有，换台电脑也能继续付款
 }
 
 export const WEB_ORDER_STATUS_TEXT: Record<number, string> = {
@@ -49,10 +50,37 @@ export function brandShopCode(): string {
   try { return localStorage.getItem('brand_shop_code') || '' } catch { return '' }
 }
 
+// ─── 登录态：按店铺分开存（各家店是各自的后端、各自的会员）────────────────
+export interface WebUser { id: number; name: string; phone: string }
+interface WebSession { token: string; user: WebUser }
+
+function sessionKey() {
+  return `brand_web_session_v1:${brandShopCode() || 'default'}`
+}
+export function loadWebSession(): WebSession | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(sessionKey()) || 'null')
+    return s && s.token ? s : null
+  } catch { return null }
+}
+export function saveWebSession(s: WebSession) {
+  try { localStorage.setItem(sessionKey(), JSON.stringify(s)) } catch { /* 存不进就只在本页有效 */ }
+  window.dispatchEvent(new Event('brand-web-session'))
+}
+export function clearWebSession() {
+  try { localStorage.removeItem(sessionKey()) } catch { /* ignore */ }
+  window.dispatchEvent(new Event('brand-web-session'))
+}
+
+// 后端回 code -401 = 没登录或登录过期
+export class WebNeedLoginError extends Error {}
+
 async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
   const shop = brandShopCode()
   if (shop) headers['x-mini-shop'] = shop
+  const session = loadWebSession()
+  if (session) headers['mini-token'] = session.token
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
@@ -67,6 +95,10 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
   }
   const data = await res.json().catch(() => null)
   if (!data) throw new Error(`服务暂时不可用（HTTP ${res.status}），请稍后再试`)
+  if (data.code === -401) {
+    clearWebSession()
+    throw new WebNeedLoginError(data.message || '请先登录')
+  }
   if (data.code !== 1) throw new Error(data.message || '请求失败，请稍后再试')
   return data.data as T
 }
@@ -85,8 +117,20 @@ export function getWebOrderStatus(orderNo: string, token: string, checkWx = fals
   return call<WebOrderStatus>('GET', `/web/order/status?${q}`)
 }
 
-export function lookupWebOrders(mobile: string) {
-  const q = new URLSearchParams({ mobile, _t: String(Date.now()) })
+// 扫码登录：start 拿小程序码，poll 等手机上确认
+export function startWebLogin() {
+  return call<{ sid: string; qr: string; expires_in: number }>('POST', '/web/login/start', {})
+}
+export function pollWebLogin(sid: string) {
+  const q = new URLSearchParams({ sid, _t: String(Date.now()) })
+  return call<{ status: 'waiting' | 'scanned' | 'confirmed' | 'cancelled' | 'expired'; token?: string; user?: WebUser }>('GET', `/web/login/poll?${q}`)
+}
+export function getWebMe() {
+  return call<WebUser>('GET', `/web/me?_t=${Date.now()}`)
+}
+
+export function lookupWebOrders() {
+  const q = new URLSearchParams({ _t: String(Date.now()) })
   return call<{ rows: WebOrderRow[] }>('GET', `/web/order/lookup?${q}`)
 }
 
@@ -137,18 +181,18 @@ export interface WebRefundInfo {
   handled_at: string | null
 }
 
-export function applyWebRefund(orderNo: string, mobile: string, reason: string) {
-  return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, mobile, reason })
+export function applyWebRefund(orderNo: string, reason: string) {
+  return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, reason })
 }
 
 export interface WebTrackEvent { time: string; description: string; location: string }
 export interface WebTrackInfo { number: string; carrier: string; status: string; events: WebTrackEvent[] }
 
-// 物流轨迹：订单号 + 收货手机号
-export function getWebOrderTracking(orderNo: string, mobile: string) {
-  return call<WebTrackInfo>('GET', `/web/order/tracking?no=${encodeURIComponent(orderNo)}&mobile=${encodeURIComponent(mobile)}`)
+// 物流轨迹（要登录，只能查自己的单）
+export function getWebOrderTracking(orderNo: string) {
+  return call<WebTrackInfo>('GET', `/web/order/tracking?no=${encodeURIComponent(orderNo)}&_t=${Date.now()}`)
 }
 
-export function cancelWebOrder(orderNo: string, token: string) {
-  return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo, token })
+export function cancelWebOrder(orderNo: string) {
+  return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo })
 }

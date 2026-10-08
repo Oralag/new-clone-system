@@ -1,20 +1,28 @@
 <template>
   <div class="brand-orders">
     <div class="bo-header">
-      <h2 class="bo-title">订单查询</h2>
-      <p class="bo-sub">输入下单时填写的收货手机号，查看订单状态</p>
-    </div>
-    <div class="bo-form">
-      <input v-model="query" type="tel" maxlength="11" placeholder="收货手机号" class="bo-input" @keyup.enter="doSearch" />
-      <button class="bo-btn" @click="doSearch" :disabled="searching">
-        {{ searching ? '查询中...' : '查询' }}
-      </button>
+      <h2 class="bo-title">我的订单</h2>
+      <p class="bo-sub">官网和小程序的订单都在这里</p>
     </div>
 
-    <div v-if="searched && !searching && !errorMsg && results.length === 0" class="bo-empty">
+    <!-- 没登录：扫码登录后才能看订单 -->
+    <div v-if="!webUser" class="bo-login">
+      <p class="bo-login-title">登录后查看订单</p>
+      <p class="bo-login-sub">用微信扫一扫小程序码登录，账号就是小程序会员</p>
+      <button class="bo-btn bo-login-go" @click="showLogin = true">扫码登录</button>
+    </div>
+    <div v-else class="bo-user">
+      <span>{{ maskPhone(webUser.phone) }}<template v-if="webUser.name"> · {{ webUser.name }}</template></span>
+      <span class="bo-user-btns">
+        <button class="bo-user-link" :disabled="searching" @click="doSearch">{{ searching ? '刷新中…' : '刷新' }}</button>
+        <button class="bo-user-link" @click="logout">退出登录</button>
+      </span>
+    </div>
+
+    <div v-if="webUser && searched && !searching && !errorMsg && results.length === 0" class="bo-empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(29,29,31,0.2)" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <p>这个手机号下没有订单</p>
-      <p class="bo-empty-hint">请确认是下单时填写的收货手机号</p>
+      <p>还没有订单</p>
+      <p class="bo-empty-hint">以前没登录时下的单，收货手机号和这个账号一样的也会显示在这里</p>
     </div>
 
     <div v-if="results.length > 0" class="bo-list">
@@ -42,13 +50,13 @@
         </div>
 
         <div v-if="order.status === 0" class="bo-pay-row">
-          <template v-if="tokenOf(order.order_no)">
+          <span v-if="order.source !== 'web'" class="bo-pay-hint">小程序订单，请在小程序里付款</span>
+          <template v-else>
             <button class="bo-link-btn" :disabled="busy === order.order_no" @click="doCancel(order.order_no)">取消订单</button>
-            <button class="bo-pay-btn" :disabled="opening === order.order_no" @click="continuePay(order.order_no)">
+            <button v-if="tokenOf(order)" class="bo-pay-btn" :disabled="opening === order.order_no" @click="continuePay(order)">
               {{ opening === order.order_no ? '正在获取支付码…' : '继续付款' }}
             </button>
           </template>
-          <span v-else class="bo-pay-hint">请在下单的那台电脑上继续付款，超时未付会自动取消</span>
         </div>
         <div v-else-if="[1, 2, 3, 5].includes(order.status)" class="bo-pay-row">
           <button v-if="order.tracking_no" class="bo-link-btn" :disabled="trackLoading === order.order_no" @click="toggleTrack(order)">
@@ -60,7 +68,7 @@
             <button class="bo-link-btn" @click="openForm(order, 'refund')">申请退款</button>
           </template>
         </div>
-        <div v-if="serviceSent[order.order_no]" class="bo-refund">售后申请已提交，商家会尽快打 {{ query }} 联系您</div>
+        <div v-if="serviceSent[order.order_no]" class="bo-refund">售后申请已提交，商家会尽快打电话联系您</div>
 
         <!-- 物流轨迹 -->
         <div v-if="trackFor === order.order_no" class="bo-track">
@@ -112,20 +120,46 @@
       @done="payOrder = null"
       @view-orders="payOrder = null"
     />
+
+    <BrandLoginDialog v-if="showLogin" reason="登录后查看你的订单" @close="showLogin = false" @success="handleLoggedIn" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
+import BrandLoginDialog from '@/components/BrandLoginDialog.vue'
 import {
   lookupWebOrders, getWebOrderStatus, loadMyWebOrders, applyWebRefund, cancelWebOrder, submitWebLead, getWebOrderTracking,
-  WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo, type WebTrackInfo,
+  loadWebSession, clearWebSession, WebNeedLoginError,
+  WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo, type WebTrackInfo, type WebUser,
 } from '@/api/brandWebOrder'
 
-const route = useRoute()
-const query = ref('')
+const webUser = ref<WebUser | null>(loadWebSession()?.user || null)
+const showLogin = ref(false)
+function maskPhone(p: string) {
+  return /^\d{11}$/.test(p || '') ? `${p.slice(0, 3)}****${p.slice(7)}` : (p || '')
+}
+function handleLoggedIn(user: WebUser) {
+  webUser.value = user
+  showLogin.value = false
+  doSearch()
+}
+function logout() {
+  clearWebSession()
+  webUser.value = null
+  results.value = []
+  searched.value = false
+}
+// 任何接口回「请先登录」（过期/会员被删）：退回未登录界面
+function handleErr(e: any, prefix: string) {
+  if (e instanceof WebNeedLoginError) {
+    logout()
+    return
+  }
+  errorMsg.value = `${prefix}${e?.message || '请稍后再试'}`
+}
+
 const searching = ref(false)
 const searched = ref(false)
 const errorMsg = ref('')
@@ -134,33 +168,30 @@ const opening = ref('')
 const payOrder = ref<{ order_no: string; token: string; code_url: string; total_amount: number; expires_at: string | null } | null>(null)
 
 async function doSearch() {
-  const q = query.value.trim()
-  if (!q) return
+  if (!webUser.value) return
   errorMsg.value = ''
-  if (!/^1[3-9]\d{9}$/.test(q)) {
-    errorMsg.value = '请输入正确的11位手机号'
-    return
-  }
   searching.value = true
   searched.value = false
   try {
-    const data = await lookupWebOrders(q)
+    const data = await lookupWebOrders()
     results.value = data.rows || []
   } catch (e: any) {
     results.value = []
-    errorMsg.value = `查询失败：${e?.message || '请稍后再试'}`
+    handleErr(e, '查询失败：')
   } finally {
     searching.value = false
     searched.value = true
   }
 }
 
-function tokenOf(orderNo: string) {
-  return loadMyWebOrders().find(o => o.order_no === orderNo)?.token || ''
+// 付款凭证：后端给的（自己名下的单）优先，其次是这台电脑下单时记下的
+function tokenOf(order: WebOrderRow) {
+  return order.pay_token || loadMyWebOrders().find(o => o.order_no === order.order_no)?.token || ''
 }
 
-async function continuePay(orderNo: string) {
-  const token = tokenOf(orderNo)
+async function continuePay(order: WebOrderRow) {
+  const orderNo = order.order_no
+  const token = tokenOf(order)
   if (!token) return
   opening.value = orderNo
   errorMsg.value = ''
@@ -219,8 +250,9 @@ async function toggleTrack(order: WebOrderRow) {
   track.value = null
   trackError.value = ''
   try {
-    track.value = await getWebOrderTracking(order.order_no, query.value.trim())
+    track.value = await getWebOrderTracking(order.order_no)
   } catch (e: any) {
+    if (e instanceof WebNeedLoginError) { logout(); return }
     trackError.value = `物流查询失败：${e?.message || '请稍后再试'}`
   } finally {
     trackLoading.value = ''
@@ -240,12 +272,12 @@ function openForm(order: WebOrderRow, kind: 'refund' | 'service') {
 }
 async function submitForm(order: WebOrderRow) {
   const reason = [refundReason.value, refundDetail.value.trim()].filter(Boolean).join('：')
-  const mobile = query.value.trim()
+  const mobile = webUser.value?.phone || ''
   busy.value = order.order_no
   errorMsg.value = ''
   try {
     if (formKind.value === 'refund') {
-      await applyWebRefund(order.order_no, mobile, reason)
+      await applyWebRefund(order.order_no, reason)
       formFor.value = ''
       await doSearch()
     } else {
@@ -260,20 +292,19 @@ async function submitForm(order: WebOrderRow) {
       serviceSent.value = { ...serviceSent.value, [order.order_no]: true }
     }
   } catch (e: any) {
-    errorMsg.value = `提交失败：${e?.message || '请稍后再试'}`
+    handleErr(e, '提交失败：')
   } finally {
     busy.value = ''
   }
 }
 async function doCancel(orderNo: string) {
-  const token = tokenOf(orderNo)
-  if (!token || !confirm('确定取消这个订单吗？')) return
+  if (!confirm('确定取消这个订单吗？')) return
   busy.value = orderNo
   errorMsg.value = ''
   try {
-    await cancelWebOrder(orderNo, token)
+    await cancelWebOrder(orderNo)
   } catch (e: any) {
-    errorMsg.value = e?.message || '取消失败，请稍后再试'
+    handleErr(e, '')
   } finally {
     busy.value = ''
     await doSearch()
@@ -293,12 +324,7 @@ function statusClass(status: number) {
 }
 
 onMounted(() => {
-  // 从付款弹窗「查看订单」跳过来会带手机号，直接查
-  const m = String(route.query.mobile || '')
-  if (m) {
-    query.value = m
-    doSearch()
-  }
+  if (webUser.value) doSearch()
 })
 </script>
 
@@ -333,6 +359,14 @@ onMounted(() => {
 .bo-amount { font-size: 17px; font-weight: 800; }
 .bo-card-goods { font-size: 12px; color: rgba(29,29,31,0.5); margin-top: 4px; }
 .bo-tracking { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #0071e3; font-weight: 600; margin-top: 8px; }
+.bo-login { text-align: center; padding: 40px 24px; background: #f5f5f7; border-radius: 20px; }
+.bo-login-title { font-size: 18px; font-weight: 800; margin: 0 0 6px; }
+.bo-login-sub { font-size: 13px; color: rgba(29,29,31,0.5); margin: 0 0 20px; }
+.bo-login-go { height: 44px; }
+.bo-user { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 14px; background: rgba(52,199,89,0.1); color: #15803d; font-size: 13px; font-weight: 600; }
+.bo-user-btns { display: flex; gap: 14px; }
+.bo-user-link { border: none; background: none; color: rgba(29,29,31,0.5); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+.bo-user-link:disabled { opacity: 0.5; cursor: default; }
 .bo-error { text-align: center; color: #ef4444; font-size: 14px; padding: 24px 0; }
 .bo-pay-row { display: flex; align-items: center; justify-content: flex-end; margin-top: 12px; }
 .bo-pay-btn { height: 36px; padding: 0 18px; border-radius: 12px; border: none; background: #1d1d1f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s; }

@@ -10,6 +10,17 @@
       <div class="bc-layout">
         <!-- 左：表单 -->
         <div class="bc-form-col">
+          <!-- 登录状态：付款下单要登录（账号=小程序会员），逛和加购不用 -->
+          <div class="bc-login-bar" :class="{ on: !!webUser }">
+            <template v-if="webUser">
+              <span>已登录 {{ maskPhone(webUser.phone) }}<template v-if="webUser.name"> · {{ webUser.name }}</template></span>
+              <button type="button" class="bc-login-link" @click="logout">退出登录</button>
+            </template>
+            <template v-else>
+              <span>下单付款前需要先用微信扫码登录</span>
+              <button type="button" class="bc-login-btn" @click="showLogin = true">扫码登录</button>
+            </template>
+          </div>
           <!-- 粘贴整段收货信息，自动拆到下面各个格子里 -->
           <div class="bc-section bc-paste">
             <h3 class="bc-section-title">粘贴地址自动识别</h3>
@@ -94,7 +105,7 @@
             </div>
             <button class="bc-submit-btn" :disabled="submitting || !shopStore.cart.length" @click="submitOrder">
               <svg v-if="!submitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span>{{ !shopStore.cart.length ? '购物车是空的' : submitting ? '正在生成支付码...' : '确认下单并付款' }}</span>
+              <span>{{ !shopStore.cart.length ? '购物车是空的' : submitting ? '正在生成支付码...' : webUser ? '确认下单并付款' : '登录并下单付款' }}</span>
             </button>
             <p v-if="submitError" class="bc-submit-err">{{ submitError }}</p>
             <p class="bc-secure-tip">
@@ -198,6 +209,13 @@
       @view-orders="handlePayDone('/brand/orders')"
     />
 
+    <BrandLoginDialog
+      v-if="showLogin"
+      :reason="loginThenSubmit ? '登录后继续下单付款' : undefined"
+      @close="showLogin = false; loginThenSubmit = false"
+      @success="handleLoggedIn"
+    />
+
     <!-- 批发询价提交成功 -->
     <div v-if="success" class="bc-success-overlay">
       <div class="bc-success-card">
@@ -220,8 +238,12 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useRouter } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
+import BrandLoginDialog from '@/components/BrandLoginDialog.vue'
 import { parseAddress } from '@/utils/parseAddress'
-import { createWebOrder, getWebShipping, rememberWebOrder, submitWebLead, brandShopCode, type WebOrderCreated } from '@/api/brandWebOrder'
+import {
+  createWebOrder, getWebShipping, rememberWebOrder, submitWebLead, brandShopCode,
+  loadWebSession, clearWebSession, getWebMe, WebNeedLoginError, type WebOrderCreated, type WebUser,
+} from '@/api/brandWebOrder'
 
 const shopStore = useShopStore()
 const router = useRouter()
@@ -248,7 +270,31 @@ const wForm = reactive({
   volume: '', payment: '', remark: '',
 })
 
+const webUser = ref<WebUser | null>(loadWebSession()?.user || null)
+const showLogin = ref(false)
+const loginThenSubmit = ref(false)
+function maskPhone(p: string) {
+  return /^\d{11}$/.test(p || '') ? `${p.slice(0, 3)}****${p.slice(7)}` : (p || '')
+}
+function logout() {
+  clearWebSession()
+  webUser.value = null
+}
+function handleLoggedIn(user: WebUser) {
+  webUser.value = user
+  showLogin.value = false
+  if (!form.mobile && user.phone) form.mobile = user.phone
+  if (loginThenSubmit.value) {
+    loginThenSubmit.value = false
+    submitOrder()
+  }
+}
+
 onMounted(() => {
+  // 本地记着登录，但可能已过期/会员被删：问一下后端，不行就当没登录
+  if (webUser.value) {
+    getWebMe().then(u => { webUser.value = u }).catch(e => { if (e instanceof WebNeedLoginError) webUser.value = null })
+  }
   getWebShipping().then(r => { shipRule.value = r }).catch(() => { /* 读不到按包邮显示，下单时以服务端为准 */ })
   try {
     const stored = localStorage.getItem('brand_user_settings')
@@ -311,6 +357,11 @@ async function submitOrder() {
     submitError.value = `「${missing[0].name}」商品信息不完整，请从购物车删掉后重新加入`
     return
   }
+  if (!webUser.value) {
+    loginThenSubmit.value = true
+    showLogin.value = true
+    return
+  }
   submitting.value = true
   try {
     // 价格、运费以服务端为准（按商品现价重算），这里只传商品和数量
@@ -322,7 +373,14 @@ async function submitOrder() {
     rememberWebOrder(order.order_no, order.token, form.mobile)
     payOrder.value = order
   } catch (e: any) {
-    submitError.value = e?.message || '下单失败，请稍后再试'
+    if (e instanceof WebNeedLoginError) {
+      // 登录过期：重新扫码，扫完自动接着下单
+      webUser.value = null
+      loginThenSubmit.value = true
+      showLogin.value = true
+    } else {
+      submitError.value = e?.message || '下单失败，请稍后再试'
+    }
   } finally {
     submitting.value = false
   }
@@ -334,9 +392,8 @@ function handlePaid() {
 }
 
 function handlePayDone(path: string) {
-  const mobile = form.mobile
   payOrder.value = null
-  goBrand(path, path === '/brand/orders' ? { mobile } : {})
+  goBrand(path)
 }
 
 async function submitInquiry() {
@@ -389,6 +446,11 @@ async function submitInquiry() {
 .bc-sub { font-size: 14px; color: rgba(29,29,31,0.45); }
 
 .bc-layout { display: grid; grid-template-columns: 1fr 380px; gap: 32px; align-items: start; }
+.bc-login-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 14px; background: rgba(124,58,237,0.07); color: #6d28d9; font-size: 13px; font-weight: 600; }
+.bc-login-bar.on { background: rgba(52,199,89,0.1); color: #15803d; }
+.bc-login-btn { flex-shrink: 0; height: 32px; padding: 0 16px; border-radius: 10px; border: none; background: #1d1d1f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.bc-login-btn:hover { background: #7c3aed; }
+.bc-login-link { flex-shrink: 0; border: none; background: none; color: rgba(29,29,31,0.45); font-size: 12px; cursor: pointer; text-decoration: underline; }
 .bc-section { background: #fff; border-radius: 20px; padding: 24px; border: 1px solid rgba(0,0,0,0.06); margin-bottom: 20px; }
 .bc-section-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
 .bc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

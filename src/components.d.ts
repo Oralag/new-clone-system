@@ -20,6 +20,7 @@ declare module 'vue' {
     AiMemoryPanel: typeof import('./components/ai/AiMemoryPanel.vue')['default']
     AiToolCallCard: typeof import('./components/ai/AiToolCallCard.vue')['default']
     BrandCustomerService: typeof import('./components/BrandCustomerService.vue')['default']
+    BrandLoginDialog: typeof import('./components/BrandLoginDialog.vue')['default']
     BrandWebPayDialog: typeof import('./components/BrandWebPayDialog.vue')['default']
     CaptainBar: typeof import('./components/CaptainBar.vue')['default']
     CaptchaCanvas: typeof import('./components/CaptchaCanvas.vue')['default']

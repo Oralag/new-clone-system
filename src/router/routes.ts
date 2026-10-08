@@ -431,7 +431,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'shipping', name: 'BrandShipping', component: () => import('@/views/brand/Shipping.vue'), meta: { title: '物流查询 - NOMADIC DAIRY', public: true } },
       { path: 'support', name: 'BrandSupport', component: () => import('@/views/brand/Support.vue'), meta: { title: '客户支持 - NOMADIC DAIRY', public: true } },
       { path: 'settings', name: 'BrandSettings', component: () => import('@/views/brand/Settings.vue'), meta: { title: '品牌设置 - NOMADIC DAIRY', public: true } },
-      { path: 'orders', name: 'BrandOrders', component: () => import('@/views/brand/Orders.vue'), meta: { title: '订单查询 - NOMADIC DAIRY', public: true } },
+      { path: 'orders', name: 'BrandOrders', component: () => import('@/views/brand/Orders.vue'), meta: { title: '我的订单 - NOMADIC DAIRY', public: true } },
       { path: 'wholesale-apply', name: 'BrandWholesaleApply', component: () => import('@/views/brand/WholesaleApply.vue'), meta: { title: '采购商申请 - NOMADIC DAIRY', public: true } },
       { path: 'checkout', name: 'BrandCheckout', component: () => import('@/views/brand/Checkout.vue'), meta: { title: '结账 - NOMADIC DAIRY', public: true } },
     ],
