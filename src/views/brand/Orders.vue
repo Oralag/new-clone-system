@@ -34,11 +34,40 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           {{ order.express_company ? order.express_company + ' ' : '' }}运单号：{{ order.tracking_no }}
         </div>
+        <!-- 退款/售后进度 -->
+        <div v-if="order.refund" class="bo-refund" :class="`rf-${order.refund.status}`">
+          <b>{{ refundTitle(order.refund) }}</b>
+          <span v-if="order.refund.status === 1"> · ¥{{ order.refund.amount.toFixed(2) }} 原路退回微信</span>
+          <div v-if="order.refund.note" class="bo-refund-note">商家：{{ order.refund.note }}</div>
+        </div>
+
         <div v-if="order.status === 0" class="bo-pay-row">
-          <button v-if="tokenOf(order.order_no)" class="bo-pay-btn" :disabled="opening === order.order_no" @click="continuePay(order.order_no)">
-            {{ opening === order.order_no ? '正在获取支付码…' : '继续付款' }}
-          </button>
+          <template v-if="tokenOf(order.order_no)">
+            <button class="bo-link-btn" :disabled="busy === order.order_no" @click="doCancel(order.order_no)">取消订单</button>
+            <button class="bo-pay-btn" :disabled="opening === order.order_no" @click="continuePay(order.order_no)">
+              {{ opening === order.order_no ? '正在获取支付码…' : '继续付款' }}
+            </button>
+          </template>
           <span v-else class="bo-pay-hint">请在下单的那台电脑上继续付款，超时未付会自动取消</span>
+        </div>
+        <div v-else-if="canRefund(order)" class="bo-pay-row">
+          <button class="bo-link-btn" @click="openRefund(order)">{{ order.status === 1 ? '申请退款' : '申请售后' }}</button>
+        </div>
+
+        <!-- 退款/售后申请表 -->
+        <div v-if="refundFor === order.order_no" class="bo-refund-form">
+          <p class="bo-rf-title">{{ order.status === 1 ? '申请退款' : '申请售后' }} · ¥{{ order.total_amount.toFixed(2) }}</p>
+          <div class="bo-rf-reasons">
+            <button v-for="r in refundReasons(order)" :key="r" class="bo-rf-chip" :class="{ on: refundReason === r }" @click="refundReason = r">{{ r }}</button>
+          </div>
+          <textarea v-model="refundDetail" class="bo-rf-text" maxlength="150" placeholder="补充说明（选填）：比如破损情况、想换货还是退款"></textarea>
+          <p class="bo-rf-hint">提交后商家会尽快处理，同意后钱原路退回您的微信；也可能联系您协商换货或补发。</p>
+          <div class="bo-rf-btns">
+            <button class="bo-link-btn" @click="refundFor = ''">取消</button>
+            <button class="bo-pay-btn" :disabled="!refundReason || busy === order.order_no" @click="submitRefund(order)">
+              {{ busy === order.order_no ? '提交中…' : '提交申请' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +95,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
 import {
-  lookupWebOrders, getWebOrderStatus, loadMyWebOrders, WEB_ORDER_STATUS_TEXT, type WebOrderRow,
+  lookupWebOrders, getWebOrderStatus, loadMyWebOrders, applyWebRefund, cancelWebOrder,
+  WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo,
 } from '@/api/brandWebOrder'
 
 const route = useRoute()
@@ -124,6 +154,60 @@ async function continuePay(orderNo: string) {
   }
 }
 
+const busy = ref('')
+const refundFor = ref('')
+const refundReason = ref('')
+const refundDetail = ref('')
+
+// 被拒绝的申请可以重新提交；处理中/已退款的不再显示按钮
+function canRefund(order: WebOrderRow) {
+  if (![1, 2, 3].includes(order.status)) return false
+  return !order.refund || order.refund.status === 2
+}
+function refundReasons(order: WebOrderRow) {
+  return order.status === 1
+    ? ['不想要了', '拍错了/多拍了', '地址填错了', '其他']
+    : ['商品破损/变质', '发错货/少发', '质量问题', '没收到货', '其他']
+}
+function refundTitle(r: WebRefundInfo) {
+  if (r.status === 1) return '已退款'
+  if (r.status === 2) return '退款申请未通过'
+  return r.note ? '商家正在和您协商处理' : '退款/售后申请处理中'
+}
+function openRefund(order: WebOrderRow) {
+  refundFor.value = order.order_no
+  refundReason.value = ''
+  refundDetail.value = ''
+}
+async function submitRefund(order: WebOrderRow) {
+  const reason = [refundReason.value, refundDetail.value.trim()].filter(Boolean).join('：')
+  busy.value = order.order_no
+  errorMsg.value = ''
+  try {
+    await applyWebRefund(order.order_no, query.value.trim(), reason)
+    refundFor.value = ''
+    await doSearch()
+  } catch (e: any) {
+    errorMsg.value = `提交失败：${e?.message || '请稍后再试'}`
+  } finally {
+    busy.value = ''
+  }
+}
+async function doCancel(orderNo: string) {
+  const token = tokenOf(orderNo)
+  if (!token || !confirm('确定取消这个订单吗？')) return
+  busy.value = orderNo
+  errorMsg.value = ''
+  try {
+    await cancelWebOrder(orderNo, token)
+  } catch (e: any) {
+    errorMsg.value = e?.message || '取消失败，请稍后再试'
+  } finally {
+    busy.value = ''
+    await doSearch()
+  }
+}
+
 function fmtTime(v: string) {
   return v ? new Date(v).toLocaleString('zh-CN', { hour12: false }) : ''
 }
@@ -132,6 +216,7 @@ function statusClass(status: number) {
   if (status === 3) return 'status-done'
   if (status === 2) return 'status-shipping'
   if (status === 4) return 'status-cancel'
+  if (status === 5) return 'status-refund'
   return 'status-pending'
 }
 
@@ -182,6 +267,24 @@ onMounted(() => {
 .bo-pay-btn:hover:not(:disabled) { background: #7c3aed; }
 .bo-pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .bo-pay-hint { font-size: 12px; color: rgba(29,29,31,0.45); }
+.bo-pay-row { gap: 10px; }
+.bo-link-btn { height: 36px; padding: 0 16px; border-radius: 12px; border: 1.5px solid rgba(0,0,0,0.12); background: #fff; color: #1d1d1f; font-size: 13px; font-weight: 700; cursor: pointer; }
+.bo-link-btn:hover:not(:disabled) { border-color: #7c3aed; }
+.bo-link-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-refund { color: #7c3aed; background: rgba(124,58,237,0.1); }
+.bo-refund { margin-top: 10px; font-size: 12px; padding: 8px 12px; border-radius: 10px; background: rgba(124,58,237,0.07); color: #6d28d9; line-height: 1.6; }
+.bo-refund.rf-1 { background: rgba(52,199,89,0.1); color: #15803d; }
+.bo-refund.rf-2 { background: rgba(0,0,0,0.05); color: rgba(29,29,31,0.6); }
+.bo-refund-note { margin-top: 2px; }
+.bo-refund-form { margin-top: 12px; padding: 14px; border-radius: 14px; background: #fff; border: 1.5px solid rgba(124,58,237,0.2); }
+.bo-rf-title { font-size: 14px; font-weight: 800; margin: 0 0 10px; }
+.bo-rf-reasons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bo-rf-chip { padding: 6px 12px; border-radius: 999px; border: 1.5px solid rgba(0,0,0,0.1); background: #fff; font-size: 12px; cursor: pointer; }
+.bo-rf-chip.on { border-color: #7c3aed; color: #6d28d9; background: rgba(124,58,237,0.06); font-weight: 700; }
+.bo-rf-text { width: 100%; box-sizing: border-box; min-height: 64px; padding: 10px 12px; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 13px; resize: vertical; outline: none; font-family: inherit; }
+.bo-rf-text:focus { border-color: #7c3aed; }
+.bo-rf-hint { font-size: 11px; color: rgba(29,29,31,0.45); margin: 8px 0 0; line-height: 1.6; }
+.bo-rf-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
 @media (max-width: 768px) {
   .brand-orders { padding: 24px 16px 60px; }

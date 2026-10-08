@@ -10,6 +10,17 @@
       <div class="bc-layout">
         <!-- 左：表单 -->
         <div class="bc-form-col">
+          <!-- 粘贴整段收货信息，自动拆到下面各个格子里 -->
+          <div class="bc-section bc-paste">
+            <h3 class="bc-section-title">粘贴地址自动识别</h3>
+            <textarea v-model="pasteText" class="bc-textarea bc-paste-text"
+              placeholder="把整段收货信息粘贴到这里，例如：&#10;张三 13800000000 内蒙古呼和浩特市赛罕区大学东街1号"
+              @paste="onPasteAddress"></textarea>
+            <div class="bc-paste-row">
+              <span class="bc-paste-tip">{{ pasteTip }}</span>
+              <button type="button" class="bc-paste-btn" :disabled="!pasteText.trim()" @click="applyPaste">识别</button>
+            </div>
+          </div>
           <div class="bc-section">
             <h3 class="bc-section-title">联系信息</h3>
             <div class="bc-fields">
@@ -209,6 +220,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useShopStore } from '@/stores/shopStore'
 import { useRouter } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
+import { parseAddress } from '@/utils/parseAddress'
 import { createWebOrder, getWebShipping, rememberWebOrder, submitWebLead, brandShopCode, type WebOrderCreated } from '@/api/brandWebOrder'
 
 const shopStore = useShopStore()
@@ -255,6 +267,26 @@ onMounted(() => {
 })
 
 const submitError = ref('')
+const pasteText = ref('')
+const pasteTip = ref('支持「姓名 手机 地址」任意顺序，带「收货人：」这类标签也行')
+
+// 识别到的才填，没识别到的格子保持原样，不把顾客已经填好的清空
+function applyPaste() {
+  const r = parseAddress(pasteText.value)
+  const got: string[] = []
+  if (r.name) { form.name = r.name; got.push('姓名') }
+  if (r.mobile) { form.mobile = r.mobile; got.push('手机') }
+  if (r.region) { form.region = r.region; got.push('省市区') }
+  if (r.address) { form.address = r.address; got.push('详细地址') }
+  if (r.postcode) { form.postcode = r.postcode; got.push('邮编') }
+  pasteTip.value = got.length
+    ? `已识别：${got.join('、')}，请核对一下下面的信息`
+    : '没认出来，请直接在下面填写'
+}
+function onPasteAddress() {
+  // 等粘贴内容进到输入框后再识别
+  setTimeout(() => { if (pasteText.value.trim()) applyPaste() }, 0)
+}
 const payOrder = ref<WebOrderCreated | null>(null)
 
 // 官网链接里带了 ?shop=店铺码 的，跳转时要带着，不然到下一页就分不清是哪家店了
@@ -399,6 +431,12 @@ async function submitInquiry() {
 }
 .bc-submit-btn:hover:not(:disabled) { background: #0071e3; }
 .bc-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.bc-paste-text { min-height: 72px; }
+.bc-paste-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.bc-paste-tip { font-size: 12px; color: rgba(29,29,31,0.45); line-height: 1.5; }
+.bc-paste-btn { flex-shrink: 0; height: 34px; padding: 0 18px; border-radius: 10px; border: none; background: #1d1d1f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.bc-paste-btn:hover:not(:disabled) { background: #7c3aed; }
+.bc-paste-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .bc-submit-err { margin: 10px 0 0; font-size: 13px; color: #dc2626; line-height: 1.5; text-align: center; }
 .bc-wholesale-btn:hover:not(:disabled) { background: #d97706 !important; }
 .bc-secure-tip { font-size: 11px; color: rgba(29,29,31,0.35); text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }

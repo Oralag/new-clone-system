@@ -35,6 +35,7 @@ export interface WebOrderRow {
   tracking_no: string
   express_company: string
   items: WebOrderItem[]
+  refund?: WebRefundInfo | null
 }
 
 export const WEB_ORDER_STATUS_TEXT: Record<number, string> = {
@@ -125,4 +126,21 @@ export function submitWebLead(payload: {
 // 官网运费规则（ERP 收款设置里配，默认包邮）
 export function getWebShipping() {
   return call<{ fee: number; free_threshold: number }>('GET', `/web/shipping?_t=${Date.now()}`)
+}
+
+export interface WebRefundInfo {
+  status: number          // 0处理中 1已退款 2已拒绝
+  amount: number
+  note: string
+  reason: string
+  created_at: string
+  handled_at: string | null
+}
+
+export function applyWebRefund(orderNo: string, mobile: string, reason: string) {
+  return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, mobile, reason })
+}
+
+export function cancelWebOrder(orderNo: string, token: string) {
+  return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo, token })
 }
