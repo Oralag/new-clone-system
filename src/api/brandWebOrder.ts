@@ -141,6 +141,14 @@ export function applyWebRefund(orderNo: string, mobile: string, reason: string) 
   return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, mobile, reason })
 }
 
+export interface WebTrackEvent { time: string; description: string; location: string }
+export interface WebTrackInfo { number: string; carrier: string; status: string; events: WebTrackEvent[] }
+
+// 物流轨迹：订单号 + 收货手机号
+export function getWebOrderTracking(orderNo: string, mobile: string) {
+  return call<WebTrackInfo>('GET', `/web/order/tracking?no=${encodeURIComponent(orderNo)}&mobile=${encodeURIComponent(mobile)}`)
+}
+
 export function cancelWebOrder(orderNo: string, token: string) {
   return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo, token })
 }

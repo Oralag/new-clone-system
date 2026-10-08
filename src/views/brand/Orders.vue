@@ -50,21 +50,46 @@
           </template>
           <span v-else class="bo-pay-hint">请在下单的那台电脑上继续付款，超时未付会自动取消</span>
         </div>
-        <div v-else-if="canRefund(order)" class="bo-pay-row">
-          <button class="bo-link-btn" @click="openRefund(order)">{{ order.status === 1 ? '申请退款' : '申请售后' }}</button>
+        <div v-else-if="[1, 2, 3, 5].includes(order.status)" class="bo-pay-row">
+          <button v-if="order.tracking_no" class="bo-link-btn" :disabled="trackLoading === order.order_no" @click="toggleTrack(order)">
+            {{ trackLoading === order.order_no ? '查询中…' : trackFor === order.order_no ? '收起物流' : '查看物流' }}
+          </button>
+          <span v-else-if="order.status === 1" class="bo-pay-hint">商家发货后这里能查物流</span>
+          <template v-if="canRefund(order)">
+            <button class="bo-link-btn" @click="openForm(order, 'service')">申请售后</button>
+            <button class="bo-link-btn" @click="openForm(order, 'refund')">申请退款</button>
+          </template>
+        </div>
+        <div v-if="serviceSent[order.order_no]" class="bo-refund">售后申请已提交，商家会尽快打 {{ query }} 联系您</div>
+
+        <!-- 物流轨迹 -->
+        <div v-if="trackFor === order.order_no" class="bo-track">
+          <div v-if="trackError" class="bo-track-empty">{{ trackError }}</div>
+          <template v-else-if="track">
+            <div class="bo-track-head">{{ track.carrier || order.express_company || '快递' }} · {{ track.number }}</div>
+            <div v-if="!track.events.length" class="bo-track-empty">快递公司还没有返回轨迹，一般揽收后几小时内会有，稍后再来看</div>
+            <ol v-else class="bo-track-list">
+              <li v-for="(e, i) in track.events" :key="i" :class="{ latest: i === 0 }">
+                <div class="bo-track-desc">{{ e.description }}<template v-if="e.location">（{{ e.location }}）</template></div>
+                <div class="bo-track-time">{{ fmtTime(e.time) }}</div>
+              </li>
+            </ol>
+          </template>
         </div>
 
-        <!-- 退款/售后申请表 -->
-        <div v-if="refundFor === order.order_no" class="bo-refund-form">
-          <p class="bo-rf-title">{{ order.status === 1 ? '申请退款' : '申请售后' }} · ¥{{ order.total_amount.toFixed(2) }}</p>
+        <!-- 退款 / 售后申请表 -->
+        <div v-if="formFor === order.order_no" class="bo-refund-form">
+          <p class="bo-rf-title">{{ formKind === 'refund' ? `申请退款 · ¥${order.total_amount.toFixed(2)}` : '申请售后' }}</p>
           <div class="bo-rf-reasons">
-            <button v-for="r in refundReasons(order)" :key="r" class="bo-rf-chip" :class="{ on: refundReason === r }" @click="refundReason = r">{{ r }}</button>
+            <button v-for="r in formReasons(order)" :key="r" class="bo-rf-chip" :class="{ on: refundReason === r }" @click="refundReason = r">{{ r }}</button>
           </div>
-          <textarea v-model="refundDetail" class="bo-rf-text" maxlength="150" placeholder="补充说明（选填）：比如破损情况、想换货还是退款"></textarea>
-          <p class="bo-rf-hint">提交后商家会尽快处理，同意后钱原路退回您的微信；也可能联系您协商换货或补发。</p>
+          <textarea v-model="refundDetail" class="bo-rf-text" maxlength="150" :placeholder="detailPlaceholder"></textarea>
+          <p class="bo-rf-hint">{{ formKind === 'refund'
+            ? '提交后商家会尽快处理，同意后钱原路退回您的微信。'
+            : order.status === 1 ? '提交后商家会打您的收货手机号联系处理。' : '提交后商家会打您的收货手机号联系，换货、补发不用重新付款。' }}</p>
           <div class="bo-rf-btns">
-            <button class="bo-link-btn" @click="refundFor = ''">取消</button>
-            <button class="bo-pay-btn" :disabled="!refundReason || busy === order.order_no" @click="submitRefund(order)">
+            <button class="bo-link-btn" @click="formFor = ''">取消</button>
+            <button class="bo-pay-btn" :disabled="!canSubmitForm || busy === order.order_no" @click="submitForm(order)">
               {{ busy === order.order_no ? '提交中…' : '提交申请' }}
             </button>
           </div>
@@ -91,12 +116,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
 import {
-  lookupWebOrders, getWebOrderStatus, loadMyWebOrders, applyWebRefund, cancelWebOrder,
-  WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo,
+  lookupWebOrders, getWebOrderStatus, loadMyWebOrders, applyWebRefund, cancelWebOrder, submitWebLead, getWebOrderTracking,
+  WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo, type WebTrackInfo,
 } from '@/api/brandWebOrder'
 
 const route = useRoute()
@@ -155,38 +180,85 @@ async function continuePay(orderNo: string) {
 }
 
 const busy = ref('')
-const refundFor = ref('')
+const formFor = ref('')
+const formKind = ref<'refund' | 'service'>('refund')
 const refundReason = ref('')
 const refundDetail = ref('')
+const serviceSent = ref<Record<string, boolean>>({})
 
 // 被拒绝的申请可以重新提交；处理中/已退款的不再显示按钮
 function canRefund(order: WebOrderRow) {
   if (![1, 2, 3].includes(order.status)) return false
   return !order.refund || order.refund.status === 2
 }
-function refundReasons(order: WebOrderRow) {
+// 退款走 ERP 退款管理（同意即原路退钱）；售后（改地址、换货、补发）不退钱，走官网留言让商家联系
+function formReasons(order: WebOrderRow) {
+  if (formKind.value === 'refund') {
+    return order.status === 1
+      ? ['不想要了', '拍错了/多拍了', '地址填错了', '其他']
+      : ['商品破损/变质', '发错货/少发', '质量问题', '没收到货', '其他']
+  }
   return order.status === 1
-    ? ['不想要了', '拍错了/多拍了', '地址填错了', '其他']
-    : ['商品破损/变质', '发错货/少发', '质量问题', '没收到货', '其他']
+    ? ['修改收货地址', '修改商品/数量', '催发货', '其他问题']
+    : ['换货', '补发（少发/漏发）', '商品有问题', '其他问题']
+}
+const detailPlaceholder = computed(() => {
+  if (refundReason.value === '修改收货地址') return '请填写新的收货地址（姓名、手机、省市区、详细地址）'
+  return formKind.value === 'refund' ? '补充说明（选填）：比如破损情况' : '请说明具体情况，比如想换成什么、少了哪件'
+})
+// 售后需要写清楚要怎么处理，补充说明必填
+const canSubmitForm = computed(() => !!refundReason.value && (formKind.value === 'refund' || !!refundDetail.value.trim()))
+
+const trackFor = ref('')
+const trackLoading = ref('')
+const track = ref<WebTrackInfo | null>(null)
+const trackError = ref('')
+async function toggleTrack(order: WebOrderRow) {
+  if (trackFor.value === order.order_no) { trackFor.value = ''; return }
+  trackLoading.value = order.order_no
+  track.value = null
+  trackError.value = ''
+  try {
+    track.value = await getWebOrderTracking(order.order_no, query.value.trim())
+  } catch (e: any) {
+    trackError.value = `物流查询失败：${e?.message || '请稍后再试'}`
+  } finally {
+    trackLoading.value = ''
+    trackFor.value = order.order_no
+  }
 }
 function refundTitle(r: WebRefundInfo) {
   if (r.status === 1) return '已退款'
   if (r.status === 2) return '退款申请未通过'
   return r.note ? '商家正在和您协商处理' : '退款/售后申请处理中'
 }
-function openRefund(order: WebOrderRow) {
-  refundFor.value = order.order_no
+function openForm(order: WebOrderRow, kind: 'refund' | 'service') {
+  formFor.value = order.order_no
+  formKind.value = kind
   refundReason.value = ''
   refundDetail.value = ''
 }
-async function submitRefund(order: WebOrderRow) {
+async function submitForm(order: WebOrderRow) {
   const reason = [refundReason.value, refundDetail.value.trim()].filter(Boolean).join('：')
+  const mobile = query.value.trim()
   busy.value = order.order_no
   errorMsg.value = ''
   try {
-    await applyWebRefund(order.order_no, query.value.trim(), reason)
-    refundFor.value = ''
-    await doSearch()
+    if (formKind.value === 'refund') {
+      await applyWebRefund(order.order_no, mobile, reason)
+      formFor.value = ''
+      await doSearch()
+    } else {
+      const goods = order.items.map(i => `${i.goods_name} × ${i.qty}`).join('、')
+      await submitWebLead({
+        type: 'support',
+        name: `订单 ${order.order_no}`,
+        mobile,
+        content: `【售后·${refundReason.value}】订单 ${order.order_no}（${WEB_ORDER_STATUS_TEXT[order.status] || ''}，¥${order.total_amount.toFixed(2)}）\n商品：${goods}\n说明：${refundDetail.value.trim()}`,
+      })
+      formFor.value = ''
+      serviceSent.value = { ...serviceSent.value, [order.order_no]: true }
+    }
   } catch (e: any) {
     errorMsg.value = `提交失败：${e?.message || '请稍后再试'}`
   } finally {
@@ -285,6 +357,17 @@ onMounted(() => {
 .bo-rf-text:focus { border-color: #7c3aed; }
 .bo-rf-hint { font-size: 11px; color: rgba(29,29,31,0.45); margin: 8px 0 0; line-height: 1.6; }
 .bo-rf-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.bo-pay-row { flex-wrap: wrap; }
+.bo-track { margin-top: 12px; padding: 14px 16px; border-radius: 14px; background: #fff; border: 1.5px solid rgba(0,113,227,0.15); }
+.bo-track-head { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.bo-track-empty { font-size: 12px; color: rgba(29,29,31,0.5); line-height: 1.6; }
+.bo-track-list { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid rgba(0,0,0,0.08); }
+.bo-track-list li { position: relative; padding: 0 0 12px 12px; }
+.bo-track-list li::before { content: ''; position: absolute; left: -20px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: rgba(0,0,0,0.18); }
+.bo-track-list li.latest::before { background: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+.bo-track-list li.latest .bo-track-desc { color: #0071e3; font-weight: 700; }
+.bo-track-desc { font-size: 13px; color: #1d1d1f; line-height: 1.5; }
+.bo-track-time { font-size: 11px; color: rgba(29,29,31,0.4); margin-top: 2px; }
 
 @media (max-width: 768px) {
   .brand-orders { padding: 24px 16px 60px; }
