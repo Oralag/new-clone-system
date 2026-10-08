@@ -1,12 +1,20 @@
 <template>
   <div class="brand-orders">
     <div class="bo-header">
-      <h2 class="bo-title">我的订单</h2>
-      <p class="bo-sub">官网和小程序的订单都在这里</p>
+      <h2 class="bo-title">{{ loginMode ? '我的订单' : '订单查询' }}</h2>
+      <p class="bo-sub">{{ loginMode ? '官网和小程序的订单都在这里' : '输入下单时填写的收货手机号，查看订单状态' }}</p>
+    </div>
+
+    <!-- 登录还没开（小程序登录页发布前）：按收货手机号查 -->
+    <div v-if="!loginMode" class="bo-form">
+      <input v-model="query" type="tel" maxlength="11" placeholder="收货手机号" class="bo-input" @keyup.enter="doSearch" />
+      <button class="bo-btn" @click="doSearch" :disabled="searching">
+        {{ searching ? '查询中...' : '查询' }}
+      </button>
     </div>
 
     <!-- 没登录：扫码登录后才能看订单 -->
-    <div v-if="!webUser" class="bo-login">
+    <div v-else-if="!webUser" class="bo-login">
       <p class="bo-login-title">登录后查看订单</p>
       <p class="bo-login-sub">用微信扫一扫小程序码登录，账号就是小程序会员</p>
       <button class="bo-btn bo-login-go" @click="showLogin = true">扫码登录</button>
@@ -19,10 +27,10 @@
       </span>
     </div>
 
-    <div v-if="webUser && searched && !searching && !errorMsg && results.length === 0" class="bo-empty">
+    <div v-if="(webUser || !loginMode) && searched && !searching && !errorMsg && results.length === 0" class="bo-empty">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(29,29,31,0.2)" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <p>还没有订单</p>
-      <p class="bo-empty-hint">以前没登录时下的单，收货手机号和这个账号一样的也会显示在这里</p>
+      <p>{{ webUser ? '还没有订单' : '这个手机号下没有订单' }}</p>
+      <p class="bo-empty-hint">{{ webUser ? '以前没登录时下的单，收货手机号和这个账号一样的也会显示在这里' : '请确认是下单时填写的收货手机号' }}</p>
     </div>
 
     <div v-if="results.length > 0" class="bo-list">
@@ -51,8 +59,9 @@
 
         <div v-if="order.status === 0" class="bo-pay-row">
           <span v-if="order.source !== 'web'" class="bo-pay-hint">小程序订单，请在小程序里付款</span>
+          <span v-else-if="!webUser && !tokenOf(order)" class="bo-pay-hint">请在下单的那台电脑上继续付款，超时未付会自动取消</span>
           <template v-else>
-            <button class="bo-link-btn" :disabled="busy === order.order_no" @click="doCancel(order.order_no)">取消订单</button>
+            <button class="bo-link-btn" :disabled="busy === order.order_no" @click="doCancel(order)">取消订单</button>
             <button v-if="tokenOf(order)" class="bo-pay-btn" :disabled="opening === order.order_no" @click="continuePay(order)">
               {{ opening === order.order_no ? '正在获取支付码…' : '继续付款' }}
             </button>
@@ -127,16 +136,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import BrandWebPayDialog from '@/components/BrandWebPayDialog.vue'
 import BrandLoginDialog from '@/components/BrandLoginDialog.vue'
 import {
   lookupWebOrders, getWebOrderStatus, loadMyWebOrders, applyWebRefund, cancelWebOrder, submitWebLead, getWebOrderTracking,
-  loadWebSession, clearWebSession, WebNeedLoginError,
+  loadWebSession, clearWebSession, getWebLoginStatus, WebNeedLoginError,
   WEB_ORDER_STATUS_TEXT, type WebOrderRow, type WebRefundInfo, type WebTrackInfo, type WebUser,
 } from '@/api/brandWebOrder'
 
+const route = useRoute()
 const webUser = ref<WebUser | null>(loadWebSession()?.user || null)
 const showLogin = ref(false)
+const query = ref('')
+// 小程序「确认登录」页发布后后端自动打开；没开时按收货手机号查（旧方式）
+const loginEnabled = ref(false)
+const loginMode = computed(() => loginEnabled.value || !!webUser.value)
 function maskPhone(p: string) {
   return /^\d{11}$/.test(p || '') ? `${p.slice(0, 3)}****${p.slice(7)}` : (p || '')
 }
@@ -154,6 +169,7 @@ function logout() {
 // 任何接口回「请先登录」（过期/会员被删）：退回未登录界面
 function handleErr(e: any, prefix: string) {
   if (e instanceof WebNeedLoginError) {
+    loginEnabled.value = true
     logout()
     return
   }
@@ -168,12 +184,19 @@ const opening = ref('')
 const payOrder = ref<{ order_no: string; token: string; code_url: string; total_amount: number; expires_at: string | null } | null>(null)
 
 async function doSearch() {
-  if (!webUser.value) return
   errorMsg.value = ''
+  const mobile = webUser.value ? '' : query.value.trim()
+  if (!webUser.value) {
+    if (loginMode.value || !mobile) return
+    if (!/^1[3-9]\d{9}$/.test(mobile)) {
+      errorMsg.value = '请输入正确的11位手机号'
+      return
+    }
+  }
   searching.value = true
   searched.value = false
   try {
-    const data = await lookupWebOrders()
+    const data = await lookupWebOrders(mobile)
     results.value = data.rows || []
   } catch (e: any) {
     results.value = []
@@ -250,9 +273,9 @@ async function toggleTrack(order: WebOrderRow) {
   track.value = null
   trackError.value = ''
   try {
-    track.value = await getWebOrderTracking(order.order_no)
+    track.value = await getWebOrderTracking(order.order_no, webUser.value ? '' : query.value.trim())
   } catch (e: any) {
-    if (e instanceof WebNeedLoginError) { logout(); return }
+    if (e instanceof WebNeedLoginError) { loginEnabled.value = true; logout(); return }
     trackError.value = `物流查询失败：${e?.message || '请稍后再试'}`
   } finally {
     trackLoading.value = ''
@@ -272,12 +295,12 @@ function openForm(order: WebOrderRow, kind: 'refund' | 'service') {
 }
 async function submitForm(order: WebOrderRow) {
   const reason = [refundReason.value, refundDetail.value.trim()].filter(Boolean).join('：')
-  const mobile = webUser.value?.phone || ''
+  const mobile = webUser.value?.phone || query.value.trim()
   busy.value = order.order_no
   errorMsg.value = ''
   try {
     if (formKind.value === 'refund') {
-      await applyWebRefund(order.order_no, reason)
+      await applyWebRefund(order.order_no, reason, webUser.value ? '' : mobile)
       formFor.value = ''
       await doSearch()
     } else {
@@ -297,12 +320,13 @@ async function submitForm(order: WebOrderRow) {
     busy.value = ''
   }
 }
-async function doCancel(orderNo: string) {
+async function doCancel(order: WebOrderRow) {
+  const orderNo = order.order_no
   if (!confirm('确定取消这个订单吗？')) return
   busy.value = orderNo
   errorMsg.value = ''
   try {
-    await cancelWebOrder(orderNo)
+    await cancelWebOrder(orderNo, webUser.value ? '' : tokenOf(order))
   } catch (e: any) {
     handleErr(e, '')
   } finally {
@@ -324,7 +348,17 @@ function statusClass(status: number) {
 }
 
 onMounted(() => {
-  if (webUser.value) doSearch()
+  getWebLoginStatus().then(r => { loginEnabled.value = !!r.enabled }).catch(() => { /* 读不到就按旧方式 */ })
+  if (webUser.value) {
+    doSearch()
+    return
+  }
+  // 付款弹窗「查看订单」跳过来会带手机号（登录没开时），直接查
+  const m = String(route.query.mobile || '')
+  if (m) {
+    query.value = m
+    doSearch()
+  }
 })
 </script>
 

@@ -11,7 +11,7 @@
         <!-- 左：表单 -->
         <div class="bc-form-col">
           <!-- 登录状态：付款下单要登录（账号=小程序会员），逛和加购不用 -->
-          <div class="bc-login-bar" :class="{ on: !!webUser }">
+          <div v-if="loginEnabled || webUser" class="bc-login-bar" :class="{ on: !!webUser }">
             <template v-if="webUser">
               <span>已登录 {{ maskPhone(webUser.phone) }}<template v-if="webUser.name"> · {{ webUser.name }}</template></span>
               <button type="button" class="bc-login-link" @click="logout">退出登录</button>
@@ -105,7 +105,7 @@
             </div>
             <button class="bc-submit-btn" :disabled="submitting || !shopStore.cart.length" @click="submitOrder">
               <svg v-if="!submitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span>{{ !shopStore.cart.length ? '购物车是空的' : submitting ? '正在生成支付码...' : webUser ? '确认下单并付款' : '登录并下单付款' }}</span>
+              <span>{{ !shopStore.cart.length ? '购物车是空的' : submitting ? '正在生成支付码...' : webUser || !loginEnabled ? '确认下单并付款' : '登录并下单付款' }}</span>
             </button>
             <p v-if="submitError" class="bc-submit-err">{{ submitError }}</p>
             <p class="bc-secure-tip">
@@ -242,7 +242,7 @@ import BrandLoginDialog from '@/components/BrandLoginDialog.vue'
 import { parseAddress } from '@/utils/parseAddress'
 import {
   createWebOrder, getWebShipping, rememberWebOrder, submitWebLead, brandShopCode,
-  loadWebSession, clearWebSession, getWebMe, WebNeedLoginError, type WebOrderCreated, type WebUser,
+  loadWebSession, clearWebSession, getWebMe, getWebLoginStatus, WebNeedLoginError, type WebOrderCreated, type WebUser,
 } from '@/api/brandWebOrder'
 
 const shopStore = useShopStore()
@@ -273,6 +273,8 @@ const wForm = reactive({
 const webUser = ref<WebUser | null>(loadWebSession()?.user || null)
 const showLogin = ref(false)
 const loginThenSubmit = ref(false)
+// 小程序登录页发布前为 false：不用登录也能下单（后端同一套开关，以后端为准）
+const loginEnabled = ref(false)
 function maskPhone(p: string) {
   return /^\d{11}$/.test(p || '') ? `${p.slice(0, 3)}****${p.slice(7)}` : (p || '')
 }
@@ -291,6 +293,7 @@ function handleLoggedIn(user: WebUser) {
 }
 
 onMounted(() => {
+  getWebLoginStatus().then(r => { loginEnabled.value = !!r.enabled }).catch(() => { /* 读不到按后端回的「请先登录」处理 */ })
   // 本地记着登录，但可能已过期/会员被删：问一下后端，不行就当没登录
   if (webUser.value) {
     getWebMe().then(u => { webUser.value = u }).catch(e => { if (e instanceof WebNeedLoginError) webUser.value = null })
@@ -357,7 +360,7 @@ async function submitOrder() {
     submitError.value = `「${missing[0].name}」商品信息不完整，请从购物车删掉后重新加入`
     return
   }
-  if (!webUser.value) {
+  if (!webUser.value && loginEnabled.value) {
     loginThenSubmit.value = true
     showLogin.value = true
     return
@@ -374,8 +377,9 @@ async function submitOrder() {
     payOrder.value = order
   } catch (e: any) {
     if (e instanceof WebNeedLoginError) {
-      // 登录过期：重新扫码，扫完自动接着下单
+      // 没登录/登录过期：扫码，扫完自动接着下单
       webUser.value = null
+      loginEnabled.value = true
       loginThenSubmit.value = true
       showLogin.value = true
     } else {
@@ -392,8 +396,10 @@ function handlePaid() {
 }
 
 function handlePayDone(path: string) {
+  const mobile = form.mobile
   payOrder.value = null
-  goBrand(path)
+  // 登录没开时订单页按手机号查，带过去直接出结果
+  goBrand(path, path === '/brand/orders' && !webUser.value ? { mobile } : {})
 }
 
 async function submitInquiry() {

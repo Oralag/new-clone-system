@@ -125,12 +125,17 @@ export function pollWebLogin(sid: string) {
   const q = new URLSearchParams({ sid, _t: String(Date.now()) })
   return call<{ status: 'waiting' | 'scanned' | 'confirmed' | 'cancelled' | 'expired'; token?: string; user?: WebUser }>('GET', `/web/login/poll?${q}`)
 }
+// 登录是否已开启（小程序「确认登录」页发布后后端自动打开）；没开时官网照旧按手机号查单
+export function getWebLoginStatus() {
+  return call<{ enabled: boolean }>('GET', `/web/login/status?_t=${Date.now()}`)
+}
 export function getWebMe() {
   return call<WebUser>('GET', `/web/me?_t=${Date.now()}`)
 }
 
-export function lookupWebOrders() {
+export function lookupWebOrders(mobile = '') {
   const q = new URLSearchParams({ _t: String(Date.now()) })
+  if (mobile) q.set('mobile', mobile)
   return call<{ rows: WebOrderRow[] }>('GET', `/web/order/lookup?${q}`)
 }
 
@@ -181,18 +186,18 @@ export interface WebRefundInfo {
   handled_at: string | null
 }
 
-export function applyWebRefund(orderNo: string, reason: string) {
-  return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, reason })
+export function applyWebRefund(orderNo: string, reason: string, mobile = '') {
+  return call<{ amount: number }>('POST', '/web/order/refund', { no: orderNo, reason, mobile })
 }
 
 export interface WebTrackEvent { time: string; description: string; location: string }
 export interface WebTrackInfo { number: string; carrier: string; status: string; events: WebTrackEvent[] }
 
 // 物流轨迹（要登录，只能查自己的单）
-export function getWebOrderTracking(orderNo: string) {
-  return call<WebTrackInfo>('GET', `/web/order/tracking?no=${encodeURIComponent(orderNo)}&_t=${Date.now()}`)
+export function getWebOrderTracking(orderNo: string, mobile = '') {
+  return call<WebTrackInfo>('GET', `/web/order/tracking?no=${encodeURIComponent(orderNo)}&mobile=${encodeURIComponent(mobile)}&_t=${Date.now()}`)
 }
 
-export function cancelWebOrder(orderNo: string) {
-  return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo })
+export function cancelWebOrder(orderNo: string, token = '') {
+  return call<Record<string, never>>('POST', '/web/order/cancel', { no: orderNo, token })
 }
