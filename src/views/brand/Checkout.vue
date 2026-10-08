@@ -431,7 +431,7 @@ async function submitInquiry() {
 }
 .bc-submit-btn:hover:not(:disabled) { background: #0071e3; }
 .bc-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.bc-paste-text { min-height: 72px; }
+.bc-paste-text { display: block; width: 100%; box-sizing: border-box; min-height: 72px; }
 .bc-paste-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
 .bc-paste-tip { font-size: 12px; color: rgba(29,29,31,0.45); line-height: 1.5; }
 .bc-paste-btn { flex-shrink: 0; height: 34px; padding: 0 18px; border-radius: 10px; border: none; background: #1d1d1f; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
