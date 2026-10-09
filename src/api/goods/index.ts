@@ -37,4 +37,4 @@ export const getGoodsPriceList = (params?: any) => http.get('/goods/ShopGoodsPri
 export const updateGoodsPrice = (data: any) => http.post('/goods/ShopGoodsPrice/edit', data)
 
 export const getUnitConvert = (goods_id: number) => http.get('/goods/GoodsUnitConvert/index', { params: { goods_id } })
-export const saveUnitConvert = (data: { goods_id: number; units: { unit_name: string; ratio: number; cost_price?: number }[] }) => http.post('/goods/GoodsUnitConvert/save', data)
+export const saveUnitConvert = (data: { goods_id: number; units: { unit_name: string; ratio: number; cost_price?: number; purchase_only?: boolean }[] }) => http.post('/goods/GoodsUnitConvert/save', data)

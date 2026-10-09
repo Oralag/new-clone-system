@@ -1377,8 +1377,9 @@ async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: numbe
       // 非 g 的辅助单位作为桶装快捷选项，优先使用关联BOM成品的价格
       const specObj = (() => { try { return JSON.parse(target.spec || '{}') } catch { return {} } })()
       const unitLinked: Record<string, { id: number; name: string }> = specObj.unit_linked_goods || {}
+      // 「仅采购」的单位（如麻袋）收银台不出
       wcAuxUnits.value = units
-        .filter((u: any) => u.unit_name !== 'g')
+        .filter((u: any) => u.unit_name !== 'g' && !u.purchase_only)
         .map((u: any) => {
           const linked = unitLinked[u.unit_name]
           const linkedGoods = linked?.id ? goodsList.value.find((g: any) => g.id === linked.id) : null
@@ -1422,7 +1423,7 @@ async function openWeightCalcEdit(idx: number) {
       const res = await getUnitConvert(item.goods_id)
       const units: any[] = res.data?.rows ?? []
       wcAuxUnits.value = units
-        .filter((u: any) => u.unit_name !== 'g')
+        .filter((u: any) => u.unit_name !== 'g' && !u.purchase_only)
         .map((u: any) => ({ unit_name: u.unit_name, ratio: Number(u.ratio), sell_price: Number(u.sell_price) || 0, cost_price: Number(u.cost_price) || 0 }))
     } catch {}
   }

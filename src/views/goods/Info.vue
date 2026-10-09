@@ -549,6 +549,13 @@
                     <span v-else>¥{{ (row.sell_price ?? 0).toFixed(2) }}</span>
                   </template>
                 </el-table-column>
+                <el-table-column label="仅采购" width="90" align="center">
+                  <template #default="{ row }">
+                    <el-tooltip content="勾上后收银台不出这个单位，只在采购单里用（如按麻袋进货）" placement="top">
+                      <el-checkbox v-model="row.purchase_only" :disabled="isView" size="small" />
+                    </el-tooltip>
+                  </template>
+                </el-table-column>
                 <el-table-column :label="$t('goods.info.minSaleUnit')" width="120" align="center">
                   <template #default="{ row, $index }">
                     <el-radio v-model="minSaleUnitIdx" :value="$index + 1" :disabled="isView" size="small">{{ '' }}</el-radio>
@@ -3073,6 +3080,7 @@ interface MultiUnitRow {
   is_default_sale: boolean
   cost_price: number
   sell_price: number
+  purchase_only?: boolean  // 只用于采购，收银台不出
 }
 
 const multiUnitRows = ref<MultiUnitRow[]>([])
@@ -3149,6 +3157,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
         is_default_sale: i === 0,
         cost_price: savedPrice !== undefined ? savedPrice : (i === 0 ? baseCostPrice : 0),
         sell_price: 0,
+        purchase_only: !!r.purchase_only,
       }
     })
   } catch { return [] }
@@ -3172,7 +3181,7 @@ async function saveMultiUnitsToServer(goodsId: number) {
     const units = normalizeUnitRows(
       [
         { unit_name: fd.unit_name, ratio: 1, cost_price: Number(multiUnitRows.value[0]?.cost_price ?? fd.cost_price ?? 0) },
-        ...multiUnitRows.value.slice(1).map(r => ({ unit_name: r.unit_name, ratio: r.ratio, cost_price: Number(r.cost_price || 0) })),
+        ...multiUnitRows.value.slice(1).map(r => ({ unit_name: r.unit_name, ratio: r.ratio, cost_price: Number(r.cost_price || 0), purchase_only: !!r.purchase_only })),
       ],
       fd.unit_name,
     )
