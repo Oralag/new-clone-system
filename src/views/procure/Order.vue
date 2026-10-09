@@ -1108,6 +1108,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { useI18n } from 'vue-i18n'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick } from 'vue'
@@ -2621,7 +2622,7 @@ async function openCreate() {
   fd.order_no = generateOrderNo()
   fd.order_sn = fd.order_no
   // 采购人默认 = 当前登录账号
-  fd.admin_name = String(authStore.userInfo?.name || authStore.userInfo?.account || '')
+  fd.admin_name = currentStaffName()
   // 应用默认仓库
   if (!warehouseOptions.value.length) await loadWarehouses()
   const defaultWhId = await getSyncedDefaultWarehouseId()

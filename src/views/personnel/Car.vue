@@ -62,6 +62,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
@@ -83,7 +84,7 @@ function resetSearch() {
 
 function openForm(row?: any) {
   formTitle.value = t('personnel.car.formTitleAdd')
-  formRef.value?.open(row)
+  formRef.value?.open(row ?? { applicant_name: currentStaffName() })
 }
 
 async function handleSubmit(data: any) {

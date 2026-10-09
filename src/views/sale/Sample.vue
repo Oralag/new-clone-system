@@ -307,6 +307,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ArrowLeft, Delete, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -467,6 +468,7 @@ async function loadSummary() {
 
 async function openCreate() {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   fd.items = []
   await ensureWarehouseOptionsLoaded()
   await applyDefaultWarehouse()

@@ -206,7 +206,7 @@
                 </el-form-item>
               </el-col>
               <el-col :span="6">
-                <el-form-item :label="$t('sale.exchange.handler')" prop="warehouse_id" :rules="[{ required: true, message: $t('sale.exchange.warehouseRequired') }]">
+                <el-form-item :label="$t('sale.exchange.colOutWarehouse')" prop="warehouse_id" :rules="[{ required: true, message: $t('sale.exchange.warehouseRequired') }]">
                   <el-select v-model="fd.warehouse_id" :placeholder="$t('sale.exchange.selectWarehouse')" filterable style="width:100%" @change="onWarehouseChange">
                     <el-option v-for="w in warehouseOptions" :key="w.id" :label="w.name" :value="w.id" />
                   </el-select>
@@ -502,6 +502,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, ArrowLeft, ArrowDown, EditPen } from '@element-plus/icons-vue'
 import { fmtDt } from '@/utils/date'
@@ -670,6 +671,7 @@ function onWarehouseChange(val: any) {
 
 function openCreate(orderType: OrderType = 'exchange') {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   fd.order_type = orderType
   isReadonly.value = false
   showForm.value = true

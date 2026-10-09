@@ -70,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
@@ -100,7 +101,7 @@ function onReset() {
 
 function openForm(row?: any) {
   formTitle.value = row ? '编辑' : '新增'
-  formRef.value?.open(row)
+  formRef.value?.open(row ?? { applicant_name: currentStaffName() })
 }
 
 async function handleSubmit(data: any) {

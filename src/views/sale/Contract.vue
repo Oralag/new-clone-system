@@ -1420,6 +1420,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName, currentStaffId } from '@/utils/currentStaff'
 import { specText } from '@/utils/goodsSpec'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated, nextTick, onUnmounted } from 'vue'
@@ -3122,6 +3123,10 @@ async function applyDefaultReceiveAccount() {
 
 async function openCreate() {
   Object.assign(fd, defaultFd())
+  // 经办人默认 = 当前登录账号，同时带出其默认提成比例
+  fd.admin_id = currentStaffId()
+  fd.admin_name = currentStaffName()
+  if (fd.admin_id) fd.commission_rate = getCommissionRate(fd.admin_id)
   applyDefaultReceiveAccount()
   isReadonly.value = false
   showExchangeGroup.value = false
@@ -4858,8 +4863,12 @@ function applyOfferToForm(offer: any) {
   fd.customer_id = offer.customer_id ?? null
   fd.customer_name = offer.customer_name || ''
   fd.level_id = offer.level_id ?? null
-  fd.admin_id = offer.admin_id ?? null
-  fd.admin_name = offer.admin_name || ''
+  // 报价单有经办人就沿用（提成比例跟着换），没有就保留当前登录账号
+  if (offer.admin_id || offer.admin_name) {
+    if (offer.admin_id && Number(offer.admin_id) !== Number(fd.admin_id)) fd.commission_rate = getCommissionRate(Number(offer.admin_id))
+    fd.admin_id = offer.admin_id ?? null
+    fd.admin_name = offer.admin_name || ''
+  }
   fd.sign_date = offer.offer_date || fd.sign_date
   fd.expire_date = offer.expire_date || ''
   fd.source_offer_id = Number(offer.id || 0)

@@ -488,6 +488,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
@@ -568,7 +569,7 @@ function tryLoadContractData() {
       openCreate()
       if (c.customer_id) { fd.customer_id = Number(c.customer_id); fd.customer_name = String(c.customer_name || '') }
       if (c.warehouse_id) { fd.warehouse_id = Number(c.warehouse_id); fd.warehouse_name = String(c.warehouse_name || '') }
-      fd.admin_name = String(c.admin_name || '')
+      fd.admin_name = String(c.admin_name || fd.admin_name || '')
       fd.remark = t('sale.out.fromContractRemark', { sn: c.contract_sn })
       fd.contract_id = Number(c.contract_id || 0)
       fd.discount_type = String(c.discount_type || 'none')
@@ -727,6 +728,7 @@ function parseSaleOutNo(row: any): string {
 
 async function openCreate() {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   isReadonly.value = false
   showForm.value = true
   try {

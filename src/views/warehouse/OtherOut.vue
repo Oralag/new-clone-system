@@ -244,6 +244,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { fmtDt } from '@/utils/date'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
@@ -313,6 +314,7 @@ const totalPrice = computed(() => fd.items.reduce((s, r) => s + (Number(r.num)||
 // ── 打开表单 ────────────────────────────────────────────────────
 async function openAdd() {
   Object.assign(fd, defaultFd())
+  fd.out_man = currentStaffName()
   fd.items = []
   isView.value = false
   showForm.value = true

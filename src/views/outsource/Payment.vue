@@ -143,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft } from '@element-plus/icons-vue'
@@ -165,7 +166,7 @@ async function loadSuppliers(){try{const r=await getSupplierList({list_rows:200}
 function onSupplierChange(id:any){const s=supplierOptions.value.find(x=>x.id===id);fd.supplier_name=s?.name??''}
 function defaultFd(){return{id:0,status:0,payment_no:'',supplier_id:null as any,supplier_name:'',payment_date:new Date().toISOString().slice(0,10),amount:0,pay_method:'银行转账',account_name:'',payer:'',pay_purpose:'委外加工款',receiver_account:'',remark:''}}
 const fd=reactive(defaultFd())
-async function openAdd(){Object.assign(fd,defaultFd());isView.value=false;showForm.value=true;await loadSuppliers()}
+async function openAdd(){Object.assign(fd,defaultFd());fd.payer=currentStaffName();isView.value=false;showForm.value=true;await loadSuppliers()}
 async function openEdit(row:any){Object.assign(fd,{...defaultFd(),...row});isView.value=false;showForm.value=true;await loadSuppliers()}
 async function openView(row:any){Object.assign(fd,{...defaultFd(),...row});isView.value=true;showForm.value=true;await loadSuppliers()}
 function backToList(){showForm.value=false;tableRef.value?.refresh()}

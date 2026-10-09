@@ -313,6 +313,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -425,6 +426,7 @@ const saving = ref(false)
 
 async function openCreate() {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   isReadonly.value = false
   showForm.value = true
   try {

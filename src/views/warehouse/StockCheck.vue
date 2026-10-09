@@ -177,6 +177,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtDt } from '@/utils/date'
@@ -279,6 +280,7 @@ function resetForm() {
 
 async function openCreate() {
   resetForm()
+  fd.admin_name = currentStaffName()
   isEdit.value = false
   await Promise.allSettled([loadWarehouse(), loadGoods()])
   showForm.value = true

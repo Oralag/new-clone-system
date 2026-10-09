@@ -313,6 +313,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus, ArrowLeft, Delete } from '@element-plus/icons-vue'
@@ -488,6 +489,7 @@ async function refreshAllRowStocks() {
 
 async function openAdd() {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   fd.items = []
   isView.value = false
   showForm.value = true
@@ -757,6 +759,7 @@ onMounted(async () => {
   if (!plan_id) return
 
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   fd.production_plan_id = toNumber(plan_id)
   fd.items = []
   isView.value = false

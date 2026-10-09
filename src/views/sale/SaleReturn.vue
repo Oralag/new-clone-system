@@ -461,6 +461,7 @@
 </template>
 
 <script setup lang="ts">
+import { currentStaffName } from '@/utils/currentStaff'
 import { useReconcile } from '@/composables/useReconcile'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Delete, ArrowLeft, EditPen, Document, Upload, Camera, Paperclip } from '@element-plus/icons-vue'
@@ -693,6 +694,7 @@ function onWarehouseChange(id: any) {
 
 function openCreate() {
   Object.assign(fd, defaultFd())
+  fd.admin_name = currentStaffName()
   customerGoodsIds.value = null
   isReadonly.value = false
   showForm.value = true
