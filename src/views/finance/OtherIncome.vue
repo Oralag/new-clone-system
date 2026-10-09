@@ -133,7 +133,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { useReconcile } from '@/composables/useReconcile'
 import http from '@/api/http'
-import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund, updateFund } from '@/api/finance'
+import { getCollectReceiptList, createCollectReceipt, deleteCollectReceipt, getFundList, createFund } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 
 const { t } = useI18n()
@@ -284,15 +284,7 @@ async function handleSubmit() {
       fund_name: fd.fund_name,
       remark: fd.remark ? `[${fd.income_type_name || '其他'}] ${fd.remark}` : (fd.income_type_name || ''),
     })
-    // 增加资金账户余额
-    const fund = fundOptions.value.find((f: any) => f.id === fd.fund_id)
-    if (fund) {
-      await updateFund({
-        id: fund.id,
-        name: fund.name,
-        balance: Number(fund.balance || 0) + Number(fd.amount),
-      })
-    }
+    // 后端建单/删单时已同步资金账户余额，前端不再重复调整
     ElMessage.success(t('finance.otherIncome.msgAddSuccess'))
     formVisible.value = false
     tableRef.value?.refresh()
@@ -308,19 +300,7 @@ async function handleDelete(row: any) {
     return
   }
   await ElMessageBox.confirm(t('finance.otherIncome.msgDeleteConfirm', { name: row.contact_name || '' }), t('finance.otherIncome.msgDeleteTip'), { type: 'warning' })
-  await deleteCollectReceipt(row.id)
-  const amount = Number(row.amount || 0)
-  if (row.fund_id && amount > 0) {
-    const fundRes = await getFundList({ list_rows: 200 })
-    const fund = (fundRes.data?.rows ?? []).find((f: any) => f.id === row.fund_id)
-    if (fund) {
-      await updateFund({
-        id: fund.id,
-        name: fund.name,
-        balance: Number(fund.balance || 0) - amount,
-      })
-    }
-  }
+  await deleteCollectReceipt(row.id) // 后端删单时已扣回资金账户余额
   ElMessage.success(t('finance.otherIncome.msgDeleteSuccess'))
   tableRef.value?.refresh()
   loadFunds()
@@ -409,11 +389,7 @@ async function importRow(row: any) {
     fund_id: fund?.id || null,
     fund_name: fund?.name || '',
     remark: remark || contactName || '',
-  })
-  if (fund && amount > 0) {
-    await updateFund({ id: fund.id, name: fund.name, balance: Number(fund.balance || 0) + amount })
-    fund.balance = Number(fund.balance || 0) + amount
-  }
+  }) // 后端建单时已增加资金账户余额
 }
 </script>
 

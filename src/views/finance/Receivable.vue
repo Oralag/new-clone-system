@@ -206,7 +206,6 @@ import http from '@/api/http'
 import { fmtDt } from '@/utils/date'
 import { createCollectReceipt, getFundList, createFund } from '@/api/finance'
 import { getSaleCustomerList } from '@/api/sale'
-import { adjustFundBalance } from '@/utils/fund'
 import { buildContractReceivableItems } from '@/utils/receivableCalc'
 
 const { t } = useI18n()
@@ -346,12 +345,7 @@ async function handleSave() {
       remark: (fd.remark || '').trim(),
     }
     await createCollectReceipt(payload)
-    // 更新资金账户余额
-    if (fd.fund_id && fd.amount > 0) {
-      try {
-        await adjustFundBalance({ fundId: fd.fund_id, fundName: fd.fund_name, delta: fd.amount })
-      } catch { /* 余额更新失败不阻断主流程 */ }
-    }
+    // 后端建单时已同步资金账户余额，前端不再重复调整
     ElMessage.success(t('finance.receivable.msgCollectSuccess'))
     collectVisible.value = false
     await load()

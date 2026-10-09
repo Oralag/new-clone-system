@@ -471,7 +471,7 @@ import ScTable from '@/components/ScTable.vue'
 import GoodsSelect from '@/components/GoodsSelect.vue'
 import { getSaleReturnList, createSaleReturn, updateSaleReturn, deleteSaleReturn, auditSaleReturn, getSaleOutList } from '@/api/sale'
 import { getSaleCustomerList, createSaleCustomer } from '@/api/sale'
-import { getFundList, updateFund, createPayReceipt } from '@/api/finance'
+import { getFundList, createPayReceipt } from '@/api/finance'
 import { readGoods } from '@/api/goods'
 import { parseGoodsSpecOptions } from '@/utils/goodsSpecOptions'
 import { getWarehouseList } from '@/api/warehouse'
@@ -885,9 +885,7 @@ async function handleReturnRefund(returnData: any, type: 'audit' | 'reverse') {
         pay_date: new Date().toISOString().slice(0, 10),
         remark: `销售退货退款 ${orderNo}`.trim(),
       })
-      if (fund) {
-        await updateFund({ id: fund.id, name: fund.name, balance: Number(fund.balance || 0) - amount })
-      }
+      // 后端建付款单时已扣减资金账户余额，前端不再重复调整
       ElMessage.info(t('sale.return.msgRefundOrderCreated'))
     } catch (e: any) { console.warn('退款付款单创建失败', e?.message) }
   }

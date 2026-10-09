@@ -187,7 +187,6 @@ import { ElMessage } from 'element-plus'
 import { createPayReceipt, getFundList, createFund } from '@/api/finance'
 import http from '@/api/http'
 import { getSupplierList, createSupplier } from '@/api/procure'
-import { adjustFundBalance } from '@/utils/fund'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -334,12 +333,7 @@ async function handleSave() {
         if (allocated > 0) allocations.push({ orderId, orderSn, oldPay, allocated })
       }
 
-      // 统一扣减资金账户余额
-      for (const line of validPayLines.value) {
-        if (Number(line.amount || 0) > 0) {
-          try { await adjustFundBalance({ fundId: line.fund_id, fundName: line.fund_name, delta: -Number(line.amount || 0) }) } catch { /* ignore */ }
-        }
-      }
+      // 后端建单时已同步资金账户余额，前端不再重复调整
 
       // 更新每张采购单的 pay_amount
       for (const { orderId, oldPay, allocated } of allocations) {
@@ -376,10 +370,7 @@ async function handleSave() {
           ? fd.remark
           : `${fd.remark || ''}${fd.remark ? ' ' : ''}[分账户 ${idx + 1}/${totalLines}]`.trim(),
       }
-      await createPayReceipt(payload)
-      try {
-        await adjustFundBalance({ fundId: line.fund_id, fundName: line.fund_name, delta: -Number(line.amount || 0) })
-      } catch { /* 扣减失败不阻断 */ }
+      await createPayReceipt(payload) // 后端建单时已同步资金账户余额，前端不再重复调整
     }
     // 更新采购单 pay_amount
     if (routeOrderId && routeOrderPayAmount >= 0) {

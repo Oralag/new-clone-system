@@ -133,7 +133,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import ScTable from '@/components/ScTable.vue'
 import { useReconcile } from '@/composables/useReconcile'
 import http from '@/api/http'
-import { getPayReceiptList, createPayReceipt, deletePayReceipt, getFundList, createFund, updateFund } from '@/api/finance'
+import { getPayReceiptList, createPayReceipt, deletePayReceipt, getFundList, createFund } from '@/api/finance'
 import { fmtDt } from '@/utils/date'
 import { useAuthStore } from '@/stores/auth'
 import { usePermissionStore } from '@/stores/permission'
@@ -277,15 +277,7 @@ async function handleSubmit() {
       pay_type: 'bank',
       remark: fd.remark ? `[${fd.pay_type_name || '其他'}] ${fd.remark}` : (fd.pay_type_name || ''),
     })
-    // 扣减资金账户余额
-    const fund = fundOptions.value.find((f: any) => f.id === fd.fund_id)
-    if (fund) {
-      await updateFund({
-        id: fund.id,
-        name: fund.name,
-        balance: Number(fund.balance || 0) - Number(fd.amount),
-      })
-    }
+    // 后端建单/删单时已同步资金账户余额，前端不再重复调整
     ElMessage.success(t('finance.otherExpense.msgAddSuccess'))
     formVisible.value = false
     tableRef.value?.refresh()
@@ -301,20 +293,7 @@ async function handleDelete(row: any) {
     return
   }
   await ElMessageBox.confirm(t('finance.otherExpense.msgDeleteConfirm', { name: row.contact_name || '' }), t('finance.otherExpense.msgDeleteTip'), { type: 'warning' })
-  await deletePayReceipt(row.id)
-  // 回滚资金账户余额
-  const amount = Number(row.amount || 0)
-  if (row.fund_id && amount > 0) {
-    const fundRes = await getFundList({ list_rows: 200 })
-    const fund = (fundRes.data?.rows ?? []).find((f: any) => f.id === row.fund_id)
-    if (fund) {
-      await updateFund({
-        id: fund.id,
-        name: fund.name,
-        balance: Number(fund.balance || 0) + amount,
-      })
-    }
-  }
+  await deletePayReceipt(row.id) // 后端删单时已退回资金账户余额
   ElMessage.success(t('finance.otherExpense.msgDeleteSuccess'))
   tableRef.value?.refresh()
   loadFunds()
@@ -418,11 +397,7 @@ async function importRow(row: any) {
     fund_name: fund?.name || '',
     pay_type: 'bank',
     remark: remark || contactName || '',
-  })
-  if (fund && amount > 0) {
-    await updateFund({ id: fund.id, name: fund.name, balance: Number(fund.balance || 0) - amount })
-    fund.balance = Number(fund.balance || 0) - amount
-  }
+  }) // 后端建单时已扣减资金账户余额
 }
 </script>
 

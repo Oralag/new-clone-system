@@ -90,14 +90,7 @@ async function run() {
           order_sn: orderSn,
           remark: `[补录] 销售出库单 ${orderSn} 本次收款`,
         })
-        if (fundId > 0) {
-          const fund = funds.find((f: any) => f.id === fundId)
-          if (fund) {
-            const newBalance = Number(fund.balance || 0) + Number(row.receive_amount)
-            await axios.post('/finance/Fund/edit', { id: fund.id, balance: newBalance })
-            fund.balance = newBalance
-          }
-        }
+        // 后端建收款单时已增加资金账户余额，前端不再重复调整
         ok++
         log('success', `✓ ${orderSn}  客户：${row.customer_name}  金额：${row.receive_amount}`)
       } catch (e: any) {

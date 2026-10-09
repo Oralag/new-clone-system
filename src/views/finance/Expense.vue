@@ -131,7 +131,6 @@ import { useReconcile } from '@/composables/useReconcile'
 import ScForm from '@/components/ScForm.vue'
 import { getExpenseList, createExpense, updateExpense, deleteExpense, createPayReceipt, getFundList } from '@/api/finance'
 import { getExhibitions } from '@/api/retail/exhibition'
-import { adjustFundBalance } from '@/utils/fund'
 import { fmtDt } from '@/utils/date'
 
 const { t } = useI18n()
@@ -270,14 +269,7 @@ async function submitPay() {
       remark: row.remark_clean ?? row.remark ?? '',
       payment_status: 'paid',
     })
-    // 扣减资金账户余额
-    try {
-      await adjustFundBalance({
-        fundId: payForm.fund_id,
-        fundName: payForm.fund_name,
-        delta: -Number(payForm.amount || 0),
-      })
-    } catch { /* 扣减失败不阻塞 */ }
+    // 后端建单时已同步资金账户余额，前端不再重复调整
     payVisible.value = false
     ElMessage.success(t('finance.expense.paySuccess'))
     tableRef.value?.refresh()
