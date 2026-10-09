@@ -58,10 +58,12 @@
             </template>
           </el-table-column>
           <el-table-column prop="remark" :label="$t('warehouse.stockCheck.colRemark')" min-width="120" show-overflow-tooltip />
-          <el-table-column :label="$t('warehouse.stockCheck.colActions')" width="160" fixed="right">
+          <el-table-column :label="$t('warehouse.stockCheck.colActions')" width="230" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" size="small" link @click="openEdit(row)">{{ $t('warehouse.stockCheck.btnView') }}</el-button>
               <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('warehouse.stockCheck.btnReconciled') : $t('warehouse.stockCheck.btnReconcile') }}</el-button>
+              <el-button v-if="row.status !== 1" type="success" size="small" link @click="handleAudit(row, 1)">审核</el-button>
+              <el-button v-else type="warning" size="small" link @click="handleAudit(row, 0)">反审核</el-button>
               <el-button type="danger" size="small" link :disabled="row.status === 1" :title="row.status === 1 ? $t('warehouse.stockCheck.titleAuditedCannotDelete') : ''" @click="handleDelete(row.id)">{{ $t('warehouse.stockCheck.btnDelete') }}</el-button>
             </template>
           </el-table-column>
@@ -76,7 +78,11 @@
         <span class="form-title">{{ isEdit ? $t('warehouse.stockCheck.formTitleEdit') : $t('warehouse.stockCheck.formTitleAdd') }}</span>
         <div class="form-header-actions">
           <el-button @click="backToList">{{ $t('warehouse.stockCheck.btnCancel') }}</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('warehouse.stockCheck.btnSave') }}</el-button>
+          <template v-if="fd.status !== 1">
+            <el-button :loading="saving" @click="handleSave(false)">保存草稿</el-button>
+            <el-button type="primary" :loading="saving" @click="handleSave(true)">保存并审核</el-button>
+          </template>
+          <el-tag v-else type="success">已审核（要改先在列表里反审核）</el-tag>
         </div>
       </div>
 
@@ -119,7 +125,10 @@
         <el-card class="form-card" style="margin-top:16px">
           <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center">
             <span>{{ $t('warehouse.stockCheck.sectionItems') }}</span>
-            <el-button type="primary" size="small" :icon="Plus" @click="addItem">{{ $t('warehouse.stockCheck.btnAddItem') }}</el-button>
+            <span>
+              <el-button size="small" :disabled="!fd.warehouse_id || fd.status === 1" @click="addAllStockItems">带出本仓库全部商品</el-button>
+              <el-button type="primary" size="small" :icon="Plus" :disabled="fd.status === 1" @click="addItem">{{ $t('warehouse.stockCheck.btnAddItem') }}</el-button>
+            </span>
           </div>
           <el-table :data="fd.items" border size="small" style="margin-top:12px">
             <el-table-column type="index" :label="$t('warehouse.stockCheck.colItemIndex')" width="55" align="center" />
@@ -144,7 +153,7 @@
             </el-table-column>
             <el-table-column :label="$t('warehouse.stockCheck.colItemSystemQty')" width="110" align="right">
               <template #default="{ row }">
-                <el-input-number v-model="row.system_qty" :min="0" :precision="2" size="small" style="width:95px" disabled />
+                <span :style="{ color: Number(row.system_qty) < 0 ? '#dc2626' : '' }">{{ Number(row.system_qty || 0) }}</span>
               </template>
             </el-table-column>
             <el-table-column :label="$t('warehouse.stockCheck.colItemCheckQty')" width="110" align="right">
@@ -211,6 +220,7 @@ const fd = reactive({
   warehouse_id: 0,
   admin_name: '',
   remark: '',
+  status: 0,
   items: [] as any[],
 })
 
@@ -231,7 +241,8 @@ async function loadGoods() {
 }
 
 async function loadStock(warehouseName: string) {
-  const res = await http.get('/stock/StockAll/index', { params: { warehouse_name: warehouseName, list_rows: 500 } })
+  // 按仓库 ID 取账面数（后端以前不认仓库筛选，几个仓库的数会混在一起）
+  const res = await http.get('/stock/StockAll/index', { params: { warehouse_id: fd.warehouse_id || undefined, warehouse_name: warehouseName, list_rows: 5000 } })
   const rows = res.data?.rows || []
   const map: Record<number, number> = {}
   for (const r of rows) map[r.goods_id] = Number(r.qty || 0)
@@ -275,6 +286,7 @@ function resetForm() {
   fd.warehouse_id = 0
   fd.admin_name = ''
   fd.remark = ''
+  fd.status = 0
   fd.items = []
 }
 
@@ -297,8 +309,10 @@ async function openEdit(row: any) {
   fd.warehouse_id = row.warehouse_id || 0
   fd.admin_name = row.admin_name || ''
   fd.remark = row.remark || ''
+  fd.status = Number(row.status) || 0
   fd.items = parseItems(row.goods_info)
-  if (fd.warehouse_name) await loadStock(fd.warehouse_name)
+  // 已审核的单子保留当时的账面数，草稿刷新成现在的账面数
+  if (fd.warehouse_name && fd.status !== 1) await loadStock(fd.warehouse_name)
   showForm.value = true
 }
 
@@ -307,8 +321,39 @@ function backToList() {
   tableRef.value?.refresh()
 }
 
-async function handleSave() {
+// 一次带出这个仓库所有有库存记录的商品，实盘数先填账面数，只改数出来不一样的
+function addAllStockItems() {
+  const have = new Set(fd.items.map((i: any) => Number(i.goods_id)).filter(Boolean))
+  const byId = new Map(goodsList.value.map((g: any) => [Number(g.id), g]))
+  for (const [gid, qty] of Object.entries(stockMap.value)) {
+    const id = Number(gid)
+    if (have.has(id)) continue
+    const g: any = byId.get(id) || {}
+    fd.items.push({ goods_id: id, goods_name: g.goods_name || '', goods_sn: g.goods_sn || '', spec: '', unit_name: g.unit_name || '',
+      system_qty: Number(qty) || 0, check_qty: Number(qty) >= 0 ? Number(qty) : null, remark: '' })  // 负库存留空，审核时跳过，必须数了再填
+  }
+  fd.items = fd.items.filter((i: any) => i.goods_id)
+}
+
+async function handleAudit(row: any, status: number) {
+  const msg = status === 1
+    ? '审核后，库存会按「实盘数量 − 审核时的账面数」调整，并记一条盘点流水。确定审核？'
+    : '反审核会把这张盘点单调整的库存原样撤回。确定反审核？'
+  try { await ElMessageBox.confirm(msg, status === 1 ? '审核盘点单' : '反审核盘点单', { type: 'warning' }) } catch { return }
+  try {
+    await http.post('/stock/StockCheck/audit', { id: row.id, status })
+    ElMessage.success(status === 1 ? '已审核，库存已调整' : '已反审核，库存已撤回')
+    tableRef.value?.refresh()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '操作失败')
+  }
+}
+
+async function handleSave(audit = false) {
   try { await formRef.value?.validate() } catch { return }
+  if (audit) {
+    try { await ElMessageBox.confirm('保存并审核后，库存会按「实盘数量 − 审核时的账面数」调整。确定？', '保存并审核', { type: 'warning' }) } catch { return }
+  }
   saving.value = true
   try {
     const payload = {
@@ -318,15 +363,21 @@ async function handleSave() {
       warehouse_id: fd.warehouse_id,
       admin_name: fd.admin_name,
       remark: fd.remark,
-      goods_info: JSON.stringify(fd.items),
-      status: 1,
+      goods_info: JSON.stringify(fd.items.filter((i: any) => i.goods_id)),
     }
+    let id = fd.id
     if (fd.id) {
       await http.post('/stock/StockCheck/edit', { id: fd.id, ...payload })
     } else {
-      await createCheck(payload)
+      const res: any = await createCheck(payload)
+      id = res?.data?.id
     }
-    ElMessage.success(t('warehouse.stockCheck.msgSaveSuccess'))
+    if (audit && id) {
+      await http.post('/stock/StockCheck/audit', { id, status: 1 })
+      ElMessage.success('已保存并审核，库存已调整')
+    } else {
+      ElMessage.success(t('warehouse.stockCheck.msgSaveSuccess'))
+    }
     backToList()
   } catch (e: any) {
     ElMessage.error(e?.message || t('warehouse.stockCheck.msgSaveFailed'))
