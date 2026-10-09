@@ -879,7 +879,9 @@ async function addSpecItemToCart() {
   ssWeighAfter.value = false
   if (weighThis) {
     const price = priceSku?.sell_price != null ? Number(priceSku.sell_price) : Number(g.sell_price) || 0
-    openWeightCalc(g, specLabel, price)
+    // 规格里填了成本（如不同口味进价不同）就按规格成本记，利润才准
+    const specCost = priceSku?.cost_price != null && Number(priceSku.cost_price) > 0 ? Number(priceSku.cost_price) : undefined
+    openWeightCalc(g, specLabel, price, specCost)
     return
   }
 
@@ -1322,6 +1324,7 @@ const weightCalcVisible = ref(false)
 const wcGoodsId = ref<any>(null)
 const wcGoodsName = ref('')
 const wcSpecLabel = ref('') // 散装+规格时携带的规格标签
+const wcCostOverride = ref<number | null>(null) // 散装+规格时该规格的成本价（基础单位）
 const wcGoodsUnit = ref('斤')
 const wcPricePerJin = ref(0)
 const wcGramsPerBaseUnit = ref(500)
@@ -1354,8 +1357,9 @@ const wcJinPresets = computed(() => {
   ]
 })
 
-async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: number) {
+async function openWeightCalc(g?: any, specLabel?: string, overridePrice?: number, overrideCost?: number) {
   const target = g ?? selectedGoods.value
+  wcCostOverride.value = overrideCost ?? null
   const targetGoodsId = Number(target?.id)
   wcGoodsId.value = Number.isSafeInteger(targetGoodsId) && targetGoodsId > 0 ? targetGoodsId : null
   wcGoodsName.value = target?.goods_name ?? ''
@@ -1464,7 +1468,7 @@ function addWeightItemToCart() {
       goods_sn: '',
       unit_name: wcGoodsUnit.value,
       price: wcPricePerJin.value,
-      cost_price: Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
+      cost_price: wcCostOverride.value ?? Number(goodsList.value.find((g: any) => g.id === wcGoodsId.value)?.cost_price || 0),
       num: newNum,
       is_bulk: true,
       bulk_grams_per_base: wcGramsPerBaseUnit.value,
