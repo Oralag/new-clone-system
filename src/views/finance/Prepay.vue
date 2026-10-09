@@ -272,20 +272,7 @@ async function handleDelete(id: number) {
     { type: 'warning', confirmButtonText: t('finance.prepay.deleteConfirmBtn'), cancelButtonText: t('finance.prepay.cancel') },
   )
 
-  await http.post('/finance/Prepay/del', { id })
-
-  // 回退资金账户余额
-  if (row.fund_id && amount > 0) {
-    try {
-      const fundRes = await http.get('/finance/Fund/index', { params: { list_rows: 100 } })
-      const funds: any[] = fundRes.data?.rows || []
-      const fund = funds.find((f: any) => f.id === row.fund_id)
-      if (fund) {
-        const newBalance = Number(fund.balance || 0) - amount
-        await http.post('/finance/Fund/edit', { id: fund.id, name: fund.name, balance: newBalance })
-      }
-    } catch { /* 回退失败不影响删除结果 */ }
-  }
+  await http.post('/finance/Prepay/del', { id }) // 后端删除时已撤回资金账户余额
 
   ElMessage.success(t('finance.prepay.deleteSuccess'))
   loadData()

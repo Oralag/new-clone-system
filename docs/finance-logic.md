@@ -252,6 +252,19 @@ Overview.vue 的汇总数字必须与 FundFlow.vue 的明细合计一致。两�
   再经 applyProcureReturnsToFundRows() 加上采购退货退款
 ```
 
+#### 资金账户 balance 字段由谁维护（2026-10-10）
+```
+只由后端维护，前端一律不再自己调 balance（不再调用 adjustFundBalance / updateFund / Fund/edit 改余额）
+  付款单 add -金额 / del +金额（只有真正删掉的那次才退，重复删除不重复退）
+  收款单 add +金额 / del -金额（同上）；「预付款核销 - …」收款单不动余额（钱在充值时已进账）
+  预付款 create：客户预存 +金额，预付供应商 -金额；del 反向撤回
+  采购单审核/反审核/删除：auditTransactions.js，按付款单逐张退回原账户（#id 精确匹配，#12 不会匹配 #120）
+  采购退货审核/反审核/删除：auditTransactions.js 一个事务完成——按退货单仓库扣库存、退款到账户、冲减原采购单 total/after_discount/pay_amount，
+    实际影响记在 procure_return_effects，反审核/删除按记录原样撤回
+  退款金额 = min(已付, max(0, 退货金额 - 未付))；退货金额 = Σ 数量×单价
+历史问题：2026-03-29 ~ 2026-10-10 多个前端页面在后端之后又调一次余额，balance 有偏差，见总览页动态余额对账
+```
+
 #### loadAllData 完整 API 请求列表
 ```
 getFundList()                                    → fundRes
