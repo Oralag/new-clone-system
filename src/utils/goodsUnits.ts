@@ -1,21 +1,27 @@
 import http from '@/api/http'
 import { getUnitConvert } from '@/api/goods'
 
-export interface UnitRow { unit_name: string; ratio: number }
+// cost_price：该单位的采购价（后端 goods_unit_convert.cost_price），没设过就不带
+export interface UnitRow { unit_name: string; ratio: number; cost_price?: number }
 
 // 整理单位换算行：基础单位永远排第一且 ratio=1；去掉重名；
 // 换算表里没有基础单位时，ratio=1 的那行是改基础单位前留下的旧基础行，丢掉。
 export function normalizeUnitRows(rows: any[], baseUnitName: string): UnitRow[] {
   const base = String(baseUnitName || '').trim()
   const list = (Array.isArray(rows) ? rows : [])
-    .map(r => ({ unit_name: String(r?.unit_name || '').trim(), ratio: Number(r?.ratio) }))
+    .map(r => {
+      const row: UnitRow = { unit_name: String(r?.unit_name || '').trim(), ratio: Number(r?.ratio) }
+      if (r?.cost_price !== undefined && r?.cost_price !== null && r?.cost_price !== '') row.cost_price = Number(r.cost_price)
+      return row
+    })
     .filter(r => r.unit_name && r.ratio > 0)
   if (!base) {
     const seen = new Set<string>()
     return list.filter(r => !seen.has(r.unit_name) && seen.add(r.unit_name))
   }
   const hasBase = list.some(r => r.unit_name === base)
-  const out: UnitRow[] = [{ unit_name: base, ratio: 1 }]
+  const baseSrc = list.find(r => r.unit_name === base && r.ratio === 1) ?? list.find(r => r.unit_name === base)
+  const out: UnitRow[] = [{ unit_name: base, ratio: 1, ...(baseSrc?.cost_price !== undefined ? { cost_price: baseSrc.cost_price } : {}) }]
   const seen = new Set<string>([base])
   // 同名多行时优先保留 ratio≠1 的（ratio=1 那行多半是旧基础行）
   const sorted = [...list].sort((a, b) => Number(a.ratio === 1) - Number(b.ratio === 1))

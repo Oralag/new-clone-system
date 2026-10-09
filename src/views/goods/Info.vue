@@ -3136,7 +3136,8 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     return ordered.map((r: any, i: number) => {
       const ratio = Number(r.ratio)
       const linked = unitLinked[r.unit_name]
-      const savedPrice = savedPrices[r.unit_name]
+      // 单位采购价以后端为准，后端没存过的再看本机旧缓存
+      const savedPrice = r.cost_price ?? savedPrices[r.unit_name]
       return {
         is_base: i === 0,
         unit_id: null,
@@ -3169,11 +3170,14 @@ async function saveMultiUnitsToServer(goodsId: number) {
   try {
     // 基础行以商品档案的基础单位为准，去重、去空
     const units = normalizeUnitRows(
-      [{ unit_name: fd.unit_name, ratio: 1 }, ...multiUnitRows.value.slice(1).map(r => ({ unit_name: r.unit_name, ratio: r.ratio }))],
+      [
+        { unit_name: fd.unit_name, ratio: 1, cost_price: Number(multiUnitRows.value[0]?.cost_price ?? fd.cost_price ?? 0) },
+        ...multiUnitRows.value.slice(1).map(r => ({ unit_name: r.unit_name, ratio: r.ratio, cost_price: Number(r.cost_price || 0) })),
+      ],
       fd.unit_name,
     )
     await saveUnitConvert({ goods_id: goodsId, units })
-    // Save unit-specific cost prices to localStorage
+    // 本机缓存留着兼容旧版本，单位采购价已随 units 存到后端
     const prices: Record<string, number> = {}
     multiUnitRows.value.forEach(r => { if (r.unit_name) prices[r.unit_name] = Number(r.cost_price || 0) })
     saveUnitCostPrices(goodsId, prices)

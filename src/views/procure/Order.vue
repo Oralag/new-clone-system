@@ -2255,8 +2255,9 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
   goodsUnitMap[goodsId] = []
   try {
     const rows = await loadGoodsUnitRows(goodsId, baseUnitName)
+    // 单位采购价以后端为准；后端没存过的再看本机旧缓存（以前只存在录入那台浏览器里）
     const savedPrices = readUnitCostPrices(goodsId)
-    goodsUnitMap[goodsId] = rows.map(r => ({ ...r, cost_price: savedPrices[r.unit_name] ?? 0 }))
+    goodsUnitMap[goodsId] = rows.map(r => ({ ...r, cost_price: r.cost_price ?? savedPrices[r.unit_name] ?? 0 }))
   } catch { /* ignore */ }
 }
 const searchForm = reactive<any>({ order_no: route.query.order_no ? String(route.query.order_no) : '', supplier_name: '', status: '', goods_name: '', start_date: '', end_date: '' })
@@ -3341,7 +3342,7 @@ function onUnitChange(row: any, unitName: string) {
     row._base_price_no_tax = Number(basePriceFromPrev.toFixed(6))
   }
 
-  // Unit-specific cost_price from convert table (currently always null in this ERP)
+  // 该单位在商品资料里设的采购价（goods_unit_convert.cost_price）
   let nextPriceNoTax = Number(found?.cost_price || 0)
 
   // KaoNaiPi goods have hardcoded unit prices — keep special logic
