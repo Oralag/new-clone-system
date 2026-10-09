@@ -2340,7 +2340,7 @@ onMounted(() => {
         fd.warehouse_id = Number(p.warehouse_id)
         fd.warehouse_name = String(p.warehouse_name || '')
       }
-      fd.admin_name = String(p.admin_name || '')
+      fd.admin_name = String(p.admin_name || fd.admin_name || '')
       fd.remark = String(p.remark || '')
       fd.plan_id = Number(p.plan_id || 0)
       const items = JSON.parse(String(p.goods_info || '[]'))
@@ -2620,6 +2620,8 @@ async function openCreate() {
   Object.assign(fd, defaultFd())
   fd.order_no = generateOrderNo()
   fd.order_sn = fd.order_no
+  // 采购人默认 = 当前登录账号
+  fd.admin_name = String(authStore.userInfo?.name || authStore.userInfo?.account || '')
   // 应用默认仓库
   if (!warehouseOptions.value.length) await loadWarehouses()
   const defaultWhId = await getSyncedDefaultWarehouseId()
