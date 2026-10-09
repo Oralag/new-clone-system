@@ -658,13 +658,13 @@
         <div v-if="ssSpecLabel" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
           <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ ssSpecLabel }}</div>
           <div style="font-size:28px;font-weight:700;color:#2563eb">
-            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}
+            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}<span v-if="ssWeighAfter" style="font-size:15px;font-weight:600">/{{ ssGoods?.unit_name || '斤' }}</span>
           </div>
         </div>
         <el-button type="primary"
           :disabled="ssSelectedVals.some(v => !v) || !ssSpecAttrs.length"
           @click="addSpecItemToCart" style="width:100%">
-          {{ $t('retail.cashRegister.specAddToCart') }}
+          {{ ssWeighAfter ? '下一步：称重' : $t('retail.cashRegister.specAddToCart') }}
         </el-button>
       </div>
     </el-dialog>
