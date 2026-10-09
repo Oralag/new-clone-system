@@ -658,13 +658,13 @@
         <div v-if="ssSpecLabel" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
           <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ ssSpecLabel }}</div>
           <div style="font-size:28px;font-weight:700;color:#2563eb">
-            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}<span v-if="ssWeighAfter" style="font-size:15px;font-weight:600">/{{ ssGoods?.unit_name || '斤' }}</span>
+            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}<span v-if="ssWeighCurrent" style="font-size:15px;font-weight:600">/{{ ssCurrentGoods?.unit_name || '斤' }}</span>
           </div>
         </div>
         <el-button type="primary"
           :disabled="ssSelectedVals.some(v => !v) || !ssSpecAttrs.length"
           @click="addSpecItemToCart" style="width:100%">
-          {{ ssWeighAfter ? '下一步：称重' : $t('retail.cashRegister.specAddToCart') }}
+          {{ ssWeighCurrent ? '下一步：称重' : $t('retail.cashRegister.specAddToCart') }}
         </el-button>
       </div>
     </el-dialog>
@@ -785,6 +785,13 @@ const ssCurrentSku = computed(() => {
 })
 
 const ssSpecLabel = computed(() => ssSelectedVals.value.filter(Boolean).join(' · '))
+// 当前选中规格对应的商品（合并同款时是被并入的那个商品），用来判断要不要称重、显示单位
+const ssCurrentGoods = computed(() => {
+  const id = Number(ssCurrentSku.value?.goods_id) || 0
+  if (!id || id === Number(ssGoods.value?.id)) return ssGoods.value
+  return goodsList.value.find((x: any) => Number(x.id) === id) || mergeAllGoods.value.find((x: any) => Number(x.id) === id) || ssGoods.value
+})
+const ssWeighCurrent = computed(() => ssWeighAfter.value && Number(ssCurrentGoods.value?.goods_type) === 5)
 
 async function openSpecSelect(g: any) {
   ssGoods.value = g
@@ -867,8 +874,10 @@ async function addSpecItemToCart() {
   specSelectVisible.value = false
 
   // 散装+规格：选完规格后进入称重弹窗，把规格标签带进去
-  if (ssWeighAfter.value) {
-    ssWeighAfter.value = false
+  // 只有选中的那个商品本身是散装才称重；合并进来的袋装等计件商品直接按件加购物车
+  const weighThis = ssWeighAfter.value && Number(g.goods_type) === 5
+  ssWeighAfter.value = false
+  if (weighThis) {
     const price = priceSku?.sell_price != null ? Number(priceSku.sell_price) : Number(g.sell_price) || 0
     openWeightCalc(g, specLabel, price)
     return
