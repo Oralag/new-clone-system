@@ -90,7 +90,7 @@
         <el-table-column :label="t('sale.miniOrders.colCreatedAt')" width="135">
           <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column :label="t('sale.miniOrders.colAction')" width="230" fixed="right">
+        <el-table-column :label="t('sale.miniOrders.colAction')" width="290" fixed="right">
           <template #default="{ row }">
             <div class="mini-order-actions">
               <el-button type="success" plain size="small" @click="openPrivateMessage(row)">私信</el-button>
@@ -103,6 +103,7 @@
               <el-button v-else-if="row.status === 1" type="primary" size="small" @click="openShip(row)">{{ shipBtnText(row.delivery_type) }}</el-button>
               <el-button v-else-if="row.status === 2 && row.delivery_type === 2" type="success" size="small" @click="openPickup(row)">{{ t('sale.miniOrders.pickupVerifyBtn') }}</el-button>
               <el-button v-else size="small" @click="viewDetail(row)">{{ t('sale.miniOrders.detailBtn') }}</el-button>
+              <el-button v-if="canRefund(row)" type="danger" plain size="small" @click="openRefund(row)">退款</el-button>
             </div>
           </template>
         </el-table-column>
@@ -197,6 +198,37 @@
     </el-dialog>
 
     <!-- 待付款订单改价 -->
+    <!-- 商家主动退款（全额/部分），钱原路退回客户微信 -->
+    <el-dialog v-model="refundDialog" title="给客户退款" width="480px" :close-on-click-modal="false">
+      <el-alert type="warning" :closable="false" show-icon title="钱会原路退回客户的微信，提交后无法撤销" style="margin-bottom:16px;" />
+      <el-form label-width="96px">
+        <el-form-item label="订单编号"><span>{{ current?.order_no }}</span></el-form-item>
+        <el-form-item label="实付金额">
+          <span>¥{{ Number(current?.total_amount || 0).toFixed(2) }}</span>
+          <span v-if="refundedOf(current) > 0" class="refund-hint">（已退 ¥{{ refundedOf(current).toFixed(2) }}）</span>
+        </el-form-item>
+        <el-form-item label="退款金额" required>
+          <el-input-number v-model="refundForm.amount" :min="0.01" :max="refundMax" :precision="2" :step="1" controls-position="right" style="width:100%;" />
+          <div class="refund-hint">
+            {{ refundIsFull ? '全额退款：订单改为已退款，退回客户的积分和优惠券' : '部分退款：只退这部分钱，订单照常发货/完成' }}
+          </div>
+        </el-form-item>
+        <el-form-item label="退款原因" required>
+          <el-input v-model="refundForm.reason" maxlength="100" show-word-limit placeholder="如：商品破损补偿、缺货退款" />
+        </el-form-item>
+        <el-form-item v-if="refundIsFull" label="库存">
+          <template v-if="Number(current?.status) === 1">
+            <span class="refund-hint">还没发货，退款后库存自动加回</span>
+          </template>
+          <el-checkbox v-else v-model="refundForm.restock">货已退回，把库存加回来</el-checkbox>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="refundDialog = false">取消</el-button>
+        <el-button type="danger" :loading="refunding" @click="submitRefund">确认退款 ¥{{ Number(refundForm.amount || 0).toFixed(2) }}</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="adjustDialog" title="修改待付款金额" width="440px" :close-on-click-modal="false">
       <el-alert
         type="info"
@@ -367,6 +399,47 @@ const current = ref<any>(null)
 const privateMessageText = ref('')
 const shipForm = reactive({ express_company: DEFAULT_EXPRESS_COMPANY, tracking_no: '' })
 const adjustForm = reactive({ amount: 0, note: '' })
+const refundDialog = ref(false)
+const refunding = ref(false)
+const refundForm = reactive({ amount: 0, reason: '', restock: false })
+const refundedOf = (row: any) => Number(row?.refunded_amount || 0)
+const refundMax = computed(() => Math.max(0.01, Math.round((Number(current.value?.total_amount || 0) - refundedOf(current.value)) * 100) / 100))
+const refundIsFull = computed(() => Number(refundForm.amount || 0) >= refundMax.value - 0.001)
+// 已付款（待发货/已发货/已完成）且还有没退完的钱才能退
+function canRefund(row: any) {
+  return [1, 2, 3].includes(Number(row.status)) && Number(row.total_amount || 0) - refundedOf(row) > 0.001
+}
+function openRefund(row: any) {
+  current.value = row
+  refundForm.amount = Math.round((Number(row.total_amount || 0) - refundedOf(row)) * 100) / 100
+  refundForm.reason = ''
+  refundForm.restock = false
+  refundDialog.value = true
+}
+async function submitRefund() {
+  const reason = refundForm.reason.trim()
+  if (!reason) { ElMessage.warning('请填写退款原因'); return }
+  const amount = Math.round(Number(refundForm.amount || 0) * 100) / 100
+  if (!(amount > 0)) { ElMessage.warning('退款金额必须大于 0'); return }
+  await ElMessageBox.confirm(
+    `确认把 ¥${amount.toFixed(2)} 原路退回给客户？${refundIsFull.value ? '订单将改为已退款。' : ''}提交后无法撤销。`,
+    '确认退款', { type: 'warning', confirmButtonText: '确认退款', cancelButtonText: '再想想' },
+  )
+  refunding.value = true
+  try {
+    const res: any = await http.post('/mini/order/refund', {
+      order_id: current.value.id, amount, reason,
+      restock: Number(current.value.status) === 1 ? true : refundForm.restock,
+    })
+    ElMessage.success(res?.data?.message || res?.message || '退款成功')
+    refundDialog.value = false
+    load()
+  } catch (e: any) {
+    ElMessage.error(e?.message || '退款失败')
+  } finally {
+    refunding.value = false
+  }
+}
 const availableCoupons = ref<any[]>([])
 const selectedCouponId = ref<number | null>(null)
 
@@ -714,4 +787,5 @@ onUnmounted(() => window.removeEventListener('mini-order-arrived', onMiniOrderAr
 .addr-block { background: #f8f9fa; padding: 12px 16px; border-radius: 4px; font-size: 14px; line-height: 1.8; }
 .addr-title { font-weight: 600; margin-bottom: 4px; }
 .remark { color: #e6a23c; margin-top: 4px; }
+.refund-hint { font-size: 12px; color: #86868b; margin-left: 6px; line-height: 1.6; }
 </style>

@@ -67,6 +67,10 @@
       <el-form label-width="80px">
         <el-form-item :label="t('miniprogramRefund.order')">{{ handleRow?.order_no }}</el-form-item>
         <el-form-item :label="t('miniprogramRefund.amount')">¥{{ Number(handleRow?.amount || 0).toFixed(2) }}</el-form-item>
+        <el-form-item v-if="handleAction === 'approve' && Number(handleRow?.original_order_status) >= 2" label="库存">
+          <el-checkbox v-model="handleRestock">货已退回，把库存加回来</el-checkbox>
+          <div style="font-size:12px;color:#86868b;line-height:1.6;">订单申请退款前已发货；货没退回就不要勾</div>
+        </el-form-item>
         <el-form-item v-if="handleAction === 'negotiate'" label="处理方式">
           <el-select v-model="resolution" style="width:100%">
             <el-option label="协商退款" value="refund" />
@@ -126,6 +130,7 @@ const activeTab = ref('')
 const handleVisible = ref(false)
 const handleRow = ref<any>(null)
 const handleAction = ref<'approve' | 'reject' | 'negotiate'>('approve')
+const handleRestock = ref(false)
 const handleNote = ref('')
 const resolution = ref('exchange')
 const acting = ref(false)
@@ -155,6 +160,7 @@ function openHandle(row: any, action: 'approve' | 'reject' | 'negotiate') {
   handleAction.value = action
   handleNote.value = ''
   resolution.value = 'exchange'
+  handleRestock.value = false
   handleVisible.value = true
 }
 
@@ -166,6 +172,8 @@ async function submitHandle() {
       action: handleAction.value,
       resolution: resolution.value,
       note: handleNote.value,
+      // 没发货的退款库存自动加回；已发货的只有勾了「货已退回」才加
+      restock: Number(handleRow.value?.original_order_status) >= 2 ? handleRestock.value : true,
     })
     ElMessage.success(res.data?.message || t('miniprogramRefund.operationSuccess'))
     handleVisible.value = false
