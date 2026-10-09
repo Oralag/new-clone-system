@@ -721,8 +721,10 @@ function getStockQty(row: any): number {
   return stockQtyMap.value[row.id] ?? Number(row.stock_num ?? 0)
 }
 
+// 库存均价 = 商品成本价（后端在采购入库审核时按移动加权平均维护）；没有成本价才用入库单现算的参考值
 function getAvgPrice(row: any): number {
-  return stockPriceMap.value[row.id] ?? Number(row.cost_price ?? 0)
+  const cost = Number(row.cost_price ?? 0)
+  return cost > 0 ? cost : (stockPriceMap.value[row.id] ?? 0)
 }
 
 // Recursively collect all descendant cate ids (including self)

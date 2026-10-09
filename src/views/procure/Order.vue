@@ -1282,7 +1282,13 @@ async function ensureKaoNaiPiMasterData() {
   }
 }
 
-async function syncGoodsCostPriceFromItems(items: any[]) {
+// 成本价改由后端在「采购入库审核」时按移动加权平均更新（含规格成本）。
+// 这里以前用本张采购单的进价直接覆盖商品成本价，会把库存均价冲成最近一次进价，所以不再回写。
+async function syncGoodsCostPriceFromItems(_items: any[]) {
+  return
+}
+// 旧实现保留备查，不再调用
+async function legacySyncGoodsCostPriceFromItems(items: any[]) {
   const statMap = new Map<number, { qty: number; amount: number; fallback: number }>()
   for (const rawItem of (items || [])) {
     const goodsId = Number(rawItem?.goods_id || 0)
