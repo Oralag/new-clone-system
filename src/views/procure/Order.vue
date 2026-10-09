@@ -3305,9 +3305,10 @@ const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
+    // 采购默认带最后一次进货价；cost_price 是库存均价（移动加权平均），只在没有进货记录时兜底
     const priceNoTax = isKaoNaiPiGoods(g)
       ? KAONAIPI_BASE_COST
-      : (Number(g.cost_price) || 0)
+      : (Number(g.last_purchase_price) || Number(g.cost_price) || 0)
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
       spec: '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
       num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
