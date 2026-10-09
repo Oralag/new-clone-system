@@ -30,15 +30,19 @@ async function findDefaultWarehouseParam() {
 }
 
 let defaultWarehouseRequest: Promise<number> | null = null
+// 以后端设置为准：每次打开页面先问一次后端，本机缓存只在后端读不到时兜底
+// （以前本机有值就不问后端，别的电脑设的默认仓库在这台永远不生效）
+let remoteChecked = false
 
 export async function getSyncedDefaultWarehouseId(forceRefresh = false) {
   const localId = readLocalDefaultWarehouseId()
-  if (!forceRefresh && localId > 0) return localId
+  if (!forceRefresh && remoteChecked && localId > 0) return localId
   if (!defaultWarehouseRequest) {
     defaultWarehouseRequest = (async () => {
       try {
         const row = await findDefaultWarehouseParam()
         const remoteId = toWarehouseId(row?.value)
+        remoteChecked = true
         if (remoteId > 0) {
           writeLocalDefaultWarehouseId(remoteId)
           return remoteId

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <el-card>
-      <ScTable ref="tableRef" :api-obj="getWarehouseList"
+      <ScTable ref="tableRef" :api-obj="listAllWarehouses"
           del-path="/stock/WarehouseName/batchDel"
           :export-file-name="$t('warehouse.warehouseName.exportFileName')" :params="searchForm">
         <template #search>
@@ -15,12 +15,13 @@
           <template #default="{ row }">
             <span>{{ row.name }}</span>
             <el-tag v-if="row.id === defaultWarehouseId" type="success" size="small" style="margin-left: 8px">{{ $t('warehouse.warehouseName.tagDefault') }}</el-tag>
+            <el-tag v-if="Number(row.status) === 0" type="info" size="small" style="margin-left: 8px">已停用</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="address" :label="$t('warehouse.warehouseName.colAddress')" min-width="180" show-overflow-tooltip />
         <el-table-column prop="remark" :label="$t('warehouse.warehouseName.colRemark')" min-width="160" show-overflow-tooltip />
 
-        <el-table-column :label="$t('warehouse.warehouseName.colActions')" width="220" fixed="right">
+        <el-table-column :label="$t('warehouse.warehouseName.colActions')" width="270" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="openForm(row)">{{ $t('warehouse.warehouseName.btnEdit') }}</el-button>
             <el-button type="success" size="small" link @click="formRef?.openView(row)">{{ $t('warehouse.warehouseName.btnView') }}</el-button>
@@ -30,6 +31,8 @@
               :disabled="row.id === defaultWarehouseId"
               @click="setDefault(row)"
             >{{ row.id === defaultWarehouseId ? $t('warehouse.warehouseName.btnAlreadyDefault') : $t('warehouse.warehouseName.btnSetDefault') }}</el-button>
+            <el-button v-if="row.id !== defaultWarehouseId" size="small" link :type="Number(row.status) === 0 ? 'success' : 'info'"
+              @click="toggleStatus(row)">{{ Number(row.status) === 0 ? '启用' : '停用' }}</el-button>
             <el-button type="danger" size="small" link @click="handleDelete(row.id)">{{ $t('warehouse.warehouseName.btnDelete') }}</el-button>
           </template>
         </el-table-column>
@@ -68,6 +71,18 @@ const tableRef = ref()
 const formRef = ref()
 const editingRow = ref<any>(null)
 const defaultWarehouseId = ref<number | null>(null)
+// 仓库管理页要看到停用的仓库（其他页面的仓库列表默认不返回停用仓库）
+const listAllWarehouses = (params?: any) => getWarehouseList({ ...(params || {}), all: 1 })
+// 停用后开单选不到它，收银台/线上单兜底也不会再扣到它；库存和历史单据都保留
+const toggleStatus = async (row: any) => {
+  const disable = Number(row.status) !== 0
+  if (disable) {
+    await ElMessageBox.confirm(`停用「${row.name}」后，开单时选不到它，库存和历史单据都保留，随时可以再启用。`, '停用仓库', { type: 'warning' })
+  }
+  await updateWarehouse({ id: row.id, status: disable ? 0 : 1 })
+  ElMessage.success(disable ? '已停用' : '已启用')
+  tableRef.value?.refresh?.()
+}
 
 const searchForm = reactive({
   name: ''
@@ -98,7 +113,7 @@ const handleSubmit = async (form: any, done: () => void) => {
       await updateWarehouse({ ...form, id: editingRow.value.id })
       ElMessage.success(t('warehouse.warehouseName.msgEditSuccess'))
     } else {
-      const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50 })
+      const res = await getWarehouseList({ name: form.name, page: 1, page_size: 50, all: 1 })
       const rows: any[] = res?.rows ?? res?.data?.rows ?? []
       const duplicate = rows.find((r: any) => r.name === form.name)
       if (duplicate) {

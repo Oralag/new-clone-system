@@ -673,6 +673,7 @@
 </template>
 
 <script setup lang="ts">
+import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Search, Delete, CircleCheckFilled, Plus } from '@element-plus/icons-vue'
@@ -1547,7 +1548,7 @@ async function openQuickAdd() {
     const r = await getWarehouseList({ list_rows: 100 })
     warehouseList.value = r.data?.rows ?? []
   }
-  const saved = Number(localStorage.getItem('erp_default_warehouse_id'))
+  const saved = await getSyncedDefaultWarehouseId()
   const wMatch = warehouseList.value.find((w: any) => w.id === saved) ?? warehouseList.value[0]
   quickAddForm.procure_warehouse_id = wMatch?.id ?? null
   quickAddForm.procure_warehouse_name = wMatch?.name ?? ''
