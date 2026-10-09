@@ -827,7 +827,7 @@ const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
-    const priceNoTax = Number(g.cost_price) || 0
+    const priceNoTax = Number(g.last_purchase_price) || Number(g.cost_price) || 0  // 默认最后一次进货价
     fd.items.push({
       goods_id: g.id,
       goods_name: g.goods_name,
