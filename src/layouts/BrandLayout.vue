@@ -16,7 +16,7 @@
         <button v-if="isFromERP" class="topnav-back" @click="$router.push('/portal')" :title="t('brandLayout.backToErp')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
-        <div class="topnav-logo" @click="$router.push('/brand')">
+        <div class="topnav-logo" @click="$router.push(homePath)">
           <div class="topnav-logo-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#7c3aed" stroke-width="1.8" stroke-linejoin="round"/>
@@ -33,7 +33,7 @@
 
       <!-- 中：主导航 -->
       <nav class="topnav-center" v-if="shopStore.shopMode !== null">
-        <router-link to="/brand" class="topnav-link" :class="{ active: isExactBrand }">{{ t('brandLayout.home') }}</router-link>
+        <router-link :to="homePath" class="topnav-link" :class="{ active: isExactBrand }">{{ t('brandLayout.home') }}</router-link>
         <router-link to="/brand/products" class="topnav-link" active-class="active">{{ t('brandLayout.shop') }}</router-link>
         <router-link to="/brand/reviews" class="topnav-link" active-class="active">{{ t('brandLayout.reviews') }}</router-link>
         <router-link to="/brand/story" class="topnav-link" active-class="active">{{ t('brandLayout.story') }}</router-link>
@@ -373,7 +373,7 @@ function bagStep(item: ShopCartItem, dir: 1 | -1) {
 watch(() => route.fullPath, () => { bagOpen.value = false })
 
 const mobileLinks = computed(() => ([
-  { to: '/brand', label: t('brandLayout.home') },
+  { to: homePath.value, label: t('brandLayout.home') },
   { to: '/brand/products', label: t('brandLayout.shop') },
   { to: '/brand/reviews', label: t('brandLayout.customerReviews') },
   { to: '/brand/story', label: t('brandLayout.story') },
@@ -429,10 +429,21 @@ function updateMeta() {
 watch(() => route.path, updateMeta, { immediate: false })
 
 // 精确匹配 /brand 首页
-const isExactBrand = computed(() => route.path === '/brand' || route.path === '/brand/')
+const isExactBrand = computed(() => route.path === '/brand' || route.path === '/brand/' || route.path === homePath.value)
 
 // 从ERP内部跳转过来才显示返回按钮
 const isFromERP = computed(() => !!localStorage.getItem('erp_token'))
+
+// 客户从零售/批发链接进来后锁定在该模式：「首页」= 该模式首页，不再回到选择批发/零售页
+// 只有登录了 ERP 的自己人才能看到选择页
+const lockedMode = computed(() => (!isFromERP.value ? shopStore.shopMode : null))
+const homePath = computed(() => (lockedMode.value ? `/brand/${lockedMode.value}` : '/brand'))
+
+// 进入 /brand 选择页：已锁定的客户直接送回所在模式首页；否则清空模式显示选择页
+function enterBrandRoot() {
+  if (lockedMode.value) router.replace(homePath.value)
+  else shopStore.resetShopMode()
+}
 
 // ── 分享：生成干净的公开链接 + 二维码 ────────────────────────────
 // 只发对外能打开的 /brand/* 路由，绝不把 ?v= 构建时间戳之类的内部参数带出去
@@ -514,7 +525,7 @@ onMounted(async () => {
   } else if (route.path === '/brand/wholesale') {
     shopStore.setShopMode('wholesale')
   } else if (route.path === '/brand' || route.path === '/brand/') {
-    shopStore.resetShopMode()
+    enterBrandRoot()
   }
   // URL 参数 ?mode=wholesale|retail 直接设置模式（优先级最高）
   const modeParam = route.query.mode as string
@@ -537,7 +548,7 @@ watch(() => route.path, (path) => {
   } else if (path === '/brand/wholesale') {
     shopStore.setShopMode('wholesale')
   } else if (path === '/brand' || path === '/brand/') {
-    shopStore.resetShopMode()
+    enterBrandRoot()
   }
   // 零售用户不能访问采购商申请页
   if (shopStore.shopMode === 'retail' && path === '/brand/wholesale-apply') {
