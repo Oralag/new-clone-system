@@ -85,7 +85,11 @@ http.interceptors.response.use(
     }
     const method = config?.method?.toUpperCase()
     const isMutation = method === 'POST' || method === 'PUT' || method === 'DELETE'
-    if (status === 401 || status === 403) {
+    // 401 means the session/token is invalid. A 403 is different: the
+    // session is valid, but this particular sub-account is not allowed to
+    // call the endpoint. Do not clear the token on 403, otherwise opening
+    // one unauthorized module logs the employee out of the whole ERP.
+    if (status === 401) {
       localStorage.removeItem(TOKEN_NAME)
       try {
         if (router.currentRoute && router.currentRoute.value && router.currentRoute.value.path !== '/login') {
@@ -93,6 +97,10 @@ http.interceptors.response.use(
           router.push('/login')
         }
       } catch { /* 忽略路由访问错误 */ }
+    } else if (status === 403) {
+      if (!config?.silent) {
+        ElMessage.error(error.response?.data?.message || '当前账号无权访问此功能')
+      }
     } else if (isMutation && status && status !== 404) {
       const messages: Record<number, string> = { 400: '请求参数错误', 500: '服务器内部错误' }
       ElMessage.error(messages[status] ?? '操作失败，请重试')
