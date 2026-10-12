@@ -1049,7 +1049,7 @@ async function fetchAllRows(path: string, params: Record<string, any> = {}, page
   let total: number | undefined
 
   while (page <= maxPages) {
-    const res = await http.get(path, { params: { ...params, page, list_rows: pageSize } })
+    const res = await dashboardGet(path, { params: { ...params, page, list_rows: pageSize } })
     const rows = extractRows(res)
     if (!rows.length) break
 
@@ -1062,6 +1062,12 @@ async function fetchAllRows(path: string, params: Record<string, any> = {}, page
   }
 
   return dedupeRows(all)
+}
+
+// 工作台统计由多个可选模块组成。子账号没有某个模块权限时，
+// 该统计应按空数据处理，不能因为后台返回 403/“无权执行此操作”连续弹窗。
+function dashboardGet(path: string, config: Record<string, any> = {}) {
+  return http.get(path, { ...config, silent: true })
 }
 
 async function loadRankData(fallbackSaleRows: any[], fallbackRetailRows: any[]) {
@@ -1099,11 +1105,11 @@ async function loadDashboardData(force = false) {
   // ── 第一阶段：快速拉今日关键指标（小数据量，优先渲染） ──
   try {
     const [saleRes, retailRes, meituanRes, customerRes, quickFundFlowRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index',  { params: { list_rows: 100, out_date: today } }),
-      http.get('/retail/order/index',        { params: { list_rows: 100, order_date: today } }),
-      http.get('/shop/ContractOrder/index',  { params: { list_rows: 100, customer_id: MEITUAN_CUSTOMER_ID } }),
-      http.get('/shop/ShopCustomer/index',   { params: { list_rows: 1 } }),
-      http.get('/finance/fundFlow/index',    { params: { list_rows: 500 } }),
+      dashboardGet('/stock/SaleOutOrder/index',  { params: { list_rows: 100, out_date: today } }),
+      dashboardGet('/retail/order/index',        { params: { list_rows: 100, order_date: today } }),
+      dashboardGet('/shop/ContractOrder/index',  { params: { list_rows: 100, customer_id: MEITUAN_CUSTOMER_ID } }),
+      dashboardGet('/finance/fundFlow/index',    { params: { list_rows: 500 } }),
+      dashboardGet('/shop/ShopCustomer/index',   { params: { list_rows: 1 } }),
     ])
 
     const rows = (r: PromiseSettledResult<any>) =>
@@ -1139,12 +1145,12 @@ async function loadDashboardData(force = false) {
 
     // ── 第二阶段：异步加载全量数据（图表/排行/库存预警），不阻塞首屏 ──
     const [saleAllRes, retailAllRes, meituanAllRes, procureRes, goodsRes, fundFlowRes] = await Promise.allSettled([
-      http.get('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
-      http.get('/retail/order/index',           { params: { list_rows: 2000 } }),
-      http.get('/shop/ContractOrder/index',     { params: { list_rows: 2000, customer_id: MEITUAN_CUSTOMER_ID } }),
-      http.get('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
-      http.get('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
-      http.get('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
+      dashboardGet('/stock/SaleOutOrder/index',     { params: { list_rows: 2000 } }),
+      dashboardGet('/retail/order/index',           { params: { list_rows: 2000 } }),
+      dashboardGet('/shop/ContractOrder/index',     { params: { list_rows: 2000, customer_id: MEITUAN_CUSTOMER_ID } }),
+      dashboardGet('/procure/ProcureInhouse/index', { params: { list_rows: 200 } }),
+      dashboardGet('/goods/ShopGoods/index',        { params: { list_rows: 500, status: 1 } }),
+      dashboardGet('/finance/fundFlow/index',       { params: { list_rows: 100 } }),
     ])
 
     const rowsAll = (r: PromiseSettledResult<any>) =>
