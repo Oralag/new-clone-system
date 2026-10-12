@@ -49,7 +49,7 @@ const total = ref(0)
 async function loadData() {
   loading.value = true
   try {
-    const res: any = await http.get('/shop.ShopCustomer/index', {
+    const res: any = await http.get('/shop/ShopCustomer/index', {
       params: { page: page.value, list_rows: 20, keyword: keyword.value },
     })
     const data = res?.data || {}
