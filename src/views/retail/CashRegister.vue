@@ -2127,8 +2127,14 @@ onMounted(async () => {
     justify-content: center; flex-shrink: 0;
   }
 
-  .cr-member-select { width: 120px; flex-shrink: 0; }
-  .cr-search-box { flex: 1; width: auto; min-width: 0; }
+  /* 手机端一行：商品搜索输入在左侧，门店/会员选择缩到右侧 */
+  .cr-search-box { order: 1; flex: 1 1 0; width: auto; min-width: 0; padding: 0 10px; }
+  .cr-search-input { font-size: 16px; }
+  .cr-scan-icon { display: none; }
+  .cr-member-select { order: 2; width: 72px; flex: 0 0 72px; }
+  :deep(.cr-member-select .el-input__wrapper) { padding: 0 6px; }
+  .cr-calc-btn { order: 3; }
+  .cr-new-goods-btn { order: 4; }
 
   /* 主体：留出底部悬浮栏高度 */
   .cr-body { padding: 0; padding-bottom: 68px; }
