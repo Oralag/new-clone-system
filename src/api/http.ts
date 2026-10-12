@@ -69,7 +69,12 @@ http.interceptors.response.use(
     // 静默模式：不弹错误提示；后端初始化错误静默处理
     const silent = (response.config as any)?.silent
     const isBackendInitError = res.message?.includes('not defined') || res.message?.includes('undefined function')
-    if (res.message && !silent && !isBackendInitError) {
+    const method = String(response.config?.method || 'get').toUpperCase()
+    // Restricted sub-accounts can legitimately hit optional reads while a
+    // page is bootstrapping. Do not turn expected denials into stacked toasts.
+    // Mutations still surface errors so failed operations remain visible.
+    const isPermissionReadError = method === 'GET' && /无权|权限|unauthorized|forbidden/i.test(String(res.message || ''))
+    if (res.message && !silent && !isBackendInitError && !isPermissionReadError) {
       ElMessage({ message: res.message, type: 'error', duration: 2000, showClose: true })
     }
     return Promise.reject(new Error(res.message || '请求失败'))

@@ -2316,8 +2316,12 @@ async function loadStaff() {
 
 onMounted(() => {
   loadSuppliers(); loadWarehouses(); loadFunds(); loadStaff(); loadPaidMap()
-  ensureKaoNaiPiMasterData()
-  migrateKaoNaiPiUnitsInPurchaseOrders()
+  // These are administrator maintenance tasks. A clerk opening the page
+  // must not trigger background writes and permission toasts.
+  if (!permStore.isSubAccount) {
+    ensureKaoNaiPiMasterData()
+    migrateKaoNaiPiUnitsInPurchaseOrders()
+  }
   // 从付款单跳转过来，高亮对应采购单
   if (route.query.order_no) {
     const sn = String(route.query.order_no)
