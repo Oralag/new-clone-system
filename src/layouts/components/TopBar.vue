@@ -126,7 +126,7 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { updateAdmin, getCompanyInfo } from '@/api/setting'
+import { updateAdmin } from '@/api/setting'
 import http from '@/api/http'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -186,7 +186,7 @@ clockTimer = setInterval(updateClock, 1000)
 onMounted(async () => {
   if (!appStore.companyName) {
     try {
-      const res: any = await getCompanyInfo()
+      const res: any = await http.get('/setting/company/detail', { silent: true })
       const name = (res.data ?? res)?.name
       if (name) appStore.setCompanyName(name)
     } catch { /* 静默失败，不影响页面 */ }
