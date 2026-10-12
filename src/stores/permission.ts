@@ -87,7 +87,9 @@ export const usePermissionStore = defineStore('permission', {
 
         // 收银台：跟随零售订单权限
         if (path === '/cashregister' || path.startsWith('/cashregister/')) {
-          return allowed.has('retail-order')
+          // 老角色通常只保存了“零售组”或门店权限；收银台是零售业务入口，
+          // 这些权限都应允许进入，具体商品/订单接口仍由后端继续校验。
+          return allowed.has('retail-order') || allowed.has('retail-store') || allowed.has('retail')
         }
 
         // Mobile paths: strip /mobile prefix and map to menuData child.path.
