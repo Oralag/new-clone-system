@@ -68,7 +68,7 @@ export const useAuthStore = defineStore('auth', {
 
       // 1) 先查管理员列表：拿账号自己的 remark 副本，同时补齐 role_id / role_name
       try {
-        const res: any = await getAdminList({ list_rows: 500 })
+        const res: any = await getAdminList({ list_rows: 500 }, { silent: true })
         const rows = res?.data?.rows ?? res?.data?.list ?? res?.data ?? []
         const me = Array.isArray(rows)
           ? rows.find((r: any) => String(r.account) === String(info.account))
@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('auth', {
       // 2) 账号上没有副本 → 按角色取权限串（角色才是权限的唯一来源）
       if (roleId == null && !roleName) return
       try {
-        const res: any = await getRoleList({ list_rows: 500 })
+        const res: any = await getRoleList({ list_rows: 500 }, { silent: true })
         const roles = res?.data?.rows ?? res?.data?.list ?? res?.data ?? []
         if (!Array.isArray(roles)) return
         const role = roles.find((r: any) =>
