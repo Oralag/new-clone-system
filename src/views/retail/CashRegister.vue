@@ -660,10 +660,10 @@
           {{ $t('retail.cashRegister.specNoConfig') }}
         </div>
         <!-- 价格预览 -->
-        <div v-if="ssSpecLabel" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
+        <div v-if="ssPreviewLine" style="background:#f0f9ff;border-radius:10px;padding:14px;text-align:center">
           <div style="font-size:12px;color:#64748b;margin-bottom:4px">{{ ssSpecLabel }}</div>
           <div style="font-size:28px;font-weight:700;color:#2563eb">
-            ¥{{ (ssCurrentSku?.sell_price != null ? Number(ssCurrentSku.sell_price) : Number(ssGoods?.sell_price || 0)).toFixed(2) }}
+            ¥{{ ssPreviewLine.price.toFixed(2) }}
           </div>
         </div>
         <el-button type="primary"
@@ -691,6 +691,7 @@ import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { usePermissionStore } from '@/stores/permission'
 import { distributeRetailItems, normalizeRetailSettlement } from '@/utils/retailPricing'
+import { resolveSpecCartLine, withHostSpecOption } from '@/utils/cashierSpec'
 
 const { t } = useI18n()
 
@@ -773,6 +774,7 @@ const ssGoods = ref<any>(null)
 const ssSpecAttrs = ref<{ name: string; values: string[] }[]>([])
 const ssSelectedVals = ref<string[]>([])
 const ssSkuMap = ref<Record<string, any>>({})
+const ssBindLinkedGoods = ref(false)
 const ssWeighAfter = ref(false) // 散装+规格：选完规格后进称重弹窗
 
 const ssCurrentSku = computed(() => {
@@ -782,11 +784,46 @@ const ssCurrentSku = computed(() => {
 
 const ssSpecLabel = computed(() => ssSelectedVals.value.filter(Boolean).join(' · '))
 
+const ssPreviewLine = computed(() => {
+  if (!ssGoods.value || !ssSpecLabel.value) return null
+  const sku = ssCurrentSku.value
+  const linkedId = Number(sku?.goods_id)
+  const linked = ssBindLinkedGoods.value && Number.isSafeInteger(linkedId) && linkedId > 0
+    ? goodsList.value.find((item: any) => Number(item.id) === linkedId)
+    : null
+  return resolveSpecCartLine({
+    host: ssGoods.value,
+    specLabel: ssSpecLabel.value,
+    sku,
+    linkedGoods: linked || null,
+    memberSelected: !!selectedMemberId.value,
+    useLinkedIdentity: ssBindLinkedGoods.value,
+  })
+})
+
+function adoptSpecModel(g: any, attrs: unknown, skus: unknown) {
+  const model = withHostSpecOption({
+    id: Number(g.id),
+    goods_name: g.goods_name || '',
+    goods_sn: g.goods_sn || '',
+    barcode: g.barcode || '',
+    unit_name: g.unit_name || '',
+    sell_price: g.sell_price,
+    cost_price: g.cost_price,
+    member_price: g.member_price,
+  }, { attrs, skus })
+  ssSpecAttrs.value = model.attrs
+  ssSkuMap.value = model.skus
+  ssBindLinkedGoods.value = model.bindLinkedGoods
+  return model.attrs.length > 0
+}
+
 async function openSpecSelect(g: any) {
   ssGoods.value = g
   ssSpecAttrs.value = []
   ssSkuMap.value = {}
   ssSelectedVals.value = []
+  ssBindLinkedGoods.value = false
   specSelectVisible.value = true
 
   // 从后端拉完整商品数据（列表接口可能不返回 spec 大字段）
@@ -801,9 +838,7 @@ async function openSpecSelect(g: any) {
     if (specSource) {
       const specData = JSON.parse(specSource)
       if (Array.isArray(specData.attrs) && specData.attrs.length > 0) {
-        ssSpecAttrs.value = specData.attrs.filter((a: any) => a.values?.length > 0)
-        ssSkuMap.value = specData.skus ?? {}
-        loaded = true
+        loaded = adoptSpecModel(g, specData.attrs, specData.skus ?? {})
       }
     }
   } catch {}
@@ -814,12 +849,12 @@ async function openSpecSelect(g: any) {
       const attrsMap = JSON.parse(localStorage.getItem('erp_spec_attrs') || '{}')
       const localAttrs = (attrsMap[g.id] ?? []).filter((a: any) => a.values?.length > 0)
       if (localAttrs.length > 0) {
-        ssSpecAttrs.value = localAttrs
+        let localSkus: Record<string, any> = {}
         try {
           const skuMap = JSON.parse(localStorage.getItem('erp_sku_map') || '{}')
-          ssSkuMap.value = skuMap[g.id] ?? {}
-        } catch { ssSkuMap.value = {} }
-        loaded = true
+          localSkus = skuMap[g.id] ?? {}
+        } catch { localSkus = {} }
+        loaded = adoptSpecModel(g, localAttrs, localSkus)
       }
     } catch {}
   }
@@ -830,10 +865,11 @@ async function openSpecSelect(g: any) {
       const specRes = await getSpecList({ goods_id: g.id, list_rows: 100 })
       const specRows: any[] = specRes.data?.rows ?? []
       if (specRows.length > 0) {
-        ssSpecAttrs.value = specRows.map((r: any) => ({
+        const rows = specRows.map((r: any) => ({
           name: r.name,
           values: typeof r.values === 'string' ? r.values.split(',').map((v: string) => v.trim()).filter(Boolean) : (r.values ?? []),
         })).filter((a: any) => a.values.length > 0)
+        loaded = adoptSpecModel(g, rows, {})
       }
     } catch {}
   }
@@ -850,32 +886,38 @@ function addSpecItemToCart() {
   const g = ssGoods.value
   if (!g) return
   const specLabel = ssSpecLabel.value
-  specSelectVisible.value = false
 
   // 散装+规格：选完规格后进入称重弹窗，把规格标签带进去
   if (ssWeighAfter.value) {
     ssWeighAfter.value = false
+    specSelectVisible.value = false
     const price = sku?.sell_price != null ? Number(sku.sell_price) : Number(g.sell_price) || 0
     openWeightCalc(g, specLabel, price)
     return
   }
 
-  const price = sku?.sell_price != null ? Number(sku.sell_price) : (selectedMemberId.value && Number(g.member_price) > 0 ? Number(g.member_price) : Number(g.sell_price) || 0)
-  const goodsName = specLabel ? `${g.goods_name} · ${specLabel}` : g.goods_name
+  const line = ssPreviewLine.value
+  if (!line) return
   const skuKey = ssSelectedVals.value.join('|')
+  const goodsId = Number(line.goods_id)
+  if (!Number.isSafeInteger(goodsId) || goodsId <= 0) {
+    ElMessage.error('商品资料异常，请刷新商品列表后重试')
+    return
+  }
+  specSelectVisible.value = false
   cartItems.push({
-    goods_id: g.id,
-    goods_name: goodsName,
-    goods_sn: sku?.sku_sn || g.goods_sn || '',
-    unit_name: g.unit_name || '',
-    price: Math.round(price * 100) / 100,
-    cost_price: sku?.cost_price != null ? Number(sku.cost_price) : Number(g.cost_price || 0),
+    goods_id: goodsId,
+    goods_name: line.goods_name,
+    goods_sn: line.goods_sn,
+    unit_name: line.unit_name,
+    price: line.price,
+    cost_price: line.cost_price,
     num: 1,
     _sku_key: skuKey,
   } as any)
   pricingTargetIndex.value = cartItems.length - 1
   calcTotal()
-  ElMessage.success(t('retail.cashRegister.specAdded', { name: goodsName }))
+  ElMessage.success(t('retail.cashRegister.specAdded', { name: line.goods_name }))
 }
 const cateList = ref<any[]>([])
 const searchInputRef = ref<HTMLInputElement>()

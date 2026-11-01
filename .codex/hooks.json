@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if jq -e '.tool_input.command // \"\" | test(\"git push\")' > /dev/null 2>&1; then printf '{\"systemMessage\":\"⚠️ git push已拦截！会触发Cloudflare Pages自动部署覆盖线上版本（2026-05-29事故教训）。如确认要push，请告知用户让其手动在终端执行。\"}\\n'; exit 2; fi",
-            "statusMessage": "检查是否有危险的 git push..."
+            "command": "d=\"$PWD\"; while [ ! -f \"$d/scripts/guard-git-push.py\" ] && [ \"$d\" != / ]; do d=$(dirname \"$d\"); done; if [ ! -f \"$d/scripts/guard-git-push.py\" ]; then printf '%s\\n' '{\"systemMessage\":\"⚠️ git push 守卫脚本缺失，已拦截。\"}'; exit 2; fi; python3 \"$d/scripts/guard-git-push.py\"",
+            "statusMessage": "检查 git push 是否只推送到 cursor/ 分支..."
           },
           {
             "type": "command",
