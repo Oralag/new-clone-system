@@ -620,8 +620,12 @@ function inferBaseQtyFromSpec(spec?: string): number | null {
 }
 
 // 将 goods_info item 的数量换算为基础单位数量
-function toBaseQty(goodsId: number, unitName: string, num: number, spec?: string, unitRatio?: any): number {
+function toBaseQty(goodsId: number, unitName: string, num: number, spec?: string, unitRatio?: any, importedInhouse = false): number {
   const explicitRatio = Number(unitRatio || 0)
+  // 旧 SaaS 入库有“30 斤”误标为“30 麻袋”的记录，unit_ratio=1 和规格“1斤”
+  // 表明数量已经是基础单位；不能再乘麻袋的换算倍率。
+  if (importedInhouse && explicitRatio === 1 && inferBaseQtyFromSpec(spec) === 1
+    && (unitRatioLookup.value[`${goodsId}:${unitName}`] || 1) > 1) return num
   // unit_ratio > 1：明确的大单位比例，直接用
   if (explicitRatio > 1) return num * explicitRatio
   // unit_ratio = 0：未存比例，先读 spec，再查换算表
@@ -1002,7 +1006,7 @@ async function loadStockMap(warehouseId = 0) {
             if (rawQty > 0 && price > 0) {
               // 换算为基础单位数量和单价
               const gid = snToGid[sn] || 0
-              const baseQty = gid ? toBaseQty(gid, item.unit_name, rawQty, item.spec, item.unit_ratio) : rawQty
+              const baseQty = gid ? toBaseQty(gid, item.unit_name, rawQty, item.spec, item.unit_ratio, String(ih.remark || '').includes('从saas.mzth.cn导入')) : rawQty
               const basePrice = baseQty > 0 ? (rawQty * price) / baseQty : price
               snTotalCost[sn] = (snTotalCost[sn] || 0) + baseQty * basePrice
               snTotalQty[sn] = (snTotalQty[sn] || 0) + baseQty
@@ -1102,7 +1106,7 @@ async function loadActivityMaps() {
           const qty = Number(item.num || 0)
           if (gid) {
             goodsInThisOrder.add(gid)
-            fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio) // 入库 +
+            fqMap[gid] = (fqMap[gid] || 0) + toBaseQty(gid, item.unit_name, qty, item.spec, item.unit_ratio, String(r.remark || '').includes('从saas.mzth.cn导入')) // 入库 +
           }
         }
         for (const gid of goodsInThisOrder) {
