@@ -2241,7 +2241,16 @@ function onSpecChange(row: any, specVal: string) {
 // 商品多单位换算缓存：goods_id -> [{unit_name, ratio, cost_price?}]
 const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number; cost_price?: number }[]>>({})
 
-async function fetchGoodsUnits(goodsId: number, baseUnitName: string, goodsSpec = '') {
+function localUnitPrice(goodsId: number, unitName: string, ratio: number, baseCost: number): number {
+  try {
+    const price = Number(JSON.parse(localStorage.getItem('erp_unit_cost_prices') || '{}')[goodsId]?.[unitName] || 0)
+    if (price <= 0) return 0
+    // 商品基础价可能只保留两位小数；允许这部分换算误差，拒绝明显过期的本地价。
+    return baseCost <= 0 || Math.abs(price - baseCost * ratio) <= ratio * 0.005 + 0.0001 ? price : 0
+  } catch { return 0 }
+}
+
+async function fetchGoodsUnits(goodsId: number, baseUnitName: string, goodsSpec = '', baseCost = 0) {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
@@ -2252,15 +2261,16 @@ async function fetchGoodsUnits(goodsId: number, baseUnitName: string, goodsSpec 
     if (rows.length) {
       goodsUnitMap[goodsId] = rows.map(r => {
         const persisted = Number(persistedPrices[r.unit_name] || 0)
+        const ratio = Number(r.ratio || 1)
         return {
           unit_name: r.unit_name,
-          ratio: Number(r.ratio),
-          cost_price: persisted > 0 ? persisted : 0,
+          ratio,
+          cost_price: persisted > 0 ? persisted : localUnitPrice(goodsId, r.unit_name, ratio, baseCost),
         }
       })
     } else {
       goodsUnitMap[goodsId] = baseUnitName
-        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: persistedPrices[baseUnitName] ?? 0 }]
+        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: persistedPrices[baseUnitName] ?? localUnitPrice(goodsId, baseUnitName, 1, baseCost) }]
         : []
     }
   } catch { /* ignore */ }
@@ -3322,14 +3332,17 @@ function resolveGoodsPurchasePrice(
 ): { unitPrice: number; basePrice: number } {
   let persistedUnitPrice = 0
   try { persistedUnitPrice = Number(JSON.parse(goods?.spec || '{}').unit_cost_prices?.[unitName] || 0) } catch {}
-  if (persistedUnitPrice > 0) {
+  const archivePrice = firstPositiveValue(goods?.cost_price, goods?.purchase_price, goods?.avg_price, goods?.in_price)
+  const exactUnitPrice = persistedUnitPrice > 0
+    ? persistedUnitPrice
+    : localUnitPrice(Number(goods?.id || 0), unitName, unitRatio, archivePrice)
+  if (exactUnitPrice > 0) {
     return {
-      unitPrice: Number(persistedUnitPrice.toFixed(4)),
-      basePrice: Number((persistedUnitPrice / unitRatio).toFixed(6)),
+      unitPrice: Number(exactUnitPrice.toFixed(4)),
+      basePrice: Number((exactUnitPrice / unitRatio).toFixed(6)),
     }
   }
 
-  const archivePrice = firstPositiveValue(goods?.cost_price, goods?.purchase_price, goods?.avg_price, goods?.in_price)
   if (archivePrice <= 0) return { unitPrice: 0, basePrice: 0 }
 
   return {
@@ -3344,7 +3357,7 @@ async function onGoodsConfirm(goods: any[]) {
     const isKnp = isKaoNaiPiGoods(g)
     const defaultUnitName = isKnp ? KAONAIPI_BASE_UNIT : (g.unit_name || '')
     // 先确保单位换算价已加载，再解析采购单价（否则多单位商品只能读到基础单位价）
-    await fetchGoodsUnits(Number(g.id), g.unit_name || '', g.spec || '')
+    await fetchGoodsUnits(Number(g.id), g.unit_name || '', g.spec || '', Number(g.cost_price || 0))
     // 单位倍率必须写对（斤=1、麻袋=30），否则入库换算和成本回写都会错
     const unitRatio = isKnp ? 1 : unitRatioOf(Number(g.id), defaultUnitName)
     const resolved = isKnp

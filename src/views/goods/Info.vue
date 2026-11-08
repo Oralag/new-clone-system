@@ -2863,6 +2863,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const auxRows = rows.filter(r => r.unit_name !== baseUnitName)
     const ordered = baseRow ? [baseRow, ...auxRows] : rows
     const savedPrices: Record<string, number> = {}
+    const localPrices = loadUnitCostPrices(goodsId)
     try {
       const persisted = JSON.parse(fd.spec || '{}').unit_cost_prices
       if (persisted && typeof persisted === 'object') Object.assign(savedPrices, persisted)
@@ -2871,6 +2872,9 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
       const ratio = Number(r.ratio)
       const linked = unitLinked[r.unit_name]
       const savedPrice = savedPrices[r.unit_name]
+      const localPrice = Number(localPrices[r.unit_name] || 0)
+      const derivedPrice = Math.round(baseCostPrice * ratio * 100) / 100
+      const compatibleLocalPrice = localPrice > 0 && Math.abs(localPrice - baseCostPrice * ratio) <= ratio * 0.005 + 0.0001
       return {
         is_base: i === 0,
         unit_id: null,
@@ -2880,7 +2884,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
         linked_goods_name: linked?.name,
         is_min_sale: i === 0,
         is_default_sale: i === 0,
-        cost_price: savedPrice !== undefined ? savedPrice : Math.round(baseCostPrice * ratio * 100) / 100,
+        cost_price: savedPrice !== undefined ? savedPrice : (compatibleLocalPrice ? localPrice : derivedPrice),
         sell_price: 0,
       }
     })
