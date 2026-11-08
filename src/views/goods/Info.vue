@@ -2862,7 +2862,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const baseRow = rows.find(r => r.unit_name === baseUnitName)
     const auxRows = rows.filter(r => r.unit_name !== baseUnitName)
     const ordered = baseRow ? [baseRow, ...auxRows] : rows
-    const savedPrices = loadUnitCostPrices(goodsId)
+    const savedPrices: Record<string, number> = {}
     try {
       const persisted = JSON.parse(fd.spec || '{}').unit_cost_prices
       if (persisted && typeof persisted === 'object') Object.assign(savedPrices, persisted)
@@ -2880,7 +2880,7 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
         linked_goods_name: linked?.name,
         is_min_sale: i === 0,
         is_default_sale: i === 0,
-        cost_price: savedPrice !== undefined ? savedPrice : (i === 0 ? baseCostPrice : 0),
+        cost_price: savedPrice !== undefined ? savedPrice : Math.round(baseCostPrice * ratio * 100) / 100,
         sell_price: 0,
       }
     })

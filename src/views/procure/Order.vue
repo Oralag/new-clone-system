@@ -2241,34 +2241,26 @@ function onSpecChange(row: any, specVal: string) {
 // 商品多单位换算缓存：goods_id -> [{unit_name, ratio, cost_price?}]
 const goodsUnitMap = reactive<Record<number, { unit_name: string; ratio: number; cost_price?: number }[]>>({})
 
-function readUnitCostPrices(goodsId: number): Record<string, number> {
-  try { return (JSON.parse(localStorage.getItem('erp_unit_cost_prices') || '{}')[goodsId]) || {} } catch { return {} }
-}
-
 async function fetchGoodsUnits(goodsId: number, baseUnitName: string, goodsSpec = '') {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
-    const savedPrices = readUnitCostPrices(goodsId)
     let persistedPrices: Record<string, number> = {}
     try { persistedPrices = JSON.parse(goodsSpec || '{}').unit_cost_prices || {} } catch {}
     if (rows.length) {
       goodsUnitMap[goodsId] = rows.map(r => {
-        const saved = Number(savedPrices[r.unit_name] || 0)
         const persisted = Number(persistedPrices[r.unit_name] || 0)
-        const fromApi = Number(r.cost_price || 0)
         return {
           unit_name: r.unit_name,
           ratio: Number(r.ratio),
-          // 商品资料持久保存的单位价优先，旧浏览器本地价格和接口值仅作兼容
-          cost_price: persisted > 0 ? persisted : (saved > 0 ? saved : (fromApi > 0 ? fromApi : 0)),
+          cost_price: persisted > 0 ? persisted : 0,
         }
       })
     } else {
       goodsUnitMap[goodsId] = baseUnitName
-        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: persistedPrices[baseUnitName] ?? savedPrices[baseUnitName] ?? 0 }]
+        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: persistedPrices[baseUnitName] ?? 0 }]
         : []
     }
   } catch { /* ignore */ }
@@ -3330,13 +3322,10 @@ function resolveGoodsPurchasePrice(
 ): { unitPrice: number; basePrice: number } {
   let persistedUnitPrice = 0
   try { persistedUnitPrice = Number(JSON.parse(goods?.spec || '{}').unit_cost_prices?.[unitName] || 0) } catch {}
-  const savedUnitPrice = persistedUnitPrice > 0
-    ? persistedUnitPrice
-    : Number(readUnitCostPrices(Number(goods?.id || 0))[unitName] || 0)
-  if (savedUnitPrice > 0) {
+  if (persistedUnitPrice > 0) {
     return {
-      unitPrice: Number(savedUnitPrice.toFixed(4)),
-      basePrice: Number((savedUnitPrice / unitRatio).toFixed(6)),
+      unitPrice: Number(persistedUnitPrice.toFixed(4)),
+      basePrice: Number((persistedUnitPrice / unitRatio).toFixed(6)),
     }
   }
 
@@ -3344,7 +3333,7 @@ function resolveGoodsPurchasePrice(
   if (archivePrice <= 0) return { unitPrice: 0, basePrice: 0 }
 
   return {
-    unitPrice: Number((archivePrice * unitRatio).toFixed(4)),
+    unitPrice: Number((archivePrice * unitRatio).toFixed(unitRatio > 1 ? 2 : 4)),
     basePrice: Number(archivePrice.toFixed(6)),
   }
 }
@@ -3419,9 +3408,11 @@ function onUnitChange(row: any, unitName: string) {
     row.price_no_tax = Number(nextPriceNoTax.toFixed(4))
     row._base_price_no_tax = Number((nextPriceNoTax / Math.max(0.0001, nextRatio)).toFixed(6))
     calcItemTax(row)
+  } else if (Number((row as any)._base_price_no_tax || 0) > 0) {
+    const derived = Number((Number((row as any)._base_price_no_tax) * nextRatio).toFixed(nextRatio > 1 ? 2 : 4))
+    row.price_no_tax = derived
+    calcItemTax(row)
   } else {
-    // No price configured for this unit: clear so user enters the actual purchase price.
-    // Purchasing prices are supplier-negotiated and cannot be derived by multiplying ratio.
     row.price_no_tax = 0
     row.price = 0
   }
