@@ -2863,6 +2863,10 @@ async function loadMultiUnitsFromServer(goodsId: number): Promise<MultiUnitRow[]
     const auxRows = rows.filter(r => r.unit_name !== baseUnitName)
     const ordered = baseRow ? [baseRow, ...auxRows] : rows
     const savedPrices = loadUnitCostPrices(goodsId)
+    try {
+      const persisted = JSON.parse(fd.spec || '{}').unit_cost_prices
+      if (persisted && typeof persisted === 'object') Object.assign(savedPrices, persisted)
+    } catch {}
     return ordered.map((r: any, i: number) => {
       const ratio = Number(r.ratio)
       const linked = unitLinked[r.unit_name]
@@ -2911,6 +2915,7 @@ async function saveMultiUnitsToServer(goodsId: number) {
     let specObj: any = {}
     try { specObj = JSON.parse(fd.spec || '{}') } catch {}
     specObj.unit_linked_goods = unitLinked
+    specObj.unit_cost_prices = prices
     const newSpec = JSON.stringify(specObj)
     fd.spec = newSpec
     await updateGoods({ id: goodsId, spec: newSpec })

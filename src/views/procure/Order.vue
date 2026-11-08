@@ -2245,22 +2245,30 @@ function readUnitCostPrices(goodsId: number): Record<string, number> {
   try { return (JSON.parse(localStorage.getItem('erp_unit_cost_prices') || '{}')[goodsId]) || {} } catch { return {} }
 }
 
-async function fetchGoodsUnits(goodsId: number, baseUnitName: string) {
+async function fetchGoodsUnits(goodsId: number, baseUnitName: string, goodsSpec = '') {
   if (!goodsId || goodsUnitMap[goodsId] !== undefined) return
   goodsUnitMap[goodsId] = []
   try {
     const res = await getUnitConvert(goodsId)
     const rows: any[] = res.data?.rows ?? []
     const savedPrices = readUnitCostPrices(goodsId)
+    let persistedPrices: Record<string, number> = {}
+    try { persistedPrices = JSON.parse(goodsSpec || '{}').unit_cost_prices || {} } catch {}
     if (rows.length) {
-      goodsUnitMap[goodsId] = rows.map(r => ({
-        unit_name: r.unit_name,
-        ratio: Number(r.ratio),
-        cost_price: savedPrices[r.unit_name] ?? 0,
-      }))
+      goodsUnitMap[goodsId] = rows.map(r => {
+        const saved = Number(savedPrices[r.unit_name] || 0)
+        const persisted = Number(persistedPrices[r.unit_name] || 0)
+        const fromApi = Number(r.cost_price || 0)
+        return {
+          unit_name: r.unit_name,
+          ratio: Number(r.ratio),
+          // 商品资料持久保存的单位价优先，旧浏览器本地价格和接口值仅作兼容
+          cost_price: persisted > 0 ? persisted : (saved > 0 ? saved : (fromApi > 0 ? fromApi : 0)),
+        }
+      })
     } else {
       goodsUnitMap[goodsId] = baseUnitName
-        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: savedPrices[baseUnitName] ?? 0 }]
+        ? [{ unit_name: baseUnitName, ratio: 1, cost_price: persistedPrices[baseUnitName] ?? savedPrices[baseUnitName] ?? 0 }]
         : []
     }
   } catch { /* ignore */ }
@@ -3298,18 +3306,69 @@ function getFileIcon(name: string): string {
 // ── 商品选择器 ────────────────────────────────────────────────────────────────
 const goodsSelectRef = ref<InstanceType<typeof GoodsSelect>>()
 
-function onGoodsConfirm(goods: any[]) {
+function unitRatioOf(goodsId: number, unitName: string): number {
+  const units = goodsUnitMap[goodsId] ?? []
+  const found = units.find(u => u.unit_name === unitName)
+  return found ? Math.max(0.0001, Number(found.ratio || 1)) : 1
+}
+
+function firstPositiveValue(...values: any[]): number {
+  for (const v of values) {
+    const n = Number(v)
+    if (n > 0) return n
+  }
+  return 0
+}
+
+// 选商品时自动带出采购单价，返回 [本行单位价, 基础单位价]
+// 1) 商品资料中该采购单位单独维护的采购价就是本行单位价
+// 2) 商品档案成本价是基础单位价，按单位倍率换算
+function resolveGoodsPurchasePrice(
+  goods: any,
+  unitName: string,
+  unitRatio: number,
+): { unitPrice: number; basePrice: number } {
+  let persistedUnitPrice = 0
+  try { persistedUnitPrice = Number(JSON.parse(goods?.spec || '{}').unit_cost_prices?.[unitName] || 0) } catch {}
+  const savedUnitPrice = persistedUnitPrice > 0
+    ? persistedUnitPrice
+    : Number(readUnitCostPrices(Number(goods?.id || 0))[unitName] || 0)
+  if (savedUnitPrice > 0) {
+    return {
+      unitPrice: Number(savedUnitPrice.toFixed(4)),
+      basePrice: Number((savedUnitPrice / unitRatio).toFixed(6)),
+    }
+  }
+
+  const archivePrice = firstPositiveValue(goods?.cost_price, goods?.purchase_price, goods?.avg_price, goods?.in_price)
+  if (archivePrice <= 0) return { unitPrice: 0, basePrice: 0 }
+
+  return {
+    unitPrice: Number((archivePrice * unitRatio).toFixed(4)),
+    basePrice: Number(archivePrice.toFixed(6)),
+  }
+}
+
+async function onGoodsConfirm(goods: any[]) {
   for (const g of goods) {
     if (fd.items.some(i => i.goods_id === g.id)) continue
-    const priceNoTax = isKaoNaiPiGoods(g)
-      ? KAONAIPI_BASE_COST
-      : (Number(g.cost_price) || 0)
+    const isKnp = isKaoNaiPiGoods(g)
+    const defaultUnitName = isKnp ? KAONAIPI_BASE_UNIT : (g.unit_name || '')
+    // 先确保单位换算价已加载，再解析采购单价（否则多单位商品只能读到基础单位价）
+    await fetchGoodsUnits(Number(g.id), g.unit_name || '', g.spec || '')
+    // 单位倍率必须写对（斤=1、麻袋=30），否则入库换算和成本回写都会错
+    const unitRatio = isKnp ? 1 : unitRatioOf(Number(g.id), defaultUnitName)
+    const resolved = isKnp
+      ? { unitPrice: KAONAIPI_BASE_COST, basePrice: KAONAIPI_BASE_COST }
+      : resolveGoodsPurchasePrice(g, defaultUnitName, unitRatio)
+    const priceNoTax = resolved.unitPrice
+    const basePriceNoTax = resolved.basePrice
     fd.items.push({ goods_id: g.id, goods_name: g.goods_name, goods_sn: g.goods_sn || '',
-      spec: '', cate_name: g.cate_name || '', unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || ''),
-      num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: 1, _base_price_no_tax: priceNoTax,
+      spec: '', cate_name: g.cate_name || '', unit_name: defaultUnitName,
+      num: 1, price_no_tax: priceNoTax, tax_rate: 0, unit_ratio: unitRatio, _base_price_no_tax: basePriceNoTax,
       price: priceNoTax, remark: '',
       supplier_id: null, supplier_name: '',
-      _current_unit_name: isKaoNaiPiGoods(g) ? KAONAIPI_BASE_UNIT : (g.unit_name || '') })
+      _current_unit_name: defaultUnitName })
     if (g.multi_spec) {
       const { options, skus } = parseSpecJson(String(g.spec || ''))
       goodsSpecMap[g.id] = options
@@ -3317,7 +3376,6 @@ function onGoodsConfirm(goods: any[]) {
     } else {
       goodsSpecMap[g.id] = []
     }
-    fetchGoodsUnits(g.id, g.unit_name || '')
     repairKaoNaiPiMasterData(g)
     applyKaoNaiPiRowDefaults(fd.items[fd.items.length - 1])
   }
