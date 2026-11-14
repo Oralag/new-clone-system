@@ -97,7 +97,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import http from '@/api/http'
 
 const router = useRouter()
@@ -144,16 +144,11 @@ function copyUrl() {
   })
 }
 
-async function handleLogout() {
-  try {
-    await ElMessageBox.confirm(t('mobileProfile.logoutConfirm'), t('mobileProfile.prompt'), {
-      confirmButtonText: t('mobileProfile.logout'),
-      cancelButtonText: t('mobileProfile.cancel'),
-      type: 'warning',
-    })
-    authStore.logout()
-    router.push('/login')
-  } catch {}
+function handleLogout() {
+  if (!window.confirm(t('mobileProfile.logoutConfirm'))) return
+
+  authStore.logout()
+  window.location.replace(`${window.location.origin}${window.location.pathname}#/login`)
 }
 </script>
 
