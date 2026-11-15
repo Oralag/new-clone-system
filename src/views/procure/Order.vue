@@ -173,7 +173,6 @@
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="openEdit(row, row.status === 1)">{{ row.status === 1 ? $t('procure.order.actionView') : $t('procure.order.actionEdit') }}</el-button>
               <el-button v-if="row.status === 0" type="success" link size="small" @click="handleAudit(row, 1)">{{ $t('procure.order.actionAudit') }}</el-button>
-              <el-button v-if="Number(row.status) === 1 && getInhouseQty(row) <= 0" type="warning" link size="small" @click="handleRepairInhouse(row)">{{ $t('procure.order.actionRepairInhouse') }}</el-button>
               <el-button v-if="Number(row.status) === 1 && getUnpaidAmount(row) > 0" type="success" link size="small" @click="openPayDialog(row)">{{ $t('procure.order.actionPay') }}</el-button>
               <el-button v-if="row.status === 1 && !permStore.isSubAccount" type="warning" link size="small" @click="handleReverseAudit(row)">{{ $t('procure.order.actionReverseAudit') }}</el-button>
               <el-button :type="row._reconciled ? 'success' : 'info'" link size="small" @click="toggleReconcile(row)">{{ row._reconciled ? $t('procure.order.actionReconciled') : $t('procure.order.actionReconcile') }}</el-button>
@@ -1116,7 +1115,7 @@ import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperc
 import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
 import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -1129,7 +1128,7 @@ import { useAuthStore } from '@/stores/auth'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
-import { ensurePurchaseOrderInhouse, receiveThenAuditPurchase, type PurchaseInhouseInput } from '@/utils/procureInhouse'
+import { purchaseReceivedQty } from '@/utils/purchaseStock'
 import { fmtDt } from '@/utils/date'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
@@ -1380,27 +1379,16 @@ async function handleBatchAudit() {
   let success = 0, failed = 0
   for (const row of pending) {
     try {
-      const items = parseItems(row.goods_info)
-      await receivePurchaseOrder(row, items, row.id)
+      await auditProcureOrder(row.id, 1, { silent: true })
       try {
-        await auditProcureOrder(row.id, 1)
-      } catch (e: any) {
-        const err = new Error(e?.message || '')
-        ;(err as any).code = 'AUDIT_AFTER_INHOUSE'
-        throw err
-      }
-      try {
-        await syncGoodsCostPriceFromItems(items)
+        await syncGoodsCostPriceFromItems(parseItems(row.goods_info))
       } catch (e: any) {
         console.warn('批量审核回写成本价失败', row?.id, e?.message)
       }
       success++
     } catch (e: any) {
       failed++
-      const prefix = e?.code === 'AUDIT_AFTER_INHOUSE'
-        ? t('procure.order.msgAuditFailedAfterInhouse')
-        : t('procure.order.msgInhouseFailedNoAudit')
-      ElMessage.error(prefix + (e?.message || ''))
+      ElMessage.error(t('procure.order.msgInhouseFailedNoAudit') + (e?.message || ''))
     }
   }
   batchAuditing.value = false
@@ -1542,6 +1530,7 @@ async function getProcureOrderListWithInhouse(params: any) {
   }
   hydrateOrderListSortDates(rows)
   if (rows.length) {
+    for (const row of rows) row.inhouse_qty = purchaseReceivedQty(0, row.received_qty)
     try {
       const inhouseRes = await getProcureInhouseList({ list_rows: 10000 })
       const inhouseRows: any[] = (inhouseRes?.data?.rows ?? []).filter((r: any) => r.status === 1)
@@ -1554,7 +1543,7 @@ async function getProcureOrderListWithInhouse(params: any) {
         qtyMap[oid] = (qtyMap[oid] || 0) + qty
       }
       for (const row of rows) {
-        row.inhouse_qty = qtyMap[row.id] || 0
+        row.inhouse_qty = purchaseReceivedQty(qtyMap[row.id] || 0, row.received_qty)
       }
     } catch { /* 查不到入库单不影响列表展示 */ }
   }
@@ -1630,52 +1619,6 @@ function updateSummaryFromRows(rows: any[]) {
 
 function getInhouseQty(row: any): number {
   return Number(row.inhouse_qty || 0)
-}
-
-const procureInhouseApi = {
-  list: (params?: Record<string, any>) => getProcureInhouseList(params),
-  create: (data: Record<string, any>) => createProcureInhouse(data),
-  audit: (id: number, status: number) => auditProcureInhouse(id, status),
-}
-
-function buildPurchaseInhouseInput(source: any, items: any[], orderId: number): PurchaseInhouseInput {
-  const defaultWhId = Number(localStorage.getItem('erp_default_warehouse_id')) || 0
-  const warehouseId = Number(source?.warehouse_id || defaultWhId || 0)
-  const warehouseName = source?.warehouse_name
-    || warehouseOptions.value.find((w: any) => Number(w.id) === warehouseId)?.name
-    || ''
-  return {
-    orderId,
-    supplier_id: source?.supplier_id,
-    supplier_name: source?.supplier_name || '',
-    warehouse_id: warehouseId,
-    warehouse_name: warehouseName,
-    admin_name: source?.admin_name || '',
-    order_date: source?.order_date,
-    created_at: source?.created_at,
-    remark: source?.remark || '',
-    items,
-  }
-}
-
-async function receivePurchaseOrder(source: any, items: any[], orderId: number) {
-  const result = await ensurePurchaseOrderInhouse(
-    procureInhouseApi,
-    buildPurchaseInhouseInput(source, items, orderId),
-  )
-  if (!result.alreadyAudited) {
-    try {
-      await applyInhouseStockEffect(
-        Number(source?.warehouse_id || 0),
-        source?.warehouse_name || '',
-        items,
-        'in',
-      )
-    } catch (e: any) {
-      console.warn('BOM原材料扣料失败', orderId, e?.message)
-    }
-  }
-  return result
 }
 
 const paidMapById = ref<Record<number, number>>({})
@@ -2883,26 +2826,16 @@ async function handleSave(andAudit = false) {
       const payAmount2 = Number(fd.pay_amount || 0)
       const fundId2 = Number(fd.fund_id || 0)
       try {
-        // 先入库再审核。采购单审核会写付款；入库失败时不能付款，也不能提示已入库。
-        const outcome = await receiveThenAuditPurchase({
-          payAmount: payAmount2,
-          fundId: fundId2,
-          ensureInhouse: () => receivePurchaseOrder(fd, fd.items, orderId),
-          auditOrder: async () => {
-            await auditProcureOrder(orderId, 1)
-            try {
-              await syncGoodsCostPriceFromItems(fd.items)
-            } catch (e: any) {
-              console.warn('保存并审核回写商品成本价失败', orderId, e?.message)
-            }
-          },
-        })
-        ElMessage.success(outcome === 'inhouse_and_finance' ? t('procure.order.msgAutoInhouseAndFinance') : t('procure.order.msgAutoInhouse'))
+        // 审核接口在同一个数据库事务里入库、改状态、付款。失败会整单回滚。
+        await auditProcureOrder(orderId, 1, { silent: true })
+        try {
+          await syncGoodsCostPriceFromItems(fd.items)
+        } catch (e: any) {
+          console.warn('保存并审核回写商品成本价失败', orderId, e?.message)
+        }
+        ElMessage.success(payAmount2 > 0 && fundId2 ? t('procure.order.msgAutoInhouseAndFinance') : t('procure.order.msgAutoInhouse'))
       } catch (e: any) {
-        const prefix = e?.code === 'AUDIT_AFTER_INHOUSE'
-          ? t('procure.order.msgAuditFailedAfterInhouse')
-          : t('procure.order.msgInhouseFailedNoAudit')
-        ElMessage.error(prefix + (e?.message || ''))
+        ElMessage.error(t('procure.order.msgInhouseFailedNoAudit') + (e?.message || ''))
       }
     }
     backToList()
@@ -3037,47 +2970,15 @@ async function handleAudit(row: any, status: number) {
         row.fund_id = f.id
       }
     }
+    await auditProcureOrder(row.id, status, { silent: true })
     if (status === 1) {
-      try {
-        await receivePurchaseOrder(row, parseItems(row.goods_info), row.id)
-      } catch (e: any) {
-        ElMessage.error(t('procure.order.msgInhouseFailedNoAudit') + (e?.message || ''))
-        return
-      }
       try {
         await syncGoodsCostPriceFromItems(parseItems(row.goods_info))
       } catch (e: any) {
         console.warn('审核回写商品成本价失败', row?.id, e?.message)
       }
     }
-    try {
-      await auditProcureOrder(row.id, status)
-    } catch (e: any) {
-      if (status === 1) {
-        ElMessage.error(t('procure.order.msgAuditFailedAfterInhouse') + (e?.message || ''))
-        tableRef.value?.refresh()
-        return
-      }
-      throw e
-    }
     stockRefreshStore.trigger()
-    // 审核通过且有付款金额，创建付款单记录
-    if (status === 1 && Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0)) {
-      try {
-        await createPayReceipt({
-          contact_type: 'supplier',
-          contact_name: row.supplier_name,
-          supplier_name: row.supplier_name,
-          order_sn: row.order_sn || row.order_no || '',
-          order_id: row.id,
-          amount: Number(row.pay_amount),
-          pay_date: (row.order_date || row.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
-          fund_id: Number(row.fund_id),
-          fund_name: row.fund_name || '',
-          remark: `Purchase Order Payment #${row.id}`,
-        })
-      } catch (e: any) { console.warn('创建付款单失败', e?.message) }
-    }
     const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
     const stockDesc = items.map((i: any) => `${i.goods_name || 'Goods'} ×${i.num}`).join(', ')
     const payAmount = Number(row.pay_amount || 0)
@@ -3091,20 +2992,6 @@ async function handleAudit(row: any, status: number) {
     loadPaidMap()
   } catch (e: any) {
     ElMessage.error(e?.message ?? t('procure.order.msgOperationFailed'))
-  }
-}
-
-async function handleRepairInhouse(row: any) {
-  try {
-    await ElMessageBox.confirm(t('procure.order.msgRepairInhouseConfirm'), t('procure.order.actionRepairInhouse'), { type: 'warning' })
-  } catch { return }
-  try {
-    const result = await receivePurchaseOrder(row, parseItems(row.goods_info), row.id)
-    stockRefreshStore.trigger()
-    tableRef.value?.refresh()
-    ElMessage.success(result.alreadyAudited ? t('procure.order.msgInhouseExistsWarning') : t('procure.order.msgRepairInhouseSuccess'))
-  } catch (e: any) {
-    ElMessage.error(t('procure.order.msgInhouseFailed') + (e?.message || ''))
   }
 }
 

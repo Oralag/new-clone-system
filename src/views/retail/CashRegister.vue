@@ -685,7 +685,7 @@ import { ElMessage } from 'element-plus'
 import { getGoodsList, getGoodsCateList, getUnitConvert, createGoods, getUnitList, readGoods, getSpecList, getBomList } from '@/api/goods'
 import { getMemberList, createRetailOrder, getRetailOrderList, getStoreList } from '@/api/retail'
 import { getSaleContractList } from '@/api/reports'
-import { createProcureOrder, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getSupplierList, createSupplier } from '@/api/procure'
+import { createProcureOrder, auditProcureOrder, getSupplierList, createSupplier } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
@@ -1651,22 +1651,8 @@ async function submitQuickAdd() {
       })
       const orderId = orderRes?.data?.id ?? orderRes?.data?.data?.id
       if (!orderId) throw new Error(t('retail.cashRegister.createOrderFail'))
-      // 审核采购单
+      // 审核时由后端同一事务入库，不再另建采购入库单
       await auditProcureOrder(orderId, 1)
-      // 创建入库单并审核（新单不可能已有入库单，直接建）
-      const inhouseRes = await createProcureInhouse({
-        purchase_order_id: orderId,
-        supplier_id: supplierId,
-        supplier_name: supplierName,
-        warehouse_id: quickAddForm.procure_warehouse_id,
-        warehouse_name: quickAddForm.procure_warehouse_name,
-        in_date: procureDate,
-        total_amount: totalAmount,
-        remark: t('retail.cashRegister.quickAddPurchaseRemark'),
-        goods_info: goodsInfo,
-      })
-      const inhouseId = inhouseRes?.data?.id ?? inhouseRes?.data
-      if (inhouseId) await auditProcureInhouse(inhouseId, 1)
       stockRefreshStore.trigger()
     }
 

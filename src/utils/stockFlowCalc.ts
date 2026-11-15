@@ -13,6 +13,7 @@
  *  - 生产领料
  */
 import http from '@/api/http'
+import { addDirectPurchaseStock } from '@/utils/purchaseStock'
 
 function isReversedOrCanceledDoc(row: any): boolean {
   const text = [
@@ -51,7 +52,7 @@ function parseGoodsInfo(raw: any): any[] {
 export async function calcStockByFlow(): Promise<Record<number, number>> {
   const fqMap: Record<number, number> = {}
 
-  const [inhouseRes, retailRes, returnRes, saleOutRes, otherInRes, otherOutRes, prodInRes, prodOutRes] = await Promise.allSettled([
+  const [inhouseRes, retailRes, returnRes, saleOutRes, otherInRes, otherOutRes, prodInRes, prodOutRes, directRes] = await Promise.allSettled([
     http.get('/procure/ProcureInhouse/index', { params: { list_rows: 1000 } }),
     http.get('/retail/order/index', { params: { list_rows: 1000 } }),
     http.get('/procure/ProcureReturn/index', { params: { list_rows: 1000 } }),
@@ -60,6 +61,7 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
     http.get('/stock/OtherOut/index', { params: { list_rows: 1000 } }),
     http.get('/production/inhouse/index', { params: { list_rows: 1000 } }),
     http.get('/production/material/index', { params: { list_rows: 1000 } }),
+    http.get('/stock/InOutFlow/index', { params: { list_rows: 1000 } }),
   ])
 
   // 退货单涉及的入库单 id 集合，排除
@@ -69,6 +71,11 @@ export async function calcStockByFlow(): Promise<Record<number, number>> {
       const inhouseId = Number(r.inhouse_id || 0)
       if (inhouseId) returnInhouseIds.add(inhouseId)
     }
+  }
+
+  // 采购单审核直接入库的流水。历史采购入库单仍走下面的单据，备注不同，不会加两次。
+  if (directRes.status === 'fulfilled') {
+    addDirectPurchaseStock(fqMap, directRes.value.data?.rows ?? [])
   }
 
   // 采购入库 +
