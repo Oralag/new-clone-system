@@ -406,6 +406,7 @@ export default {
   msgAuditConfirmSuffix: 'this purchase order?',
   msgInhouseExistsWarning: 'This order has already been received into stock. No duplicate action needed.',
   msgInhouseFailed: 'Stock receipt failed — please check product records: ',
+  msgInhouseFailedNoAudit: 'Approval failed. Stock and payment were not changed: ',
   msgPaymentSuccess: 'Payment successful',
   msgPaymentFailed: 'Payment failed',
   msgPayAmountRequired: 'Please enter a payment amount',

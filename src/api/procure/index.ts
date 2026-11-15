@@ -14,13 +14,13 @@ export const getProcureOrderList = (params?: any) => http.get('/stock/PurchaseOr
 export const createProcureOrder = (data: any) => http.post('/stock/PurchaseOrder/add', data)
 export const updateProcureOrder = (data: any) => http.post('/stock/PurchaseOrder/edit', data)
 export const deleteProcureOrder = (id: number) => http.post('/stock/PurchaseOrder/del', { id })
-export async function auditProcureOrder(id: number, status: number) {
+export async function auditProcureOrder(id: number, status: number, config?: any) {
   try {
-    return await http.post('/stock/PurchaseOrder/audit', { id, status })
+    return await http.post('/stock/PurchaseOrder/audit', { id, status }, config)
   } catch (error: any) {
     // 兼容老后端：无 audit 路由时，降级为 edit + status 更新
     if (Number(error?.response?.status) === 404) {
-      return http.post('/stock/PurchaseOrder/edit', { id, status })
+      return http.post('/stock/PurchaseOrder/edit', { id, status }, config)
     }
     throw error
   }

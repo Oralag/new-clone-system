@@ -1115,7 +1115,7 @@ import { Plus, Delete, ArrowLeft, EditPen, Document, Box, Upload, Camera, Paperc
 import { ElMessageBox, ElMessage, ElNotification } from 'element-plus'
 import { useRoute } from 'vue-router'
 import ScTable from '@/components/ScTable.vue'
-import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, createProcureInhouse, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
+import { getProcureOrderList, createProcureOrder, updateProcureOrder, deleteProcureOrder, getSupplierList, createSupplier, auditProcureOrder, auditProcureInhouse, getProcureInhouseList, getProcureReturnList } from '@/api/procure'
 import { getWarehouseList } from '@/api/warehouse'
 import { getBomList, getBomByGoods, getUnitConvert, updateGoods, saveUnitConvert, getGoodsList, getUnitList, createGoods } from '@/api/goods'
 import GoodsSelect from '@/components/GoodsSelect.vue'
@@ -1128,6 +1128,7 @@ import { useAuthStore } from '@/stores/auth'
 import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
+import { purchaseReceivedQty } from '@/utils/purchaseStock'
 import { fmtDt } from '@/utils/date'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
@@ -1378,43 +1379,17 @@ async function handleBatchAudit() {
   let success = 0, failed = 0
   for (const row of pending) {
     try {
-      await auditProcureOrder(row.id, 1)
+      await auditProcureOrder(row.id, 1, { silent: true })
       try {
-        const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-        await syncGoodsCostPriceFromItems(items)
+        await syncGoodsCostPriceFromItems(parseItems(row.goods_info))
       } catch (e: any) {
         console.warn('批量审核回写成本价失败', row?.id, e?.message)
       }
-      try {
-        const _allInhouse1 = await getProcureInhouseList({ list_rows: 2000 })
-        const existRows: any[] = (_allInhouse1.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
-        if (existRows.length === 0) {
-          const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-          const inhouseRes = await createProcureInhouse({
-            purchase_order_id: row.id,
-            supplier_id: row.supplier_id,
-            supplier_name: row.supplier_name,
-            warehouse_id: row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
-            warehouse_name: row.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
-            admin_name: row.admin_name || '',
-            in_date: (row.order_date || row.created_at || '').slice(0, 10),
-            total_amount: row.total_amount,
-            remark: row.remark || '',
-            goods_info: items,
-          })
-          const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
-          if (inhouseId) await auditProcureInhouse(inhouseId, 1)
-        } else {
-          const sorted = [...existRows].sort((a, b) => b.id - a.id)
-          for (const r of sorted.slice(1)) { try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {} }
-          if (sorted[0].status !== 1) await auditProcureInhouse(sorted[0].id, 1)
-        }
-      } catch (e: any) {
-        ElMessage.error(t('procure.order.msgInhouseFailed') + (e?.message || ''))
-        console.warn('自动创建入库单失败', e?.message)
-      }
       success++
-    } catch { failed++ }
+    } catch (e: any) {
+      failed++
+      ElMessage.error(t('procure.order.msgInhouseFailedNoAudit') + (e?.message || ''))
+    }
   }
   batchAuditing.value = false
   stockRefreshStore.trigger()
@@ -1555,6 +1530,7 @@ async function getProcureOrderListWithInhouse(params: any) {
   }
   hydrateOrderListSortDates(rows)
   if (rows.length) {
+    for (const row of rows) row.inhouse_qty = purchaseReceivedQty(0, row.received_qty)
     try {
       const inhouseRes = await getProcureInhouseList({ list_rows: 10000 })
       const inhouseRows: any[] = (inhouseRes?.data?.rows ?? []).filter((r: any) => r.status === 1)
@@ -1567,7 +1543,7 @@ async function getProcureOrderListWithInhouse(params: any) {
         qtyMap[oid] = (qtyMap[oid] || 0) + qty
       }
       for (const row of rows) {
-        row.inhouse_qty = qtyMap[row.id] || 0
+        row.inhouse_qty = purchaseReceivedQty(qtyMap[row.id] || 0, row.received_qty)
       }
     } catch { /* 查不到入库单不影响列表展示 */ }
   }
@@ -2847,55 +2823,19 @@ async function handleSave(andAudit = false) {
 
     ElMessage.success(t('procure.order.msgSaveSuccess'))
     if (andAudit && orderId) {
+      const payAmount2 = Number(fd.pay_amount || 0)
+      const fundId2 = Number(fd.fund_id || 0)
       try {
-        await auditProcureOrder(orderId, 1)
+        // 审核接口在同一个数据库事务里入库、改状态、付款。失败会整单回滚。
+        await auditProcureOrder(orderId, 1, { silent: true })
         try {
           await syncGoodsCostPriceFromItems(fd.items)
         } catch (e: any) {
           console.warn('保存并审核回写商品成本价失败', orderId, e?.message)
         }
-        // 审核后自动创建并审核入库记录，更新库存
-        try {
-          const items = fd.items
-          const _allInhouse3 = await getProcureInhouseList({ list_rows: 2000 })
-          const existRows: any[] = (_allInhouse3.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(orderId))
-          if (existRows.length === 0) {
-            const inhouseRes = await createProcureInhouse({
-              purchase_order_id: orderId,
-              supplier_id: fd.supplier_id,
-              supplier_name: fd.supplier_name,
-              warehouse_id: fd.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
-              warehouse_name: fd.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (fd.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
-              admin_name: fd.admin_name || '',
-              in_date: (fd.order_date || '').slice(0, 10),
-              total_amount: fd.total_amount,
-              remark: fd.remark || '',
-              goods_info: items,
-            })
-            const inhouseId = inhouseRes.data?.id
-            if (inhouseId) {
-              await auditProcureInhouse(inhouseId, 1)
-              await applyInhouseStockEffect(fd.warehouse_id || 0, fd.warehouse_name || '', items, 'in')
-            }
-          } else {
-            const sorted = [...existRows].sort((a, b) => b.id - a.id)
-            for (const r of sorted.slice(1)) { try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {} }
-            const keep = sorted[0]
-            if (keep.status !== 1) {
-              await auditProcureInhouse(keep.id, 1)
-              const rItems = Array.isArray(keep.goods_info) ? keep.goods_info : JSON.parse(keep.goods_info || '[]')
-              await applyInhouseStockEffect(keep.warehouse_id || fd.warehouse_id || 0, keep.warehouse_name || fd.warehouse_name || '', rItems, 'in')
-            }
-          }
-        } catch (e: any) {
-          console.warn('自动入库失败', e?.message)
-        }
-        const payAmount2 = Number(fd.pay_amount || 0)
-        const fundId2 = Number(fd.fund_id || 0)
-        // 付款单由后端审核时自动创建，前端不重复创建
         ElMessage.success(payAmount2 > 0 && fundId2 ? t('procure.order.msgAutoInhouseAndFinance') : t('procure.order.msgAutoInhouse'))
       } catch (e: any) {
-        ElMessage.warning(t('procure.order.msgAuditFailed') + (e?.message || ''))
+        ElMessage.error(t('procure.order.msgInhouseFailedNoAudit') + (e?.message || ''))
       }
     }
     backToList()
@@ -3030,80 +2970,15 @@ async function handleAudit(row: any, status: number) {
         row.fund_id = f.id
       }
     }
-    await auditProcureOrder(row.id, status)
-    // 审核通过后自动创建并审核采购入库记录（先检查是否已存在，避免重复）
+    await auditProcureOrder(row.id, status, { silent: true })
     if (status === 1) {
       try {
-        const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-        await syncGoodsCostPriceFromItems(items)
+        await syncGoodsCostPriceFromItems(parseItems(row.goods_info))
       } catch (e: any) {
         console.warn('审核回写商品成本价失败', row?.id, e?.message)
       }
-      try {
-        const _allInhouse4 = await getProcureInhouseList({ list_rows: 2000 })
-        const existRows: any[] = (_allInhouse4.data?.rows ?? []).filter((r: any) => Number(r.purchase_order_id) === Number(row.id))
-        const alreadyAudited = existRows.filter((r: any) => r.status === 1)
-        if (alreadyAudited.length > 0) {
-          ElMessage.warning(t('procure.order.msgInhouseExistsWarning'))
-          tableRef.value?.refresh()
-          return
-        }
-        if (existRows.length === 0) {
-          const items = Array.isArray(row.goods_info) ? row.goods_info : JSON.parse(row.goods_info || '[]')
-          const inhouseRes = await createProcureInhouse({
-            purchase_order_id: row.id,
-            supplier_id: row.supplier_id,
-            supplier_name: row.supplier_name,
-            warehouse_id: row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id')) || 0,
-            warehouse_name: row.warehouse_name || warehouseOptions.value.find((w: any) => w.id === (row.warehouse_id || Number(localStorage.getItem('erp_default_warehouse_id'))))?.name || '',
-            admin_name: row.admin_name || '',
-            in_date: (row.order_date || row.created_at || '').slice(0, 10),
-            total_amount: row.total_amount,
-            remark: row.remark || '',
-            goods_info: items,
-          })
-          const inhouseId = inhouseRes.data?.id ?? inhouseRes.data
-          if (inhouseId) {
-            await auditProcureInhouse(inhouseId, 1)
-            // 更新后端库存表
-            await applyInhouseStockEffect(row.warehouse_id || 0, row.warehouse_name || '', items, 'in')
-          }
-        } else {
-          // 已有入库单，只取最新一条操作，多余的删掉（防重复）
-          const sorted = [...existRows].sort((a, b) => b.id - a.id)
-          const keep = sorted[0]
-          for (const r of sorted.slice(1)) {
-            try { await http.post('/stock/ProcureInhouse/del', { ids: r.id }) } catch {}
-          }
-          if (keep.status !== 1) {
-            await auditProcureInhouse(keep.id, 1)
-            const rItems = Array.isArray(keep.goods_info) ? keep.goods_info : JSON.parse(keep.goods_info || '[]')
-            await applyInhouseStockEffect(keep.warehouse_id || row.warehouse_id || 0, keep.warehouse_name || row.warehouse_name || '', rItems, 'in')
-          }
-        }
-      } catch (e: any) {
-        ElMessage.error(t('procure.order.msgInhouseFailed') + (e?.message || ''))
-        console.warn('自动创建采购入库记录失败', e?.message)
-      }
     }
     stockRefreshStore.trigger()
-    // 审核通过且有付款金额，创建付款单记录
-    if (status === 1 && Number(row.pay_amount || 0) > 0 && Number(row.fund_id || 0)) {
-      try {
-        await createPayReceipt({
-          contact_type: 'supplier',
-          contact_name: row.supplier_name,
-          supplier_name: row.supplier_name,
-          order_sn: row.order_sn || row.order_no || '',
-          order_id: row.id,
-          amount: Number(row.pay_amount),
-          pay_date: (row.order_date || row.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
-          fund_id: Number(row.fund_id),
-          fund_name: row.fund_name || '',
-          remark: `Purchase Order Payment #${row.id}`,
-        })
-      } catch (e: any) { console.warn('创建付款单失败', e?.message) }
-    }
     const items = Array.isArray(row.goods_info) ? row.goods_info : (() => { try { return JSON.parse(row.goods_info || '[]') } catch { return [] } })()
     const stockDesc = items.map((i: any) => `${i.goods_name || 'Goods'} ×${i.num}`).join(', ')
     const payAmount = Number(row.pay_amount || 0)

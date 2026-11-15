@@ -386,6 +386,7 @@ import { getStockList, getWarehouseList } from '@/api/warehouse'
 import { getGoodsList, getGoodsCateList, createGoodsCate, updateGoodsCate, deleteGoodsCate, getUnitConvert } from '@/api/goods'
 import http from '@/api/http'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
+import { addDirectPurchaseStock, isDirectPurchaseStockFlow } from '@/utils/purchaseStock'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -1071,7 +1072,7 @@ async function loadStockMap(warehouseId = 0) {
 
 async function loadActivityMaps() {
   try {
-    const [inhouseRows, retailRowsRaw, returnRows, otherInRows, otherOutRows, prodInRows, prodOutRows] = await Promise.all([
+    const [inhouseRows, retailRowsRaw, returnRows, otherInRows, otherOutRows, prodInRows, prodOutRows, directFlowRows] = await Promise.all([
       fetchAllPages('/procure/ProcureInhouse/index').catch(() => [] as any[]),
       fetchAllPages('/retail/order/index').catch(() => [] as any[]),
       fetchAllPages('/procure/ProcureReturn/index').catch(() => [] as any[]),
@@ -1079,6 +1080,7 @@ async function loadActivityMaps() {
       fetchAllPages('/stock/OtherOut/index').catch(() => [] as any[]),
       fetchAllPages('/production/inhouse/index').catch(() => [] as any[]),
       fetchAllPages('/production/material/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/InOutFlow/index').catch(() => [] as any[]),
     ])
 
     // 流水库存汇总：goods_id -> 净数量（入库为正，出库为负）
@@ -1114,6 +1116,7 @@ async function loadActivityMaps() {
         }
       } catch { /* ignore */ }
     }
+    addDirectPurchaseStock(fqMap, directFlowRows)
     inhouseCountMap.value = inMap
 
     // Return (采购退货出库)
@@ -1361,6 +1364,7 @@ async function openFlowDialog(goods: any) {
       otherOutAllRows,
       prodInAllRows,
       prodOutAllRows,
+      directFlowRows,
     ] = await Promise.all([
       fetchAllPages('/procure/ProcureInhouse/index').catch(() => [] as any[]),
       fetchAllPages('/stock/PurchaseOrder/index').catch(() => [] as any[]),
@@ -1371,6 +1375,7 @@ async function openFlowDialog(goods: any) {
       fetchAllPages('/stock/OtherOut/index').catch(() => [] as any[]),
       fetchAllPages('/production/inhouse/index').catch(() => [] as any[]),
       fetchAllPages('/production/material/index').catch(() => [] as any[]),
+      fetchAllPages('/stock/InOutFlow/index').catch(() => [] as any[]),
     ])
     const procureOrderById: Record<number, any> = {}
     for (const order of procureOrderAllRows) {
@@ -1404,6 +1409,23 @@ async function openFlowDialog(goods: any) {
             })
           }
         } catch { /* ignore */ }
+    }
+
+    for (const flow of directFlowRows) {
+      if (!isDirectPurchaseStockFlow(flow)) continue
+      if (gid && Number(flow.goods_id) !== gid) continue
+      if (!gid && goods.goods_name && flow.goods_name !== goods.goods_name) continue
+      const orderId = Number(String(flow.remark || '').replace('purchase_order#', ''))
+      const procureOrder = procureOrderById[orderId]
+      rows.push({
+        _type: 'in',
+        _sn: flow.order_no || '',
+        _qty: Number(flow.qty || 0),
+        _unit: '',
+        _price: 0,
+        _date: procureOrder?.order_date || flow.created_at || '',
+        _partner: procureOrder?.supplier_name || '',
+      })
     }
 
     // 采购退货（出库）

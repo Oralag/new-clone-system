@@ -406,6 +406,7 @@ export default {
   msgAuditConfirmSuffix: '该采购单？',
   msgInhouseExistsWarning: '该采购单已审核入库，请勿重复操作',
   msgInhouseFailed: '入库失败，请检查商品是否已正确建档：',
+  msgInhouseFailedNoAudit: '审核失败，库存和付款都没有改动：',
   msgPaymentSuccess: '付款成功',
   msgPaymentFailed: '付款失败',
   msgPayAmountRequired: '请填写付款金额',
