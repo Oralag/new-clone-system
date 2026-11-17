@@ -272,7 +272,7 @@
               <el-col :span="6">
                 <el-form-item :label="$t('procure.order.labelPayAccount')">
                   <template v-if="isReadonly">
-                    <el-input :value="fd.pay_account || fd.fund_name || '—'" disabled />
+                    <el-input :value="fundNamesForOrder(purchasePayState, fd).join('、') || '—'" disabled />
                   </template>
                   <template v-else>
                     <div style="display:flex;gap:4px;width:100%">
@@ -691,7 +691,7 @@
             <div v-if="isReadonly" class="settle-item">
               <span class="settle-label">{{ $t('procure.order.settlePaidAmount') }}</span>
               <span class="settle-value" style="color:#16a34a;font-weight:700">
-                ¥{{ Number(fd.pay_amount || 0).toFixed(2) }}
+                ¥{{ paidAmountForOrder(purchasePayState, fd).toFixed(2) }}
               </span>
             </div>
             <div class="settle-item">
@@ -1129,6 +1129,7 @@ import { TAX_RATES } from '@/config'
 import { useStockRefreshStore } from '@/stores/stockRefresh'
 import { stockEffect } from '@/utils/stockEffect'
 import { purchaseReceivedQty } from '@/utils/purchaseStock'
+import { allocateMultiSupplierPayments, collectPurchaseGoodsPayments, emptyPurchasePaymentState, paidAmountForOrder, fundNamesForOrder } from '@/utils/purchasePayment'
 import { fmtDt } from '@/utils/date'
 import { getSyncedDefaultWarehouseId } from '@/utils/defaultWarehouse'
 import { showLogoForCurrentUser, brandHeaderHtmlPdf } from '@/utils/brandAssets'
@@ -1622,9 +1623,7 @@ function getInhouseQty(row: any): number {
 }
 
 const paidMapById = ref<Record<number, number>>({})
-const paidMapByKey = ref<Record<string, number>>({})
-const paidMapBySn = ref<Record<string, number>>({})
-const paidMapMultiSup = ref<Record<string, number>>({})
+const purchasePayState = reactive(emptyPurchasePaymentState())
 const paidMapBySupplier = ref<Record<string, number>>({})
 // 单据支出付款 Map：order_id → 已付金额
 const expensePaidById = ref<Record<number, number>>({})
@@ -1633,11 +1632,6 @@ const freightPaidById = ref<Record<number, number>>({})
 // 附加费用付款 Map："order_id:feeIndex" 或 "order_id:feeName" → 已付金额
 const feeItemPaidMap = ref<Record<string, number>>({})
 
-function payKey(orderSn: string, supplierName: string): string {
-  return `${String(orderSn || '').trim()}@@${String(supplierName || '').trim()}`
-}
-
-// ── 批量付款弹窗 ──────────────────────────────────────────────────────────────
 const batchPayVisible = ref(false)
 const batchPaySubmitting = ref(false)
 const batchPayDate = ref(new Date().toISOString().slice(0, 10))
@@ -1768,75 +1762,20 @@ async function loadPaidMap() {
   try {
     const res = await getPayReceiptList({ list_rows: 2000 })
     const rows: any[] = res.data?.rows ?? []
-    const idMap: Record<number, number> = {}
-    const keyMap: Record<string, number> = {}
-    const snMap: Record<string, number> = {}
-    const multiSupMap: Record<string, number> = {}
-    for (const r of rows) {
-      const amount = Number(r.amount || 0)
-      if (!amount) continue
-      const remark = String(r.remark || '')
-      // 跳过单据支出/运费/附加费用付款，这些不计入货款
-      if (/采购单据支出|采购运费|采购附加费用|Purchase Addon Fee/.test(remark)) continue
-      const orderSn = String(r.order_sn || '').trim()
-      const supplierName = String(r.supplier_name || r.contact_name || '').trim()
-      let matched = false
-      if (Number(r.order_id)) {
-        const id = Number(r.order_id)
-        idMap[id] = (idMap[id] || 0) + amount
-        matched = true
-      }
-      const m1all = [...String(r.remark || '').matchAll(/(?:采购单(?:自动)?付款|Purchase Order Payment)\s*#(\d+)/g)]
-      if (m1all.length === 1) {
-        const id = Number(m1all[0][1])
-        idMap[id] = (idMap[id] || 0) + amount
-        matched = true
-      } else if (m1all.length > 1) {
-        if (supplierName) multiSupMap[supplierName] = (multiSupMap[supplierName] || 0) + amount
-        matched = true
-      }
-      const m2 = String(r.remark || '').match(/采购单([A-Za-z0-9]+)审核自动生成/)
-      if (m2) {
-        const sn = m2[1].trim()
-        snMap[sn] = (snMap[sn] || 0) + amount
-        matched = true
-      }
-      // 无精确匹配时，用 order_sn@@supplier 兜底
-      if (!matched && orderSn && supplierName) {
-        const key = payKey(orderSn, supplierName)
-        keyMap[key] = (keyMap[key] || 0) + amount
-      }
-    }
-    // 多ID付款：拉采购单数据，按欠款顺序冲销写入 idMap
-    if (Object.keys(multiSupMap).length > 0) {
+    const collected = collectPurchaseGoodsPayments(rows)
+    if (collected.multiReceipts.length) {
       try {
         const orderRes = await getProcureOrderList({ list_rows: 1000 })
-        const allOrders: any[] = orderRes.data?.rows ?? []
-        for (const [supName, totalAmt] of Object.entries(multiSupMap)) {
-          const supOrders = allOrders
-            .filter(o => Number(o.status) === 1 && String(o.supplier_name || '').trim() === supName)
-            .sort((a, b) => a.id - b.id)
-          let remaining = totalAmt
-          for (const o of supOrders) {
-            if (remaining <= 0) break
-            const orderAmt = (Number(o.after_discount) > 0 ? Number(o.after_discount) : Number(o.total_amount ?? 0))
-            const alreadyPaid = (idMap[o.id] || 0)
-              + (snMap[String(o.order_sn || '').trim()] || snMap[String(o.order_no || '').trim()] || 0)
-              + (keyMap[payKey(String(o.order_sn || '').trim(), supName)] || keyMap[payKey(String(o.order_no || '').trim(), supName)] || 0)
-            const owe = Math.max(0, orderAmt - alreadyPaid)
-            const deduct = Math.min(remaining, owe)
-            if (deduct > 0) {
-              idMap[o.id] = (idMap[o.id] || 0) + deduct
-              remaining -= deduct
-            }
-          }
-        }
+        allocateMultiSupplierPayments(collected.state, orderRes.data?.rows ?? [], collected.multiReceipts)
       } catch {}
     }
-    paidMapById.value = idMap
-    paidMapByKey.value = keyMap
-    paidMapBySn.value = snMap
-    paidMapMultiSup.value = multiSupMap
+    purchasePayState.idAmounts = collected.state.idAmounts
+    purchasePayState.snAmounts = collected.state.snAmounts
+    purchasePayState.keyAmounts = collected.state.keyAmounts
+    purchasePayState.idFunds = collected.state.idFunds
+    purchasePayState.snFunds = collected.state.snFunds
+    purchasePayState.keyFunds = collected.state.keyFunds
+    paidMapById.value = collected.state.idAmounts
     // 单据支出付款 Map（去重：按 order_id + amount + pay_date + fund_id 唯一性）
     const expenseIdMap: Record<number, number> = {}
     const seenExpensePay = new Set<string>()
@@ -1889,12 +1828,7 @@ async function loadPaidMap() {
 }
 
 function getPaidAmount(row: any): number {
-  const oSn = String(row.order_sn || '').trim()
-  const oNo = String(row.order_no || '').trim()
-  const sup = String(row.supplier_name || '').trim()
-  return (paidMapById.value[row.id] || 0)
-    + (paidMapBySn.value[oSn] || paidMapBySn.value[oNo] || 0)
-    + (paidMapByKey.value[payKey(oSn, sup)] || paidMapByKey.value[payKey(oNo, sup)] || 0)
+  return paidAmountForOrder(purchasePayState, row)
 }
 
 function getUnpaidAmount(row: any): number {
